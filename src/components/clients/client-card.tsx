@@ -39,7 +39,7 @@ export default function ClientCard({ client, onClick }: ClientCardProps) {
           <h3 className="text-lg font-semibold text-white mb-1">{client.name}</h3>
           <p className="text-sm text-[#7a88a8]">{client.company}</p>
         </div>
-        <HealthScoreBadge score={client.healthScore.overall} size="md" />
+        <HealthScoreBadge score={client.healthScore?.overall ?? 0} size="md" />
       </div>
 
       <div className="space-y-3">

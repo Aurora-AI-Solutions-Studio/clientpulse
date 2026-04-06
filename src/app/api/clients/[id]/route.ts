@@ -50,13 +50,13 @@ export async function GET(
     const mappedClient: Client = {
       id: client.id,
       name: client.name,
-      company: client.company,
+      company: client.company_name,
       contactEmail: client.contact_email,
       monthlyRetainer: client.monthly_retainer,
       serviceType: client.service_type,
-      healthScore: client.health_score,
+      healthScore: undefined,
       status: client.status,
-      lastMeetingDate: client.last_meeting_date,
+      lastMeetingDate: undefined,
       notes: client.notes,
       createdAt: client.created_at,
       updatedAt: client.updated_at,
@@ -124,13 +124,12 @@ export async function PUT(
     // Build update object with snake_case keys
     const updateData: Record<string, string | number | boolean | null> = {};
     if (body.name !== undefined) updateData.name = body.name;
-    if (body.company !== undefined) updateData.company = body.company;
+    if (body.company !== undefined) updateData.company_name = body.company;
     if (body.contactEmail !== undefined) updateData.contact_email = body.contactEmail;
     if (body.monthlyRetainer !== undefined) updateData.monthly_retainer = body.monthlyRetainer;
     if (body.serviceType !== undefined) updateData.service_type = body.serviceType;
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.status !== undefined) updateData.status = body.status;
-    if (body.lastMeetingDate !== undefined) updateData.last_meeting_date = body.lastMeetingDate;
 
     // Update the client
     const { data: updatedClient, error: updateError } = await supabase
@@ -151,13 +150,13 @@ export async function PUT(
     const mappedClient: Client = {
       id: updatedClient.id,
       name: updatedClient.name,
-      company: updatedClient.company,
+      company: updatedClient.company_name,
       contactEmail: updatedClient.contact_email,
       monthlyRetainer: updatedClient.monthly_retainer,
       serviceType: updatedClient.service_type,
-      healthScore: updatedClient.health_score,
+      healthScore: undefined,
       status: updatedClient.status,
-      lastMeetingDate: updatedClient.last_meeting_date,
+      lastMeetingDate: undefined,
       notes: updatedClient.notes,
       createdAt: updatedClient.created_at,
       updatedAt: updatedClient.updated_at,

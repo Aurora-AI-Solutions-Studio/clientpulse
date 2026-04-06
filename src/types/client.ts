@@ -35,7 +35,7 @@ export interface Client {
   contactEmail?: string;
   monthlyRetainer?: number;
   serviceType?: string;
-  healthScore: HealthScore;
+  healthScore?: HealthScore;
   status: string;
   lastMeetingDate?: string;
   notes?: string;

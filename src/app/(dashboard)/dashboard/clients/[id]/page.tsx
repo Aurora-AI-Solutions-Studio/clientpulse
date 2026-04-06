@@ -234,7 +234,7 @@ export default function ClientDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Health Score */}
           <div className="flex flex-col items-center">
-            <HealthScoreBadge score={client.healthScore.overall} size="lg" />
+            <HealthScoreBadge score={client.healthScore?.overall ?? 0} size="lg" />
           </div>
 
           {/* Key Metrics */}
@@ -301,7 +301,11 @@ export default function ClientDetailPage() {
             <h3 className="text-lg font-semibold text-white mb-6">
               Health Score Breakdown
             </h3>
-            <HealthBreakdownComponent breakdown={client.healthScore.breakdown} />
+            {client.healthScore ? (
+              <HealthBreakdownComponent breakdown={client.healthScore.breakdown} />
+            ) : (
+              <p className="text-sm text-[#7a88a8]">No health score computed yet.</p>
+            )}
           </Card>
 
           {/* Recent Signals */}

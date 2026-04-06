@@ -189,7 +189,7 @@ export default function ClientsPage() {
 
     if (healthFilter !== 'all') {
       filtered = filtered.filter(
-        (client) => client.healthScore.status === healthFilter
+        (client) => client.healthScore?.status === healthFilter
       );
     }
 
