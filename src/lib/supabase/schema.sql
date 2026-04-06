@@ -36,13 +36,20 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 
 -- Function to handle new user registration
+-- NOTE: Must use raw_user_meta_data (not user_metadata — that column does not exist on auth.users).
+-- Bug fix April 6, 2026 during EU migration: previous version used user_metadata and crashed signup
+-- with "Database error saving new user". Production was manually patched but never committed back.
 CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
 BEGIN
   INSERT INTO public.profiles (id, full_name, email, subscription_plan, subscription_status, created_at, updated_at)
   VALUES (
     new.id,
-    COALESCE(new.user_metadata->>'full_name', new.email),
+    COALESCE(new.raw_user_meta_data->>'full_name', new.email),
     new.email,
     'free',
     'active',
@@ -51,7 +58,7 @@ BEGIN
   );
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at()
