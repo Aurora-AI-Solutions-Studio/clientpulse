@@ -1,0 +1,52 @@
+# ClientPulse — CI (lint + type check)
+# Added Apr 10, 2026. Matches org ruleset 14769108 required checks.
+# Two jobs => two required status checks: "Backend Lint" + "Frontend Type Check".
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: pip install ruff==0.7.4
+
+      - name: Run ruff
+        run: |
+          if [ -d "eval" ]; then
+            ruff check eval/ --select E9,F63,F7,F82
+          else
+            echo "No Python directories to lint — skipping"
+          fi
+
+  frontend-type-check:
+    name: Frontend Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
