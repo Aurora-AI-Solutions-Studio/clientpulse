@@ -9,6 +9,9 @@ import {
   Mail,
   Activity,
   Settings,
+  Bell,
+  ShieldCheck,
+  TrendingDown,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -50,6 +53,21 @@ const navItems = [
     label: 'Health Scores',
     icon: Activity,
     href: '/dashboard/health',
+  },
+  {
+    label: 'Alerts',
+    icon: Bell,
+    href: '/dashboard/alerts',
+  },
+  {
+    label: 'Approvals',
+    icon: ShieldCheck,
+    href: '/dashboard/approvals',
+  },
+  {
+    label: 'Predictions',
+    icon: TrendingDown,
+    href: '/dashboard/predictions',
   },
   {
     label: 'Settings',
@@ -98,6 +116,7 @@ export default function Sidebar({ }: SidebarProps) {
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
+          const showBadge = item.label === 'Alerts';
 
           return (
             <Link
@@ -109,7 +128,12 @@ export default function Sidebar({ }: SidebarProps) {
                   : 'text-[#7a88a8] hover:bg-[#0f1420] hover:text-white border-l-2 border-transparent'
               }`}
             >
-              <Icon className="w-5 h-5 flex-shrink-0" />
+              <div className="relative flex-shrink-0">
+                <Icon className="w-5 h-5" />
+                {showBadge && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-[#e74c3c] rounded-full"></div>
+                )}
+              </div>
               <span className="font-medium">{item.label}</span>
             </Link>
           );
