@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Check, AlertCircle, RefreshCw, Calendar, Mail, Unlink, ExternalLink, Clock } from 'lucide-react';
+import { Check, AlertCircle, RefreshCw, Calendar, Mail, Unlink, ExternalLink, Clock, Video } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -93,13 +93,15 @@ export default function SettingsPage() {
   const getConnection = (provider: string) =>
     connections.find((c) => c.provider === provider && c.status === 'connected');
 
-  const handleConnect = async (provider: 'google_calendar' | 'gmail') => {
+  const handleConnect = async (provider: 'google_calendar' | 'gmail' | 'zoom') => {
     setConnectingProvider(provider);
     try {
-      const endpoint =
-        provider === 'google_calendar'
-          ? '/api/integrations/calendar'
-          : '/api/integrations/gmail';
+      const endpointMap: Record<string, string> = {
+        google_calendar: '/api/integrations/calendar',
+        gmail: '/api/integrations/gmail',
+        zoom: '/api/integrations/zoom',
+      };
+      const endpoint = endpointMap[provider];
       const res = await fetch(endpoint);
       if (res.ok) {
         const data = await res.json();
@@ -128,13 +130,15 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSync = async (provider: 'google_calendar' | 'gmail') => {
+  const handleSync = async (provider: 'google_calendar' | 'gmail' | 'zoom') => {
     setSyncingProvider(provider);
     try {
-      const endpoint =
-        provider === 'google_calendar'
-          ? '/api/integrations/calendar/sync'
-          : '/api/integrations/gmail/sync';
+      const syncEndpointMap: Record<string, string> = {
+        google_calendar: '/api/integrations/calendar/sync',
+        gmail: '/api/integrations/gmail/sync',
+        zoom: '/api/integrations/zoom/sync',
+      };
+      const endpoint = syncEndpointMap[provider];
       const res = await fetch(endpoint, { method: 'POST' });
       if (res.ok) {
         await fetchConnections();
@@ -172,6 +176,7 @@ export default function SettingsPage() {
 
   const calendarConn = getConnection('google_calendar');
   const gmailConn = getConnection('gmail');
+  const zoomConn = getConnection('zoom');
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -421,9 +426,90 @@ export default function SettingsPage() {
             )}
           </div>
 
+          {/* Zoom */}
+          <div className={`p-4 border rounded-lg transition-all ${
+            zoomConn ? 'border-green-500/30 bg-green-500/5' : 'border-[#1a2540]'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-600/10 flex items-center justify-center">
+                  <Video className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-white">Zoom</p>
+                  {zoomConn ? (
+                    <p className="text-xs text-green-400">
+                      Connected as {zoomConn.account_email}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-[#7a88a8]">
+                      Sync meetings, recordings & participant data
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {zoomConn ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSync('zoom')}
+                      disabled={syncingProvider === 'zoom'}
+                      className="text-blue-400 border-blue-500/20 hover:bg-blue-500/10"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncingProvider === 'zoom' ? 'animate-spin' : ''}`} />
+                      {syncingProvider === 'zoom' ? 'Syncing...' : 'Sync Now'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDisconnect(zoomConn.id)}
+                      disabled={disconnectingId === zoomConn.id}
+                      className="text-red-400 border-red-500/20 hover:bg-red-500/10"
+                    >
+                      <Unlink className="w-3.5 h-3.5" />
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleConnect('zoom')}
+                    disabled={connectingProvider === 'zoom'}
+                  >
+                    {connectingProvider === 'zoom' ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                        Connect
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+            {zoomConn && (
+              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#1a2540]">
+                <span className="flex items-center gap-1.5 text-xs text-[#7a88a8]">
+                  <Clock className="w-3 h-3" />
+                  Last sync: {formatSyncTime(zoomConn.last_sync_at)}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-[#7a88a8]">
+                  <Check className="w-3 h-3 text-green-400" />
+                  Connected {zoomConn.connected_at ? new Date(zoomConn.connected_at).toLocaleDateString() : ''}
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* Privacy note */}
           <p className="text-xs text-[#7a88a8] px-1">
-            ClientPulse only reads metadata (dates, attendees, subjects). Email bodies and calendar descriptions are never stored.
+            ClientPulse only reads metadata (dates, attendees, subjects, participants). Email bodies, calendar descriptions, and recording audio are never stored.
           </p>
         </CardContent>
       </Card>
@@ -481,21 +567,6 @@ export default function SettingsPage() {
             </Button>
           </div>
 
-          {/* Zoom (Coming Soon) */}
-          <div className="flex items-center justify-between p-4 border border-[#1a2540] rounded-lg opacity-50">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-600/10 flex items-center justify-center">
-                <span className="text-blue-400 font-bold text-sm">Z</span>
-              </div>
-              <div>
-                <p className="font-medium text-white">Zoom</p>
-                <p className="text-xs text-[#7a88a8]">Coming soon — auto-recording integration</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" disabled>
-              Coming Soon
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
