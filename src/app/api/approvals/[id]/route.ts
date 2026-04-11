@@ -1,10 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { ApprovalItem } from '@/types/alerts';
-
-// In-memory storage reference (same as in route.ts)
-const approvalsStore = new Map<string, ApprovalItem[]>();
 
 export async function PATCH(
   request: NextRequest,
@@ -13,7 +9,6 @@ export async function PATCH(
   try {
     const supabase = await createClient();
 
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -23,7 +18,6 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('agency_id')
@@ -43,7 +37,6 @@ export async function PATCH(
     const body = await request.json();
     const { status } = body;
 
-    // Validate status
     if (!status || !['approved', 'dismissed', 'auto_approved'].includes(status)) {
       return NextResponse.json(
         { error: "status must be 'approved', 'dismissed', or 'auto_approved'" },
@@ -51,27 +44,42 @@ export async function PATCH(
       );
     }
 
-    // Get approvals for agency
-    const approvals = approvalsStore.get(agencyId) || [];
-    const approvalIndex = approvals.findIndex((a) => a.id === id);
+    const { data: approval, error: updateError } = await supabase
+      .from('approvals')
+      .update({
+        status,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: user.id,
+      })
+      .eq('id', id)
+      .eq('agency_id', agencyId)
+      .select()
+      .single();
 
-    if (approvalIndex === -1) {
+    if (updateError || !approval) {
       return NextResponse.json(
         { error: 'Approval item not found' },
         { status: 404 }
       );
     }
 
-    // Update approval item
-    const approval = approvals[approvalIndex];
-    approval.status = status;
-    approval.reviewedAt = new Date().toISOString();
-    approval.reviewedBy = user.id;
+    const mapped = {
+      id: approval.id,
+      agencyId: approval.agency_id,
+      clientId: approval.client_id,
+      clientName: approval.client_name,
+      type: approval.type,
+      status: approval.status,
+      title: approval.title,
+      description: approval.description,
+      content: approval.content,
+      createdAt: approval.created_at,
+      reviewedAt: approval.reviewed_at,
+      reviewedBy: approval.reviewed_by,
+      autoApproveEnabled: approval.auto_approve_enabled,
+    };
 
-    // Update store
-    approvalsStore.set(agencyId, approvals);
-
-    return NextResponse.json(approval);
+    return NextResponse.json(mapped);
   } catch (error) {
     console.error('Error updating approval:', error);
     return NextResponse.json(

@@ -1,11 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { Alert } from '@/types/alerts';
-
-// In-memory storage reference (same as in route.ts)
-// This is a workaround - in production, use Supabase directly
-const alertsStore = new Map<string, Alert[]>();
 
 export async function PATCH(
   request: NextRequest,
@@ -14,7 +9,6 @@ export async function PATCH(
   try {
     const supabase = await createClient();
 
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -24,7 +18,6 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('agency_id')
@@ -42,29 +35,38 @@ export async function PATCH(
     const { id } = await params;
 
     const body = await request.json();
-    const { read, dismissed } = body;
+    const updates: Record<string, unknown> = {};
+    if (body.read !== undefined) updates.read = body.read;
+    if (body.dismissed !== undefined) updates.dismissed = body.dismissed;
 
-    // Get alerts for agency
-    const alerts = alertsStore.get(agencyId) || [];
-    const alertIndex = alerts.findIndex((a) => a.id === id);
+    const { data: alert, error: updateError } = await supabase
+      .from('alerts')
+      .update(updates)
+      .eq('id', id)
+      .eq('agency_id', agencyId)
+      .select()
+      .single();
 
-    if (alertIndex === -1) {
+    if (updateError || !alert) {
       return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
     }
 
-    // Update alert
-    const alert = alerts[alertIndex];
-    if (read !== undefined) {
-      alert.read = read;
-    }
-    if (dismissed !== undefined) {
-      alert.dismissed = dismissed;
-    }
+    const mapped = {
+      id: alert.id,
+      agencyId: alert.agency_id,
+      clientId: alert.client_id,
+      clientName: alert.client_name,
+      type: alert.type,
+      severity: alert.severity,
+      title: alert.title,
+      message: alert.message,
+      data: alert.data,
+      read: alert.read,
+      dismissed: alert.dismissed,
+      createdAt: alert.created_at,
+    };
 
-    // Update store
-    alertsStore.set(agencyId, alerts);
-
-    return NextResponse.json(alert);
+    return NextResponse.json(mapped);
   } catch (error) {
     console.error('Error updating alert:', error);
     return NextResponse.json(
@@ -81,7 +83,6 @@ export async function DELETE(
   try {
     const supabase = await createClient();
 
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -91,7 +92,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('agency_id')
@@ -108,20 +108,19 @@ export async function DELETE(
     const agencyId = profile.agency_id as string;
     const { id } = await params;
 
-    // Get alerts for agency
-    const alerts = alertsStore.get(agencyId) || [];
-    const alertIndex = alerts.findIndex((a) => a.id === id);
+    const { data: deleted, error: deleteError } = await supabase
+      .from('alerts')
+      .delete()
+      .eq('id', id)
+      .eq('agency_id', agencyId)
+      .select()
+      .single();
 
-    if (alertIndex === -1) {
+    if (deleteError || !deleted) {
       return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
     }
 
-    // Remove alert
-    const deletedAlert = alerts[alertIndex];
-    alerts.splice(alertIndex, 1);
-    alertsStore.set(agencyId, alerts);
-
-    return NextResponse.json({ success: true, deleted: deletedAlert });
+    return NextResponse.json({ success: true, deleted: { id: deleted.id } });
   } catch (error) {
     console.error('Error deleting alert:', error);
     return NextResponse.json(

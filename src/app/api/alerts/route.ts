@@ -1,21 +1,11 @@
 export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { Alert } from '@/types/alerts';
-
-// In-memory storage for alerts (simulate Supabase)
-// Structure: Map<agencyId, Alert[]>
-const alertsStore = new Map<string, Alert[]>();
-
-function generateId(): string {
-  return `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -25,7 +15,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('agency_id')
@@ -41,29 +30,54 @@ export async function GET(request: NextRequest) {
 
     const agencyId = profile.agency_id as string;
 
-    // Get query parameters
     const { searchParams } = new URL(request.url);
     const unreadOnly = searchParams.get('unread') === 'true';
     const typeFilter = searchParams.get('type');
     const limitParam = searchParams.get('limit');
     const limit = limitParam ? parseInt(limitParam, 10) : 20;
 
-    // Get alerts from store
-    let alerts = alertsStore.get(agencyId) || [];
+    let query = supabase
+      .from('alerts')
+      .select('*')
+      .eq('agency_id', agencyId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-    // Apply filters
     if (unreadOnly) {
-      alerts = alerts.filter((a) => !a.read && !a.dismissed);
+      query = query.eq('read', false).eq('dismissed', false);
     }
 
     if (typeFilter) {
-      alerts = alerts.filter((a) => a.type === typeFilter);
+      query = query.eq('type', typeFilter);
     }
 
-    // Apply limit
-    alerts = alerts.slice(0, limit);
+    const { data: alerts, error: alertsError } = await query;
 
-    return NextResponse.json(alerts);
+    if (alertsError) {
+      console.error('Error fetching alerts:', alertsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch alerts' },
+        { status: 500 }
+      );
+    }
+
+    // Map snake_case DB columns to camelCase for frontend
+    const mapped = (alerts || []).map((a) => ({
+      id: a.id,
+      agencyId: a.agency_id,
+      clientId: a.client_id,
+      clientName: a.client_name,
+      type: a.type,
+      severity: a.severity,
+      title: a.title,
+      message: a.message,
+      data: a.data,
+      read: a.read,
+      dismissed: a.dismissed,
+      createdAt: a.created_at,
+    }));
+
+    return NextResponse.json(mapped);
   } catch (error) {
     console.error('Error fetching alerts:', error);
     return NextResponse.json(
@@ -77,7 +91,6 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -87,7 +100,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('agency_id')
@@ -105,7 +117,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    // Validate required fields
     if (!body.clientId || !body.type || !body.title || !body.message) {
       return NextResponse.json(
         { error: 'clientId, type, title, and message are required' },
@@ -125,27 +136,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
-    // Create new alert
-    const newAlert: Alert = {
-      id: generateId(),
-      agencyId,
-      clientId: body.clientId,
-      clientName: client.name,
-      type: body.type,
-      severity: body.severity || 'medium',
-      title: body.title,
-      message: body.message,
-      data: body.data || undefined,
-      read: false,
-      dismissed: false,
-      createdAt: new Date().toISOString(),
+    const { data: newAlert, error: insertError } = await supabase
+      .from('alerts')
+      .insert({
+        agency_id: agencyId,
+        client_id: body.clientId,
+        client_name: client.name,
+        type: body.type,
+        severity: body.severity || 'medium',
+        title: body.title,
+        message: body.message,
+        data: body.data || null,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error creating alert:', insertError);
+      return NextResponse.json(
+        { error: 'Failed to create alert' },
+        { status: 500 }
+      );
+    }
+
+    // Map to camelCase
+    const mapped = {
+      id: newAlert.id,
+      agencyId: newAlert.agency_id,
+      clientId: newAlert.client_id,
+      clientName: newAlert.client_name,
+      type: newAlert.type,
+      severity: newAlert.severity,
+      title: newAlert.title,
+      message: newAlert.message,
+      data: newAlert.data,
+      read: newAlert.read,
+      dismissed: newAlert.dismissed,
+      createdAt: newAlert.created_at,
     };
 
-    // Store alert
-    const existingAlerts = alertsStore.get(agencyId) || [];
-    alertsStore.set(agencyId, [...existingAlerts, newAlert]);
-
-    return NextResponse.json(newAlert, { status: 201 });
+    return NextResponse.json(mapped, { status: 201 });
   } catch (error) {
     console.error('Error creating alert:', error);
     return NextResponse.json(

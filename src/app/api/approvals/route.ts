@@ -1,21 +1,11 @@
 export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { ApprovalItem } from '@/types/alerts';
-
-// In-memory storage for approval items
-// Structure: Map<agencyId, ApprovalItem[]>
-const approvalsStore = new Map<string, ApprovalItem[]>();
-
-function generateId(): string {
-  return `approval_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -25,7 +15,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('agency_id')
@@ -41,19 +30,46 @@ export async function GET(request: NextRequest) {
 
     const agencyId = profile.agency_id as string;
 
-    // Get query parameters
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get('status');
 
-    // Get approvals from store
-    let approvals = approvalsStore.get(agencyId) || [];
+    let query = supabase
+      .from('approvals')
+      .select('*')
+      .eq('agency_id', agencyId)
+      .order('created_at', { ascending: false });
 
-    // Apply status filter
     if (statusFilter) {
-      approvals = approvals.filter((a) => a.status === statusFilter);
+      query = query.eq('status', statusFilter);
     }
 
-    return NextResponse.json(approvals);
+    const { data: approvals, error: approvalsError } = await query;
+
+    if (approvalsError) {
+      console.error('Error fetching approvals:', approvalsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch approvals' },
+        { status: 500 }
+      );
+    }
+
+    const mapped = (approvals || []).map((a) => ({
+      id: a.id,
+      agencyId: a.agency_id,
+      clientId: a.client_id,
+      clientName: a.client_name,
+      type: a.type,
+      status: a.status,
+      title: a.title,
+      description: a.description,
+      content: a.content,
+      createdAt: a.created_at,
+      reviewedAt: a.reviewed_at,
+      reviewedBy: a.reviewed_by,
+      autoApproveEnabled: a.auto_approve_enabled,
+    }));
+
+    return NextResponse.json(mapped);
   } catch (error) {
     console.error('Error fetching approvals:', error);
     return NextResponse.json(
@@ -67,7 +83,6 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -77,7 +92,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('agency_id')
@@ -95,7 +109,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    // Validate required fields
     if (!body.clientId || !body.type || !body.title || !body.description || !body.content) {
       return NextResponse.json(
         { error: 'clientId, type, title, description, and content are required' },
@@ -115,26 +128,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
-    // Create new approval item
-    const newApproval: ApprovalItem = {
-      id: generateId(),
-      agencyId,
-      clientId: body.clientId,
-      clientName: client.name,
-      type: body.type,
-      status: 'pending',
-      title: body.title,
-      description: body.description,
-      content: body.content,
-      createdAt: new Date().toISOString(),
-      autoApproveEnabled: body.autoApproveEnabled || false,
+    const { data: newApproval, error: insertError } = await supabase
+      .from('approvals')
+      .insert({
+        agency_id: agencyId,
+        client_id: body.clientId,
+        client_name: client.name,
+        type: body.type,
+        title: body.title,
+        description: body.description,
+        content: body.content,
+        auto_approve_enabled: body.autoApproveEnabled || false,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error creating approval:', insertError);
+      return NextResponse.json(
+        { error: 'Failed to create approval' },
+        { status: 500 }
+      );
+    }
+
+    const mapped = {
+      id: newApproval.id,
+      agencyId: newApproval.agency_id,
+      clientId: newApproval.client_id,
+      clientName: newApproval.client_name,
+      type: newApproval.type,
+      status: newApproval.status,
+      title: newApproval.title,
+      description: newApproval.description,
+      content: newApproval.content,
+      createdAt: newApproval.created_at,
+      autoApproveEnabled: newApproval.auto_approve_enabled,
     };
 
-    // Store approval item
-    const existingApprovals = approvalsStore.get(agencyId) || [];
-    approvalsStore.set(agencyId, [...existingApprovals, newApproval]);
-
-    return NextResponse.json(newApproval, { status: 201 });
+    return NextResponse.json(mapped, { status: 201 });
   } catch (error) {
     console.error('Error creating approval:', error);
     return NextResponse.json(

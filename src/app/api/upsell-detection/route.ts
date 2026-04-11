@@ -1,21 +1,11 @@
 export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { UpsellOpportunity } from '@/types/alerts';
-
-// In-memory storage for upsell opportunities
-// Structure: Map<agencyId, UpsellOpportunity[]>
-const upsellStore = new Map<string, UpsellOpportunity[]>();
-
-function generateId(): string {
-  return `upsell_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-}
 
 export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -25,7 +15,6 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('agency_id')
@@ -41,10 +30,36 @@ export async function GET(_request: NextRequest) {
 
     const agencyId = profile.agency_id as string;
 
-    // Get all detected upsell opportunities for the agency
-    const opportunities = upsellStore.get(agencyId) || [];
+    const { data: opportunities, error: fetchError } = await supabase
+      .from('upsell_opportunities')
+      .select('*')
+      .eq('agency_id', agencyId)
+      .order('detected_at', { ascending: false });
 
-    return NextResponse.json(opportunities);
+    if (fetchError) {
+      console.error('Error fetching upsell opportunities:', fetchError);
+      return NextResponse.json(
+        { error: 'Failed to fetch opportunities' },
+        { status: 500 }
+      );
+    }
+
+    const mapped = (opportunities || []).map((o) => ({
+      id: o.id,
+      clientId: o.client_id,
+      clientName: o.client_name,
+      signal: o.signal,
+      context: o.context,
+      currentServices: o.current_services,
+      suggestedService: o.suggested_service,
+      estimatedValue: o.estimated_value,
+      confidence: o.confidence,
+      sourceType: o.source_type,
+      sourceMeetingId: o.source_meeting_id,
+      detectedAt: o.detected_at,
+    }));
+
+    return NextResponse.json(mapped);
   } catch (error) {
     console.error('Error fetching upsell opportunities:', error);
     return NextResponse.json(
@@ -58,7 +73,6 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -68,7 +82,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('agency_id')
@@ -94,7 +107,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify client ownership and get client name and details
+    // Verify client ownership and get client details
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select('id, name, service_type, monthly_retainer')
@@ -106,17 +119,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
-    // TODO: In production, run actual upsell detection algorithm
-    // This would analyze meeting transcripts, usage patterns, market signals, etc.
-    // For now, generate mock opportunities based on client service type
-
-    const opportunities: UpsellOpportunity[] = [];
-
-    // Mock upsell opportunities based on current service type
+    // Mock upsell detection based on current service type
     const currentService = client.service_type || 'Design';
     const currentRetainer = client.monthly_retainer || 0;
 
-    // Suggest complementary services
     const suggestedServices: {
       service: string;
       value: number;
@@ -165,32 +171,54 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create upsell opportunities from suggestions
-    for (const suggestion of suggestedServices) {
-      const opportunity: UpsellOpportunity = {
-        id: generateId(),
-        clientId,
-        clientName: client.name,
-        signal: suggestion.signal,
-        context: suggestion.context,
-        currentServices: currentService,
-        suggestedService: suggestion.service,
-        estimatedValue: suggestion.value,
-        confidence: Math.random() > 0.5 ? 'high' : 'medium',
-        sourceType: 'usage_pattern',
-        detectedAt: new Date().toISOString(),
-      };
-      opportunities.push(opportunity);
+    // Delete old opportunities for this client, then insert new ones
+    await supabase
+      .from('upsell_opportunities')
+      .delete()
+      .eq('agency_id', agencyId)
+      .eq('client_id', clientId);
+
+    const rows = suggestedServices.map((s) => ({
+      agency_id: agencyId,
+      client_id: clientId,
+      client_name: client.name,
+      signal: s.signal,
+      context: s.context,
+      current_services: currentService,
+      suggested_service: s.service,
+      estimated_value: s.value,
+      confidence: Math.random() > 0.5 ? 'high' : 'medium',
+      source_type: 'usage_pattern',
+    }));
+
+    const { data: inserted, error: insertError } = await supabase
+      .from('upsell_opportunities')
+      .insert(rows)
+      .select();
+
+    if (insertError) {
+      console.error('Error inserting upsell opportunities:', insertError);
+      return NextResponse.json(
+        { error: 'Failed to save opportunities' },
+        { status: 500 }
+      );
     }
 
-    // Store opportunities (add to existing for this client)
-    const allOpportunities = upsellStore.get(agencyId) || [];
-    // Remove old opportunities for this client
-    const filtered = allOpportunities.filter((o) => o.clientId !== clientId);
-    filtered.push(...opportunities);
-    upsellStore.set(agencyId, filtered);
+    const mapped = (inserted || []).map((o) => ({
+      id: o.id,
+      clientId: o.client_id,
+      clientName: o.client_name,
+      signal: o.signal,
+      context: o.context,
+      currentServices: o.current_services,
+      suggestedService: o.suggested_service,
+      estimatedValue: o.estimated_value,
+      confidence: o.confidence,
+      sourceType: o.source_type,
+      detectedAt: o.detected_at,
+    }));
 
-    return NextResponse.json(opportunities, { status: 201 });
+    return NextResponse.json(mapped, { status: 201 });
   } catch (error) {
     console.error('Error detecting upsell opportunities:', error);
     return NextResponse.json(

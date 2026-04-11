@@ -12,6 +12,8 @@ import {
   Bell,
   ShieldCheck,
   TrendingDown,
+  TrendingUp,
+  MessageSquare,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -68,6 +70,16 @@ const navItems = [
     label: 'Predictions',
     icon: TrendingDown,
     href: '/dashboard/predictions',
+  },
+  {
+    label: 'Upsell',
+    icon: TrendingUp,
+    href: '/dashboard/upsell',
+  },
+  {
+    label: 'Check-ins',
+    icon: MessageSquare,
+    href: '/dashboard/check-ins',
   },
   {
     label: 'Settings',

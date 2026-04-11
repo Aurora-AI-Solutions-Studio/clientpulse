@@ -1,17 +1,11 @@
 export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { ChurnPrediction } from '@/types/alerts';
-
-// In-memory storage for churn predictions
-// Structure: Map<agencyId, ChurnPrediction[]>
-const churnPredictionsStore = new Map<string, ChurnPrediction[]>();
 
 export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -21,7 +15,6 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('agency_id')
@@ -37,10 +30,32 @@ export async function GET(_request: NextRequest) {
 
     const agencyId = profile.agency_id as string;
 
-    // Get latest churn predictions for all clients in the agency
-    const predictions = churnPredictionsStore.get(agencyId) || [];
+    const { data: predictions, error: fetchError } = await supabase
+      .from('churn_predictions')
+      .select('*')
+      .eq('agency_id', agencyId)
+      .order('computed_at', { ascending: false });
 
-    return NextResponse.json(predictions);
+    if (fetchError) {
+      console.error('Error fetching churn predictions:', fetchError);
+      return NextResponse.json(
+        { error: 'Failed to fetch predictions' },
+        { status: 500 }
+      );
+    }
+
+    const mapped = (predictions || []).map((p) => ({
+      clientId: p.client_id,
+      clientName: p.client_name,
+      churnProbability: p.churn_probability,
+      riskLevel: p.risk_level,
+      drivingFactors: p.driving_factors,
+      suggestedActions: p.suggested_actions,
+      savePlan: p.save_plan,
+      computedAt: p.computed_at,
+    }));
+
+    return NextResponse.json(mapped);
   } catch (error) {
     console.error('Error fetching churn predictions:', error);
     return NextResponse.json(
@@ -54,7 +69,6 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -64,7 +78,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('agency_id')
@@ -102,8 +115,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
-    // TODO: In production, run actual churn prediction algorithm using client data
-    // For now, generate mock predictions based on client health score
+    // Get health score for mock churn computation
     const { data: healthScore } = await supabase
       .from('client_health_scores')
       .select('overall_score, status')
@@ -130,7 +142,7 @@ export async function POST(request: NextRequest) {
     const drivingFactors = [];
     if (overallScore < 40) {
       drivingFactors.push({
-        category: 'financial' as const,
+        category: 'financial',
         signal: 'Low payment history',
         impact: -15,
         details: 'Client has had late payments in recent months',
@@ -138,7 +150,7 @@ export async function POST(request: NextRequest) {
     }
     if (overallScore < 50) {
       drivingFactors.push({
-        category: 'relationship' as const,
+        category: 'relationship',
         signal: 'Limited engagement',
         impact: -10,
         details: 'Declining meeting frequency and attendance',
@@ -150,41 +162,59 @@ export async function POST(request: NextRequest) {
     if (riskLevel === 'critical' || riskLevel === 'high') {
       suggestedActions.push({
         id: `action_${Date.now()}_1`,
-        priority: 'immediate' as const,
+        priority: 'immediate',
         action: 'Schedule Executive QBR',
         rationale: 'Critical engagement recovery needed',
-        type: 'qbr' as const,
+        type: 'qbr',
       });
       suggestedActions.push({
         id: `action_${Date.now()}_2`,
-        priority: 'immediate' as const,
+        priority: 'immediate',
         action: 'Check-in call with stakeholders',
         rationale: 'Re-establish relationship and gather concerns',
-        type: 'check_in' as const,
+        type: 'check_in',
       });
     }
 
-    const prediction: ChurnPrediction = {
-      clientId,
-      clientName: client.name,
-      churnProbability,
-      riskLevel,
-      drivingFactors,
-      suggestedActions,
-      computedAt: new Date().toISOString(),
+    // Upsert prediction (replace if already exists for this client in this agency)
+    const { data: prediction, error: upsertError } = await supabase
+      .from('churn_predictions')
+      .upsert(
+        {
+          agency_id: agencyId,
+          client_id: clientId,
+          client_name: client.name,
+          churn_probability: churnProbability,
+          risk_level: riskLevel,
+          driving_factors: drivingFactors,
+          suggested_actions: suggestedActions,
+          computed_at: new Date().toISOString(),
+        },
+        { onConflict: 'agency_id,client_id' }
+      )
+      .select()
+      .single();
+
+    if (upsertError) {
+      console.error('Error upserting churn prediction:', upsertError);
+      return NextResponse.json(
+        { error: 'Failed to save prediction' },
+        { status: 500 }
+      );
+    }
+
+    const mapped = {
+      clientId: prediction.client_id,
+      clientName: prediction.client_name,
+      churnProbability: prediction.churn_probability,
+      riskLevel: prediction.risk_level,
+      drivingFactors: prediction.driving_factors,
+      suggestedActions: prediction.suggested_actions,
+      savePlan: prediction.save_plan,
+      computedAt: prediction.computed_at,
     };
 
-    // Store prediction (replace if already exists for this client)
-    const predictions = churnPredictionsStore.get(agencyId) || [];
-    const existingIndex = predictions.findIndex((p) => p.clientId === clientId);
-    if (existingIndex >= 0) {
-      predictions[existingIndex] = prediction;
-    } else {
-      predictions.push(prediction);
-    }
-    churnPredictionsStore.set(agencyId, predictions);
-
-    return NextResponse.json(prediction, { status: 201 });
+    return NextResponse.json(mapped, { status: 201 });
   } catch (error) {
     console.error('Error computing churn prediction:', error);
     return NextResponse.json(
