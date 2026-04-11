@@ -113,7 +113,7 @@ export async function POST(_request: NextRequest) {
 
     // Upsert calendar events into DB
     let eventsCreated = 0;
-    let eventsUpdated = 0;
+    const eventsUpdated = 0;
 
     for (const gEvent of googleEvents) {
       const clientId = eventClientMap.get(gEvent.id) || null;
@@ -166,7 +166,7 @@ export async function POST(_request: NextRequest) {
       .eq('agency_id', profile.agency_id)
       .not('client_id', 'is', null);
 
-    for (const clientId of matchedClientIds) {
+    for (const clientId of Array.from(matchedClientIds)) {
       if (!allCalendarEvents) continue;
       const metrics = computeCalendarMetrics(clientId, allCalendarEvents as Array<{
         id: string;

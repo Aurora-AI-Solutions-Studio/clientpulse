@@ -204,7 +204,7 @@ export async function POST(_request: NextRequest) {
       .eq('agency_id', profile.agency_id)
       .not('client_id', 'is', null);
 
-    for (const clientId of matchedClientIds) {
+    for (const clientId of Array.from(matchedClientIds)) {
       if (!allEmailThreads) continue;
       const metrics = computeEmailMetrics(clientId, allEmailThreads as Array<{
         id: string;
@@ -217,16 +217,17 @@ export async function POST(_request: NextRequest) {
       }>);
 
       // Upsert into engagement_metrics (merge with calendar data if exists)
-      await supabase.rpc('upsert_email_engagement', {
+      const { error: rpcError } = await supabase.rpc('upsert_email_engagement', {
         p_agency_id: profile.agency_id,
         p_client_id: clientId,
         p_email_score: 50, // Will be recomputed by engagement agent
         p_email_volume_trend: metrics.volumeTrend,
         p_avg_response_time_hours: metrics.avgResponseTimeHours,
         p_client_responsiveness: metrics.clientAvgResponseTimeHours <= 12 ? 80 : 50,
-      }).catch(() => {
+      });
+      if (rpcError) {
         // Fallback: direct upsert if RPC doesn't exist
-        supabase
+        await supabase
           .from('engagement_metrics')
           .upsert(
             {
@@ -240,7 +241,7 @@ export async function POST(_request: NextRequest) {
             },
             { onConflict: 'agency_id,client_id' }
           );
-      });
+      }
     }
 
     // Update last sync time
