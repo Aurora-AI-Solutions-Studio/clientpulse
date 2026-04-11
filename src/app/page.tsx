@@ -54,7 +54,7 @@ export default function Home() {
             </button>
           </div>
           <Link
-            href="/auth/signup"
+            href="/auth/login"
             className="px-6 py-2 bg-[#e74c3c] hover:bg-[#d73a2e] rounded-lg font-semibold transition-colors"
           >
             Sign In
