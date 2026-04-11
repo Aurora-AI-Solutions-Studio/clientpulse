@@ -16,6 +16,9 @@ export interface HealthScoreInput {
   };
   meetingFrequencyTrend: 'increasing' | 'stable' | 'declining';
   lastMeetingDaysAgo: number;
+  /** v2 (Sprint 5): If provided, overrides the heuristic engagement score with
+   *  the real composite from Calendar + Email integration data. */
+  engagementScoreOverride?: number;
 }
 
 /**
@@ -76,12 +79,24 @@ export class HealthScoringAgent {
       signals
     );
 
-    // Compute engagement score from meeting frequency + recency
-    const engagementScore = this.computeEngagementScore(
-      params.meetingFrequencyTrend,
-      params.lastMeetingDaysAgo,
-      signals
-    );
+    // Compute engagement score — v2: use real engagement data if available
+    let engagementScore: number;
+    if (params.engagementScoreOverride !== undefined) {
+      engagementScore = params.engagementScoreOverride;
+      if (engagementScore >= 70) {
+        signals.push({ type: 'engagement', message: 'Strong multi-channel engagement (calendar + email)', severity: 'positive' });
+      } else if (engagementScore >= 40) {
+        signals.push({ type: 'engagement', message: 'Moderate engagement — some communication gaps detected', severity: 'medium' });
+      } else {
+        signals.push({ type: 'engagement', message: 'Low engagement across communication channels', severity: 'high' });
+      }
+    } else {
+      engagementScore = this.computeEngagementScore(
+        params.meetingFrequencyTrend,
+        params.lastMeetingDaysAgo,
+        signals
+      );
+    }
 
     // Weighted average
     const weights = {
