@@ -135,19 +135,33 @@ export async function POST(request: NextRequest) {
       overdue: actionItems?.filter((a) => a.status === 'overdue').length ?? 0,
     };
 
-    // Step 4: Compute health score using HealthScoringAgent
+    // Step 4: Check for Sprint 5 engagement metrics (Calendar + Email data)
+    const { data: engagementData } = await supabase
+      .from('engagement_metrics')
+      .select('overall_engagement_score, meeting_frequency_trend, last_meeting_days_ago')
+      .eq('agency_id', profile.agency_id)
+      .eq('client_id', clientId)
+      .single();
+
+    // Use engagement metrics if available (v2), otherwise fall back to v1 heuristics
+    const finalMeetingFrequencyTrend = engagementData?.meeting_frequency_trend || meetingFrequencyTrend;
+    const finalLastMeetingDaysAgo = engagementData?.last_meeting_days_ago ?? lastMeetingDaysAgo;
+
+    // Step 5: Compute health score using HealthScoringAgent
     const healthScoringAgent = new HealthScoringAgent();
     const scoreInput: HealthScoreInput = {
       financialScore,
       meetingSentimentScores,
       actionItemStats,
-      meetingFrequencyTrend,
-      lastMeetingDaysAgo,
+      meetingFrequencyTrend: finalMeetingFrequencyTrend as 'increasing' | 'stable' | 'declining',
+      lastMeetingDaysAgo: finalLastMeetingDaysAgo,
+      // v2: override engagement score with real data if available
+      engagementScoreOverride: engagementData?.overall_engagement_score ?? undefined,
     };
 
     const healthScore = healthScoringAgent.computeHealthScore(scoreInput);
 
-    // Step 5: Insert scores into health_score_history
+    // Step 6: Insert scores into health_score_history
     const { error: historyError } = await supabase
       .from('health_score_history')
       .insert({

@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Check, AlertCircle } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Check, AlertCircle, RefreshCw, Calendar, Mail, Unlink, ExternalLink, Clock } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -27,12 +27,37 @@ interface StripeStatus {
   email?: string;
 }
 
+interface IntegrationConnection {
+  id: string;
+  provider: string;
+  status: string;
+  account_email?: string;
+  account_name?: string;
+  connected_at?: string;
+  last_sync_at?: string;
+  error?: string;
+}
+
 export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [stripeStatus] = useState<StripeStatus>({
-    connected: false,
-  });
+  const [stripeStatus] = useState<StripeStatus>({ connected: false });
+  const [connections, setConnections] = useState<IntegrationConnection[]>([]);
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
+  const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+
+  const fetchConnections = useCallback(async () => {
+    try {
+      const res = await fetch('/api/integrations/connections');
+      if (res.ok) {
+        const data = await res.json();
+        setConnections(data.connections || []);
+      }
+    } catch (error) {
+      console.error('Error fetching connections:', error);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -44,7 +69,6 @@ export default function SettingsPage() {
 
         if (user) {
           setUser(user);
-          // TODO: Fetch Stripe status from Supabase
         }
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -54,7 +78,86 @@ export default function SettingsPage() {
     };
 
     fetchUserData();
-  }, []);
+    fetchConnections();
+
+    // Check URL params for recently connected provider
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get('connected');
+    if (connected) {
+      fetchConnections();
+      // Clean up URL
+      window.history.replaceState({}, '', '/dashboard/settings');
+    }
+  }, [fetchConnections]);
+
+  const getConnection = (provider: string) =>
+    connections.find((c) => c.provider === provider && c.status === 'connected');
+
+  const handleConnect = async (provider: 'google_calendar' | 'gmail') => {
+    setConnectingProvider(provider);
+    try {
+      const endpoint =
+        provider === 'google_calendar'
+          ? '/api/integrations/calendar'
+          : '/api/integrations/gmail';
+      const res = await fetch(endpoint);
+      if (res.ok) {
+        const data = await res.json();
+        window.location.href = data.authUrl;
+      }
+    } catch (error) {
+      console.error(`Error connecting ${provider}:`, error);
+    } finally {
+      setConnectingProvider(null);
+    }
+  };
+
+  const handleDisconnect = async (connectionId: string) => {
+    setDisconnectingId(connectionId);
+    try {
+      const res = await fetch(`/api/integrations/connections?connectionId=${connectionId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        await fetchConnections();
+      }
+    } catch (error) {
+      console.error('Error disconnecting:', error);
+    } finally {
+      setDisconnectingId(null);
+    }
+  };
+
+  const handleSync = async (provider: 'google_calendar' | 'gmail') => {
+    setSyncingProvider(provider);
+    try {
+      const endpoint =
+        provider === 'google_calendar'
+          ? '/api/integrations/calendar/sync'
+          : '/api/integrations/gmail/sync';
+      const res = await fetch(endpoint, { method: 'POST' });
+      if (res.ok) {
+        await fetchConnections();
+      }
+    } catch (error) {
+      console.error(`Error syncing ${provider}:`, error);
+    } finally {
+      setSyncingProvider(null);
+    }
+  };
+
+  const formatSyncTime = (iso?: string) => {
+    if (!iso) return 'Never';
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return d.toLocaleDateString();
+  };
 
   if (loading) {
     return (
@@ -66,6 +169,9 @@ export default function SettingsPage() {
       </div>
     );
   }
+
+  const calendarConn = getConnection('google_calendar');
+  const gmailConn = getConnection('gmail');
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -88,7 +194,6 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Email */}
           <div>
             <label className="block text-sm font-medium text-white mb-2">
               Email Address
@@ -107,7 +212,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Full Name */}
           <div>
             <label className="block text-sm font-medium text-white mb-2">
               Full Name
@@ -124,7 +228,6 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          {/* User ID */}
           <div>
             <label className="block text-sm font-medium text-white mb-2">
               User ID
@@ -136,7 +239,10 @@ export default function SettingsPage() {
                 disabled
                 className="flex-1 px-4 py-2 bg-[#1a2540] border border-[#1a2540] rounded-lg text-white text-sm font-mono text-xs"
               />
-              <button className="px-3 py-2 bg-[#1a2540] hover:bg-[#252d3d] rounded-lg text-[#7a88a8] text-sm transition-colors">
+              <button
+                onClick={() => navigator.clipboard.writeText(user?.id || '')}
+                className="px-3 py-2 bg-[#1a2540] hover:bg-[#252d3d] rounded-lg text-[#7a88a8] text-sm transition-colors"
+              >
                 Copy
               </button>
             </div>
@@ -144,12 +250,190 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Connected Integrations */}
+      {/* Communication Intelligence Integrations */}
       <Card>
         <CardHeader>
-          <CardTitle>Connected Integrations</CardTitle>
+          <CardTitle>Communication Intelligence</CardTitle>
           <CardDescription>
-            Manage your connected third-party services
+            Connect your calendar and email to automatically track client engagement and enrich health scores
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Google Calendar */}
+          <div className={`p-4 border rounded-lg transition-all ${
+            calendarConn ? 'border-green-500/30 bg-green-500/5' : 'border-[#1a2540]'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-white">Google Calendar</p>
+                  {calendarConn ? (
+                    <p className="text-xs text-green-400">
+                      Connected as {calendarConn.account_email}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-[#7a88a8]">
+                      Auto-detect client meetings, track frequency & attendance
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {calendarConn ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSync('google_calendar')}
+                      disabled={syncingProvider === 'google_calendar'}
+                      className="text-blue-400 border-blue-500/20 hover:bg-blue-500/10"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncingProvider === 'google_calendar' ? 'animate-spin' : ''}`} />
+                      {syncingProvider === 'google_calendar' ? 'Syncing...' : 'Sync Now'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDisconnect(calendarConn.id)}
+                      disabled={disconnectingId === calendarConn.id}
+                      className="text-red-400 border-red-500/20 hover:bg-red-500/10"
+                    >
+                      <Unlink className="w-3.5 h-3.5" />
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleConnect('google_calendar')}
+                    disabled={connectingProvider === 'google_calendar'}
+                  >
+                    {connectingProvider === 'google_calendar' ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                        Connect
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+            {calendarConn && (
+              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#1a2540]">
+                <span className="flex items-center gap-1.5 text-xs text-[#7a88a8]">
+                  <Clock className="w-3 h-3" />
+                  Last sync: {formatSyncTime(calendarConn.last_sync_at)}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-[#7a88a8]">
+                  <Check className="w-3 h-3 text-green-400" />
+                  Connected {calendarConn.connected_at ? new Date(calendarConn.connected_at).toLocaleDateString() : ''}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Gmail */}
+          <div className={`p-4 border rounded-lg transition-all ${
+            gmailConn ? 'border-green-500/30 bg-green-500/5' : 'border-[#1a2540]'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-red-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-white">Gmail</p>
+                  {gmailConn ? (
+                    <p className="text-xs text-green-400">
+                      Connected as {gmailConn.account_email}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-[#7a88a8]">
+                      Track email volume, response times & client responsiveness
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {gmailConn ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSync('gmail')}
+                      disabled={syncingProvider === 'gmail'}
+                      className="text-blue-400 border-blue-500/20 hover:bg-blue-500/10"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncingProvider === 'gmail' ? 'animate-spin' : ''}`} />
+                      {syncingProvider === 'gmail' ? 'Syncing...' : 'Sync Now'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDisconnect(gmailConn.id)}
+                      disabled={disconnectingId === gmailConn.id}
+                      className="text-red-400 border-red-500/20 hover:bg-red-500/10"
+                    >
+                      <Unlink className="w-3.5 h-3.5" />
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleConnect('gmail')}
+                    disabled={connectingProvider === 'gmail'}
+                  >
+                    {connectingProvider === 'gmail' ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                        Connect
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+            {gmailConn && (
+              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#1a2540]">
+                <span className="flex items-center gap-1.5 text-xs text-[#7a88a8]">
+                  <Clock className="w-3 h-3" />
+                  Last sync: {formatSyncTime(gmailConn.last_sync_at)}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-[#7a88a8]">
+                  <Check className="w-3 h-3 text-green-400" />
+                  Connected {gmailConn.connected_at ? new Date(gmailConn.connected_at).toLocaleDateString() : ''}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Privacy note */}
+          <p className="text-xs text-[#7a88a8] px-1">
+            ClientPulse only reads metadata (dates, attendees, subjects). Email bodies and calendar descriptions are never stored.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Other Integrations */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Other Integrations</CardTitle>
+          <CardDescription>
+            Connect additional services to enhance insights
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -164,7 +448,7 @@ export default function SettingsPage() {
                 <p className="text-xs text-[#7a88a8]">
                   {stripeStatus.connected
                     ? `Connected to ${stripeStatus.email}`
-                    : 'Not connected'}
+                    : 'Track payment health & invoice signals'}
                 </p>
               </div>
             </div>
@@ -197,15 +481,15 @@ export default function SettingsPage() {
             </Button>
           </div>
 
-          {/* Google Calendar (Coming Soon) */}
+          {/* Zoom (Coming Soon) */}
           <div className="flex items-center justify-between p-4 border border-[#1a2540] rounded-lg opacity-50">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <span className="text-blue-400 font-bold text-sm">G</span>
+              <div className="w-10 h-10 rounded-lg bg-blue-600/10 flex items-center justify-center">
+                <span className="text-blue-400 font-bold text-sm">Z</span>
               </div>
               <div>
-                <p className="font-medium text-white">Google Calendar</p>
-                <p className="text-xs text-[#7a88a8]">Coming soon</p>
+                <p className="font-medium text-white">Zoom</p>
+                <p className="text-xs text-[#7a88a8]">Coming soon — auto-recording integration</p>
               </div>
             </div>
             <Button variant="outline" size="sm" disabled>
@@ -224,7 +508,6 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Current Plan */}
           <div>
             <h3 className="text-sm font-medium text-white mb-4">
               Current Plan
@@ -234,7 +517,7 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-lg font-semibold text-white">Free Plan</p>
                   <p className="text-xs text-[#7a88a8] mt-1">
-                    Up to 5 clients • Basic analytics
+                    Up to 5 clients &bull; Basic analytics
                   </p>
                 </div>
                 <span className="text-xs px-3 py-1 bg-[#e74c3c]/10 text-[#e74c3c] rounded-full">
@@ -247,7 +530,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Upgrade Option */}
           <div className="bg-[#1a2540]/30 border border-[#e74c3c]/20 rounded-lg p-4">
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-[#e74c3c] flex-shrink-0 mt-0.5" />
@@ -266,7 +548,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Billing History */}
           <div>
             <h3 className="text-sm font-medium text-white mb-3">
               Billing History

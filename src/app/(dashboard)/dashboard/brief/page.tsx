@@ -9,6 +9,13 @@ import {
   Mail,
   RefreshCw,
   TrendingUp,
+  Zap,
+  Phone,
+  TrendingDown,
+  DollarSign,
+  RotateCcw,
+  Wrench,
+  Radio,
 } from 'lucide-react';
 import {
   Card,
@@ -235,6 +242,99 @@ function BriefPreview({ record }: { record: BriefRecord }) {
             entries={brief.risingStars}
           />
         )}
+        {/* Recommended Actions — "3 Actions for Your Approval" */}
+        {(brief.recommendedActions ?? []).length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold text-[#e74c3c] mb-3 flex items-center gap-2">
+              <Zap className="w-4 h-4" />
+              Actions for Your Approval
+            </h4>
+            <div className="space-y-3">
+              {(brief.recommendedActions ?? []).map((action, i) => {
+                const urgencyStyles: Record<string, string> = {
+                  high: 'border-l-[#e74c3c] bg-[#e74c3c]/5',
+                  medium: 'border-l-amber-500 bg-amber-500/5',
+                  low: 'border-l-green-500 bg-green-500/5',
+                };
+                const typeIcons: Record<string, React.ReactNode> = {
+                  'check-in': <Phone className="w-4 h-4" />,
+                  escalation: <AlertTriangle className="w-4 h-4" />,
+                  upsell: <DollarSign className="w-4 h-4" />,
+                  're-engagement': <RotateCcw className="w-4 h-4" />,
+                  'delivery-fix': <Wrench className="w-4 h-4" />,
+                };
+                const urgencyColors: Record<string, string> = {
+                  high: 'text-[#e74c3c]',
+                  medium: 'text-amber-400',
+                  low: 'text-green-400',
+                };
+                return (
+                  <div
+                    key={action.id}
+                    className={`p-4 border border-[#1a2540] border-l-4 rounded-lg ${urgencyStyles[action.urgency] ?? ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className={`text-xs font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5 ${urgencyColors[action.urgency] ?? 'text-[#7a88a8]'}`}>
+                          {typeIcons[action.type] ?? <Zap className="w-3.5 h-3.5" />}
+                          {i + 1}. {action.type.replace('-', ' ')} · {action.urgency}
+                        </div>
+                        <p className="text-white font-medium text-sm">{action.title}</p>
+                        <p className="text-xs text-[#7a88a8] mt-1">{action.rationale}</p>
+                        {action.engagementContext && (
+                          <p className="text-xs mt-1.5 flex items-center gap-1">
+                            <Radio className="w-3 h-3 text-blue-400" />
+                            <span className="text-blue-400">{action.engagementContext}</span>
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-2xl font-bold text-[#1a2540]/50">{i + 1}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Engagement Insights */}
+        {(brief.engagementInsights ?? []).length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+              <Radio className="w-4 h-4 text-blue-400" />
+              Engagement Intelligence
+            </h4>
+            <div className="divide-y divide-[#1a2340] border border-[#1a2340] rounded-lg overflow-hidden">
+              {(brief.engagementInsights ?? []).map((ei) => (
+                <div key={ei.clientId} className="grid grid-cols-12 gap-2 px-3 py-2 text-sm items-center">
+                  <div className="col-span-4 text-white font-medium truncate">
+                    {ei.companyName || ei.clientName}
+                  </div>
+                  <div className="col-span-2 text-center">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      ei.overallEngagement >= 70 ? 'bg-green-500/10 text-green-400' :
+                      ei.overallEngagement >= 40 ? 'bg-amber-500/10 text-amber-400' :
+                      'bg-red-500/10 text-red-400'
+                    }`}>
+                      {ei.overallEngagement}/100
+                    </span>
+                  </div>
+                  <div className="col-span-2 text-center">
+                    {ei.meetingFrequencyTrend === 'increasing' && <TrendingUp className="w-3.5 h-3.5 text-green-400 inline" />}
+                    {ei.meetingFrequencyTrend === 'declining' && <TrendingDown className="w-3.5 h-3.5 text-[#e74c3c] inline" />}
+                    {ei.lastMeetingDaysAgo !== undefined && (
+                      <span className="text-xs text-[#7a88a8] ml-1">{ei.lastMeetingDaysAgo}d</span>
+                    )}
+                  </div>
+                  <div className="col-span-4 text-xs text-[#7a88a8] truncate">
+                    {ei.insight}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {brief.topActionItems.length > 0 && (
           <div>
             <h4 className="text-sm font-semibold text-white mb-2">

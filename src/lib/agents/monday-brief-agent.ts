@@ -47,6 +47,29 @@ export interface MondayBriefActionItem {
   status: string;
 }
 
+export interface MondayBriefRecommendedAction {
+  id: string;
+  type: 'check-in' | 'escalation' | 'upsell' | 're-engagement' | 'delivery-fix';
+  clientId: string;
+  clientName: string;
+  companyName: string;
+  title: string;
+  rationale: string;
+  urgency: 'high' | 'medium' | 'low';
+  engagementContext?: string; // e.g. "No meetings in 23 days, email volume down 40%"
+}
+
+export interface MondayBriefEngagementInsight {
+  clientId: string;
+  clientName: string;
+  companyName: string;
+  overallEngagement: number;
+  meetingFrequencyTrend?: string;
+  lastMeetingDaysAgo?: number;
+  emailVolumeTrend?: string;
+  insight: string;
+}
+
 export interface MondayBriefContent {
   generatedAt: string;
   weekOf: string; // YYYY-MM-DD (Monday)
@@ -55,6 +78,8 @@ export interface MondayBriefContent {
   trendingRisks: MondayBriefClientEntry[];
   risingStars: MondayBriefClientEntry[];
   topActionItems: MondayBriefActionItem[];
+  recommendedActions: MondayBriefRecommendedAction[];
+  engagementInsights: MondayBriefEngagementInsight[];
   narrative: {
     headline: string;
     summary: string;
@@ -214,7 +239,71 @@ export class MondayBriefAgent {
       };
     });
 
-    // 10. Narrative
+    // 10. Engagement insights (Sprint 5 — Communication Intelligence)
+    const { data: engagementRows } = clientIds.length
+      ? await this.supabase
+          .from('engagement_metrics')
+          .select('client_id, overall_engagement_score, meeting_frequency_trend, last_meeting_days_ago, email_volume_trend, calendar_score, email_score')
+          .eq('agency_id', agencyId)
+          .in('client_id', clientIds)
+      : { data: [] as Array<Record<string, unknown>> };
+
+    const engagementByClient = new Map<string, Record<string, unknown>>();
+    for (const row of engagementRows ?? []) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = row as any;
+      engagementByClient.set(r.client_id as string, r);
+    }
+
+    const engagementInsights: MondayBriefEngagementInsight[] = [];
+    for (const [clientId, eng] of Array.from(engagementByClient.entries())) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const e = eng as any;
+      const meta = clientById.get(clientId);
+      if (!meta) continue;
+      const score = (e.overall_engagement_score as number) ?? 0;
+      const trend = (e.meeting_frequency_trend as string) ?? 'stable';
+      const lastDays = (e.last_meeting_days_ago as number) ?? undefined;
+      const emailTrend = (e.email_volume_trend as string) ?? 'stable';
+
+      let insight = '';
+      if (score < 40) {
+        insight = 'Low engagement across all channels — risk of going dark';
+      } else if (score < 60) {
+        insight = trend === 'declining'
+          ? 'Meeting cadence declining, needs re-engagement'
+          : emailTrend === 'declining'
+            ? 'Email communication thinning out'
+            : 'Moderate engagement — could improve';
+      } else if (score >= 70) {
+        insight = 'Strong multi-channel engagement';
+      } else {
+        insight = 'Engagement within normal range';
+      }
+
+      engagementInsights.push({
+        clientId,
+        clientName: meta.name,
+        companyName: meta.company,
+        overallEngagement: score,
+        meetingFrequencyTrend: trend,
+        lastMeetingDaysAgo: lastDays,
+        emailVolumeTrend: emailTrend,
+        insight,
+      });
+    }
+    // Sort: lowest engagement first
+    engagementInsights.sort((a, b) => a.overallEngagement - b.overallEngagement);
+
+    // 11. Recommended Actions (3 actions for your approval)
+    const recommendedActions = this.generateRecommendedActions(
+      entries,
+      engagementByClient,
+      clientById,
+      topActionItems
+    );
+
+    // 12. Narrative
     const narrative = this.buildNarrative({
       totalClients,
       healthy,
@@ -243,6 +332,8 @@ export class MondayBriefAgent {
       trendingRisks,
       risingStars,
       topActionItems,
+      recommendedActions,
+      engagementInsights: engagementInsights.slice(0, 5),
       narrative,
     };
   }
@@ -258,6 +349,132 @@ export class MondayBriefAgent {
     d.setDate(d.getDate() - diff);
     d.setHours(0, 0, 0, 0);
     return d;
+  }
+
+  private generateRecommendedActions(
+    entries: MondayBriefClientEntry[],
+    engagementByClient: Map<string, Record<string, unknown>>,
+    _clientById: Map<string, { name: string; company: string }>,
+    _actionItems: MondayBriefActionItem[]
+  ): MondayBriefRecommendedAction[] {
+    const actions: MondayBriefRecommendedAction[] = [];
+    let actionId = 0;
+
+    // Priority 1: Critical clients → escalation or check-in
+    const criticals = entries.filter((e) => e.status === 'critical').sort((a, b) => a.overallScore - b.overallScore);
+    for (const client of criticals.slice(0, 1)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const eng = engagementByClient.get(client.clientId) as any;
+      const lastDays = eng?.last_meeting_days_ago as number | undefined;
+      const engagementContext = lastDays !== undefined && lastDays > 14
+        ? `No meetings in ${lastDays} days`
+        : eng?.email_volume_trend === 'declining'
+          ? 'Email volume declining'
+          : undefined;
+
+      actions.push({
+        id: `ra-${++actionId}`,
+        type: 'escalation',
+        clientId: client.clientId,
+        clientName: client.clientName,
+        companyName: client.companyName,
+        title: `Schedule urgent check-in with ${client.companyName || client.clientName}`,
+        rationale: `Health score at ${client.overallScore}/100${client.delta !== undefined ? ` (${client.delta > 0 ? '+' : ''}${client.delta} WoW)` : ''}. ${client.topSignal || 'Multiple risk signals detected.'}`,
+        urgency: 'high',
+        engagementContext,
+      });
+    }
+
+    // Priority 2: Clients with declining engagement → re-engagement
+    const decliningEngagement = entries
+      .filter((e) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const eng = engagementByClient.get(e.clientId) as any;
+        if (!eng) return false;
+        const score = (eng.overall_engagement_score as number) ?? 100;
+        return score < 50 && e.status !== 'critical';
+      })
+      .sort((a, b) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const engA = engagementByClient.get(a.clientId) as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const engB = engagementByClient.get(b.clientId) as any;
+        return ((engA?.overall_engagement_score as number) ?? 100) - ((engB?.overall_engagement_score as number) ?? 100);
+      });
+
+    for (const client of decliningEngagement.slice(0, 1)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const eng = engagementByClient.get(client.clientId) as any;
+      const lastDays = eng?.last_meeting_days_ago as number | undefined;
+      const emailTrend = eng?.email_volume_trend as string | undefined;
+      const parts: string[] = [];
+      if (lastDays !== undefined && lastDays > 14) parts.push(`last meeting ${lastDays}d ago`);
+      if (emailTrend === 'declining') parts.push('email volume declining');
+      const engagementContext = parts.length > 0 ? parts.join(', ') : undefined;
+
+      actions.push({
+        id: `ra-${++actionId}`,
+        type: 're-engagement',
+        clientId: client.clientId,
+        clientName: client.clientName,
+        companyName: client.companyName,
+        title: `Re-engage ${client.companyName || client.clientName} — going quiet`,
+        rationale: `Engagement score at ${eng?.overall_engagement_score ?? '?'}/100. Communication gaps detected across channels.`,
+        urgency: 'medium',
+        engagementContext,
+      });
+    }
+
+    // Priority 3: Rising stars → upsell opportunity
+    const risers = entries
+      .filter((e) => e.status === 'healthy' && e.delta !== undefined && e.delta > 5)
+      .sort((a, b) => (b.delta ?? 0) - (a.delta ?? 0));
+
+    for (const client of risers.slice(0, 1)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const eng = engagementByClient.get(client.clientId) as any;
+      const engScore = eng?.overall_engagement_score as number | undefined;
+      const engagementContext = engScore !== undefined && engScore >= 70
+        ? 'Strong engagement across calendar + email'
+        : undefined;
+
+      actions.push({
+        id: `ra-${++actionId}`,
+        type: 'upsell',
+        clientId: client.clientId,
+        clientName: client.clientName,
+        companyName: client.companyName,
+        title: `Propose expansion to ${client.companyName || client.clientName}`,
+        rationale: `Health trending up +${client.delta} WoW to ${client.overallScore}/100. Good time for a growth conversation.`,
+        urgency: 'low',
+        engagementContext,
+      });
+    }
+
+    // Priority 4: At-risk with overdue action items → delivery fix
+    if (actions.length < 3) {
+      const atRiskClients = entries
+        .filter((e) => e.status === 'at-risk')
+        .sort((a, b) => a.overallScore - b.overallScore);
+
+      for (const client of atRiskClients) {
+        if (actions.length >= 3) break;
+        if (actions.some((a) => a.clientId === client.clientId)) continue;
+
+        actions.push({
+          id: `ra-${++actionId}`,
+          type: 'check-in',
+          clientId: client.clientId,
+          clientName: client.clientName,
+          companyName: client.companyName,
+          title: `Review and address concerns with ${client.companyName || client.clientName}`,
+          rationale: `At-risk with score ${client.overallScore}/100. ${client.topSignal || 'Review signals and schedule a touchpoint.'}`,
+          urgency: 'medium',
+        });
+      }
+    }
+
+    return actions.slice(0, 3);
   }
 
   private buildNarrative(ctx: {
@@ -362,6 +579,26 @@ export function renderBriefEmailHtml(brief: MondayBriefContent, agencyName?: str
     </table>
   `;
 
+  const recommendedActionsHtml = (brief.recommendedActions ?? []).length === 0
+    ? ''
+    : `
+    <h3 style="margin:24px 0 8px 0;color:${accent};font-size:15px;font-weight:700;">3 Actions for Your Approval</h3>
+    ${(brief.recommendedActions ?? []).map((a, i) => {
+      const urgencyColors: Record<string, string> = { high: accent, medium: '#f59e0b', low: '#16a34a' };
+      const urgencyColor = urgencyColors[a.urgency] ?? muted;
+      const typeLabels: Record<string, string> = {
+        'check-in': 'Check-in', escalation: 'Escalation', upsell: 'Upsell',
+        're-engagement': 'Re-engage', 'delivery-fix': 'Delivery Fix',
+      };
+      return `<div style="margin:8px 0;padding:12px 16px;border:1px solid #eef2f7;border-left:4px solid ${urgencyColor};border-radius:8px;background:${card};">
+        <div style="font-size:12px;color:${urgencyColor};font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">${i + 1}. ${typeLabels[a.type] ?? a.type} · ${a.urgency}</div>
+        <div style="font-size:15px;font-weight:600;color:${text};margin-bottom:4px;">${escapeHtml(a.title)}</div>
+        <div style="font-size:13px;color:${muted};line-height:1.4;">${escapeHtml(a.rationale)}</div>
+        ${a.engagementContext ? `<div style="font-size:12px;color:${urgencyColor};margin-top:4px;">📡 ${escapeHtml(a.engagementContext)}</div>` : ''}
+      </div>`;
+    }).join('')}
+  `;
+
   const actionItemsList = brief.topActionItems.length === 0
     ? ''
     : `
@@ -401,6 +638,7 @@ export function renderBriefEmailHtml(brief: MondayBriefContent, agencyName?: str
       ${section('Needs attention', brief.needsAttention)}
       ${section('Trending risks', brief.trendingRisks)}
       ${section('Rising stars', brief.risingStars)}
+      ${recommendedActionsHtml}
       ${actionItemsList}
 
       <div style="margin-top:28px;padding-top:16px;border-top:1px solid #eef2f7;color:${muted};font-size:12px;">
