@@ -10,6 +10,16 @@ import {
   Mail,
   Activity,
   Settings,
+  Bell,
+  ShieldCheck,
+  TrendingDown,
+  TrendingUp,
+  MessageSquare,
+  UserPlus,
+  Brain,
+  FileText,
+  Hash,
+  Mic,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -53,6 +63,61 @@ const navItems = [
     label: 'Health Scores',
     icon: Activity,
     href: '/dashboard/health',
+  },
+  {
+    label: 'Alerts',
+    icon: Bell,
+    href: '/dashboard/alerts',
+  },
+  {
+    label: 'Approvals',
+    icon: ShieldCheck,
+    href: '/dashboard/approvals',
+  },
+  {
+    label: 'Predictions',
+    icon: TrendingDown,
+    href: '/dashboard/predictions',
+  },
+  {
+    label: 'Upsell',
+    icon: TrendingUp,
+    href: '/dashboard/upsell',
+  },
+  {
+    label: 'Check-ins',
+    icon: MessageSquare,
+    href: '/dashboard/check-ins',
+  },
+  {
+    label: 'Team',
+    icon: UserPlus,
+    href: '/dashboard/team',
+  },
+  {
+    label: 'Outcomes',
+    icon: FileText,
+    href: '/dashboard/outcomes',
+  },
+  {
+    label: 'Learning',
+    icon: Brain,
+    href: '/dashboard/learning',
+  },
+  {
+    label: 'Reports',
+    icon: FileText,
+    href: '/dashboard/reports',
+  },
+  {
+    label: 'Slack',
+    icon: Hash,
+    href: '/dashboard/integrations/slack',
+  },
+  {
+    label: 'Transcription',
+    icon: Mic,
+    href: '/dashboard/integrations/whisper',
   },
   {
     label: 'Settings',

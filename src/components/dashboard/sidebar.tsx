@@ -14,6 +14,11 @@ import {
   TrendingDown,
   TrendingUp,
   MessageSquare,
+  UserPlus,
+  Brain,
+  FileText,
+  Hash,
+  Mic,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -80,6 +85,36 @@ const navItems = [
     label: 'Check-ins',
     icon: MessageSquare,
     href: '/dashboard/check-ins',
+  },
+  {
+    label: 'Team',
+    icon: UserPlus,
+    href: '/dashboard/team',
+  },
+  {
+    label: 'Outcomes',
+    icon: FileText,
+    href: '/dashboard/outcomes',
+  },
+  {
+    label: 'Learning',
+    icon: Brain,
+    href: '/dashboard/learning',
+  },
+  {
+    label: 'Reports',
+    icon: FileText,
+    href: '/dashboard/reports',
+  },
+  {
+    label: 'Slack',
+    icon: Hash,
+    href: '/dashboard/integrations/slack',
+  },
+  {
+    label: 'Transcription',
+    icon: Mic,
+    href: '/dashboard/integrations/whisper',
   },
   {
     label: 'Settings',
