@@ -92,6 +92,103 @@ export default function Home() {
     { monthly: '499', annual: '399' },
   ];
 
+  // ── SVG Icon Components (premium look, no emojis) ──
+  const Icon = {
+    // Logo / Analytics
+    pulse: (size = 32) => (
+      <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+        <rect width="40" height="40" rx="10" fill="url(#cpLogoGrad)"/>
+        <circle cx="20" cy="20" r="13" stroke="#06090f" strokeWidth="2" opacity="0.3" fill="none"/>
+        <circle cx="20" cy="20" r="7" fill="#06090f" opacity="0.15"/>
+        <polyline points="7,20 13,20 16,12 20,28 24,12 27,20 33,20" stroke="#06090f" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        <circle cx="20" cy="7" r="2.5" fill="#06090f"/>
+        <circle cx="33" cy="20" r="2" fill="#06090f" opacity="0.6"/>
+        <defs>
+          <linearGradient id="cpLogoGrad" x1="0" y1="0" x2="40" y2="40">
+            <stop offset="0%" stopColor="#38e8c8"/>
+            <stop offset="100%" stopColor="#4cc9f0"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    ),
+    // Alert / Warning
+    alertTriangle: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    ),
+    // Spreadsheet / Grid
+    grid: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+    ),
+    // Dollar / Financial
+    dollar: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+    ),
+    // Handshake / Relationship
+    handshake: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 00-7.65 0l-.77.78-.77-.78a5.4 5.4 0 00-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/></svg>
+    ),
+    // Package / Delivery
+    package: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    ),
+    // Signal / Radar / Engagement
+    radio: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/><path d="M5 12.55a10.94 10.94 0 012.28-1.49"/><path d="M10.71 5.05A16 16 0 000.01 12"/><path d="M13.29 5.05A16 16 0 0124 12"/><circle cx="12" cy="12" r="2"/></svg>
+    ),
+    // Microphone / Meeting
+    mic: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    ),
+    // Chart / Analytics bar
+    barChart: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    ),
+    // Trend up / Upsell
+    trendUp: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    ),
+    // Brain / Learning
+    brain: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A5.5 5.5 0 005 5.5C5 7 5.5 8 6.5 9c-2 1.5-2.5 4-2 6 .5 1.5 2 3 4 3.5"/><path d="M14.5 2A5.5 5.5 0 0119 5.5c0 1.5-.5 2.5-1.5 3.5 2 1.5 2.5 4 2 6-.5 1.5-2 3-4 3.5"/><path d="M12 2v20"/><path d="M8 8c1.5 0 3 .5 4 2 1-1.5 2.5-2 4-2"/><path d="M8 14c1.5 0 3 .5 4 2 1-1.5 2.5-2 4-2"/></svg>
+    ),
+    // Lock / Security
+    lock: (size = 18, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    ),
+    // Zap / Lightning
+    zap: (size = 18, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    ),
+    // Building / Infrastructure
+    server: (size = 18, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+    ),
+    // Shield / Data protection
+    shield: (size = 18, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    ),
+    // Menu / Hamburger
+    menu: (size = 24, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    ),
+    // Checkmark
+    check: (size = 16, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    ),
+    // Recycle / ReForge cross-sell
+    refresh: (size = 16, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+    ),
+    // Clock / timer
+    clock: (size = 18, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    ),
+    // Alert circle (for action required)
+    alertCircle: (size = 14, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    ),
+  };
+
   return (
     <div className="min-h-screen font-outfit" style={{ background: 'var(--deep)', color: 'var(--text-primary)' }}>
 
@@ -108,12 +205,7 @@ export default function Home() {
       >
         <div className="max-w-[1140px] mx-auto px-6 flex items-center justify-between">
           <a href="#" className="flex items-center gap-[10px] no-underline">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-base"
-              style={{ background: 'linear-gradient(135deg, var(--teal), var(--aurora-blue))' }}
-            >
-              📊
-            </div>
+            {Icon.pulse(32)}
             <span className="font-bold text-xl" style={{ color: 'var(--text-primary)' }}>
               Client
               <span
@@ -186,11 +278,11 @@ export default function Home() {
           </ul>
 
           <button
-            className="md:hidden bg-transparent border-none text-2xl cursor-pointer"
+            className="md:hidden bg-transparent border-none cursor-pointer flex items-center justify-center"
             style={{ color: 'var(--text-primary)' }}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            ☰
+            {Icon.menu(24, 'var(--text-primary)')}
           </button>
         </div>
       </nav>
@@ -357,19 +449,19 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-14">
             {[
               {
-                icon: '🚨',
+                iconEl: Icon.alertTriangle(22, '#e74c3c'),
                 iconBg: 'rgba(231, 76, 60, 0.12)',
                 title: 'Invisible warnings',
                 desc: "Declining meeting sentiment, overdue payments, stakeholder disengagement — the signals are there, but they're spread across 6 different tools. Nobody connects the dots until the client is already gone.",
               },
               {
-                icon: '📊',
+                iconEl: Icon.grid(22, '#f0c84c'),
                 iconBg: 'rgba(240, 200, 76, 0.12)',
                 title: 'Spreadsheet blindness',
                 desc: '"I think Client X might be unhappy" is how 90% of agencies track client health. Gut feeling doesn\'t scale, and it misses the patterns that data catches 60 days earlier.',
               },
               {
-                icon: '💸',
+                iconEl: Icon.dollar(22, '#b388eb'),
                 iconBg: 'rgba(179, 136, 235, 0.12)',
                 title: '$60K per miss',
                 desc: "A $5K/month client is $60K/year in recurring revenue. Agencies with 20 clients losing 3 per year? That's $180K gone. Preventing even one saves more than a year of ClientPulse.",
@@ -386,10 +478,10 @@ export default function Home() {
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
               >
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-[22px] mb-5"
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
                   style={{ background: card.iconBg }}
                 >
-                  {card.icon}
+                  {card.iconEl}
                 </div>
                 <h3 className="text-lg font-semibold mb-3" style={{ fontFamily: 'var(--font-outfit)' }}>{card.title}</h3>
                 <p className="text-[15px] leading-[1.65]" style={{ color: 'var(--color-muted)' }}>{card.desc}</p>
@@ -502,8 +594,8 @@ export default function Home() {
                   border: '1px solid rgba(231, 76, 60, 0.2)',
                 }}
               >
-                <div className="text-xs font-semibold mb-[6px]" style={{ color: 'var(--pulse-red)' }}>
-                  ⚠️ ACTION REQUIRED
+                <div className="text-xs font-semibold mb-[6px] flex items-center gap-[6px]" style={{ color: 'var(--pulse-red)' }}>
+                  {Icon.alertCircle(14, 'var(--pulse-red)')} ACTION REQUIRED
                 </div>
                 <div className="text-[13px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                   NexGen Solutions — 73% churn probability. Late payments (2 consecutive), no meetings in 3 weeks, declining email responsiveness.{' '}
@@ -534,10 +626,10 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mt-14">
             <div className="flex flex-col gap-5">
               {[
-                { weight: '30%', icon: '💰', title: 'Financial Health', desc: 'Payment timeliness, invoice disputes, contract value trends, revenue concentration risk. Powered by Stripe.' },
-                { weight: '30%', icon: '🤝', title: 'Relationship Health', desc: 'Meeting sentiment trends, stakeholder engagement (are decision-makers still showing up?), communication responsiveness.' },
-                { weight: '25%', icon: '📦', title: 'Delivery Health', desc: 'Scope creep signals, action items completed vs. overdue, deliverable cadence and quality indicators.' },
-                { weight: '15%', icon: '📡', title: 'Engagement Health', desc: 'Meeting frequency trends, email/Slack volume patterns, response time changes — the subtle signals that precede churn.' },
+                { weight: '30%', iconEl: Icon.dollar(18, 'var(--teal)'), title: 'Financial Health', desc: 'Payment timeliness, invoice disputes, contract value trends, revenue concentration risk. Powered by Stripe.' },
+                { weight: '30%', iconEl: Icon.handshake(18, 'var(--teal)'), title: 'Relationship Health', desc: 'Meeting sentiment trends, stakeholder engagement (are decision-makers still showing up?), communication responsiveness.' },
+                { weight: '25%', iconEl: Icon.package(18, 'var(--teal)'), title: 'Delivery Health', desc: 'Scope creep signals, action items completed vs. overdue, deliverable cadence and quality indicators.' },
+                { weight: '15%', iconEl: Icon.radio(18, 'var(--teal)'), title: 'Engagement Health', desc: 'Meeting frequency trends, email/Slack volume patterns, response time changes — the subtle signals that precede churn.' },
               ].map((signal, i) => (
                 <div
                   key={i}
@@ -553,7 +645,7 @@ export default function Home() {
                     {signal.weight}
                   </div>
                   <div>
-                    <h4 className="text-[15px] font-semibold mb-1">{signal.icon} {signal.title}</h4>
+                    <h4 className="text-[15px] font-semibold mb-1 flex items-center gap-2">{signal.iconEl} {signal.title}</h4>
                     <p className="text-[13px] leading-relaxed" style={{ color: 'var(--color-muted)' }}>{signal.desc}</p>
                   </div>
                 </div>
@@ -594,7 +686,7 @@ export default function Home() {
                   color: 'var(--teal)',
                 }}
               >
-                ● Healthy — Low Risk
+                Healthy — Low Risk
               </div>
             </div>
           </div>
@@ -647,7 +739,7 @@ export default function Home() {
                   From: ClientPulse &lt;brief@clientpulse.helloaurora.ai&gt;
                 </div>
                 <div className="text-[15px] font-semibold">
-                  📊 Your Monday Brief — Apr 14: 1 client needs attention
+                  Your Monday Brief — Apr 14: 1 client needs attention
                 </div>
               </div>
               <div className="p-6">
@@ -709,12 +801,12 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-14">
             {[
-              { icon: '💰', title: 'Financial Signal Agent', desc: 'Monitors Stripe invoicing data. Detects payment delays, disputes, contract value changes, and revenue concentration risk. Alerts on anomalies.' },
-              { icon: '🎙️', title: 'Meeting Intelligence Agent', desc: 'Processes meeting recordings via Whisper + Claude. Extracts sentiment, action items, scope changes, and stakeholder engagement signals.' },
-              { icon: '📊', title: 'Health Scoring Agent', desc: 'Computes the composite Client Health Score (0–100) from all signal categories. Updates as new data arrives. Self-calibrates on actual outcomes.' },
-              { icon: '⚠️', title: 'Churn Prediction Agent', desc: 'Pattern-matches across all clients to predict churn probability. Alerts 60 days before predicted churn. Explains the driving factors behind each prediction.' },
-              { icon: '📈', title: 'Upsell Detection Agent', desc: 'Analyzes meeting transcripts for expansion signals. Flags when clients mention needs outside their current package. Surfaces revenue growth opportunities.' },
-              { icon: '🧠', title: 'Recursive Learning Engine', desc: 'Every client renewal or churn trains the model. After 50+ clients, predictions calibrate to YOUR agency\'s patterns. The moat that grows over time.' },
+              { iconEl: Icon.dollar(24, 'var(--teal)'), iconBg: 'rgba(56, 232, 200, 0.08)', title: 'Financial Signal Agent', desc: 'Monitors Stripe invoicing data. Detects payment delays, disputes, contract value changes, and revenue concentration risk. Alerts on anomalies.' },
+              { iconEl: Icon.mic(24, 'var(--aurora-blue)'), iconBg: 'rgba(76, 201, 240, 0.08)', title: 'Meeting Intelligence Agent', desc: 'Processes meeting recordings via Whisper + Claude. Extracts sentiment, action items, scope changes, and stakeholder engagement signals.' },
+              { iconEl: Icon.barChart(24, 'var(--teal)'), iconBg: 'rgba(56, 232, 200, 0.08)', title: 'Health Scoring Agent', desc: 'Computes the composite Client Health Score (0–100) from all signal categories. Updates as new data arrives. Self-calibrates on actual outcomes.' },
+              { iconEl: Icon.alertTriangle(24, 'var(--reforge-gold)'), iconBg: 'rgba(240, 200, 76, 0.08)', title: 'Churn Prediction Agent', desc: 'Pattern-matches across all clients to predict churn probability. Alerts 60 days before predicted churn. Explains the driving factors behind each prediction.' },
+              { iconEl: Icon.trendUp(24, 'var(--aurora-purple)'), iconBg: 'rgba(179, 136, 235, 0.08)', title: 'Upsell Detection Agent', desc: 'Analyzes meeting transcripts for expansion signals. Flags when clients mention needs outside their current package. Surfaces revenue growth opportunities.' },
+              { iconEl: Icon.brain(24, 'var(--aurora-pink)'), iconBg: 'rgba(232, 127, 165, 0.08)', title: 'Recursive Learning Engine', desc: 'Every client renewal or churn trains the model. After 50+ clients, predictions calibrate to YOUR agency\'s patterns. The moat that grows over time.' },
             ].map((agent, i) => (
               <div
                 key={i}
@@ -726,7 +818,9 @@ export default function Home() {
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-teal)')}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
               >
-                <div className="text-[28px] mb-4">{agent.icon}</div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: agent.iconBg }}>
+                  {agent.iconEl}
+                </div>
                 <h3 className="text-[17px] font-semibold mb-[10px]" style={{ fontFamily: 'var(--font-outfit)' }}>
                   {agent.title}
                 </h3>
@@ -780,13 +874,13 @@ export default function Home() {
         <div className="max-w-[1140px] mx-auto px-6">
           <div className="reveal flex items-center justify-center gap-12 flex-wrap max-md:gap-6">
             {[
-              { icon: '🔒', text: '256-bit encryption' },
-              { icon: '🧠', text: 'Your data never trains our AI' },
-              { icon: '⚡', text: '99.9% uptime SLA' },
-              { icon: '🏗️', text: 'Built on Stripe, AWS & Anthropic' },
+              { iconEl: Icon.lock(18, 'var(--teal)'), text: '256-bit encryption' },
+              { iconEl: Icon.shield(18, 'var(--teal)'), text: 'Your data never trains our AI' },
+              { iconEl: Icon.zap(18, 'var(--teal)'), text: '99.9% uptime SLA' },
+              { iconEl: Icon.server(18, 'var(--teal)'), text: 'Built on Stripe, AWS & Anthropic' },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-[10px]">
-                <span className="text-lg">{item.icon}</span>
+                <span className="flex items-center justify-center">{item.iconEl}</span>
                 <span className="text-sm font-medium" style={{ color: 'var(--color-muted)' }}>{item.text}</span>
               </div>
             ))}
@@ -956,7 +1050,7 @@ export default function Home() {
                 <ul className="flex flex-col gap-3 mb-8 list-none">
                   {plan.features.map((feature, j) => (
                     <li key={j} className="flex items-start gap-[10px] text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                      <span className="font-bold min-w-[16px]" style={{ color: 'var(--teal)' }}>✓</span>
+                      <span className="min-w-[16px] mt-[2px] flex items-center">{Icon.check(16, 'var(--teal)')}</span>
                       {feature}
                     </li>
                   ))}
@@ -1038,6 +1132,14 @@ export default function Home() {
                 q: 'What happens after the 7-day trial?',
                 a: "You choose a plan or your account pauses — no surprise charges. Your data stays available for 30 days so you can pick up where you left off. Founding members get 30% off their first year.",
               },
+              {
+                q: "What's the difference between Starter, Pro, and Agency?",
+                a: "Starter ($59/mo) covers up to 5 clients with Health Scores, Monday Brief, and Stripe sync — perfect for freelancers or small shops. Pro ($199/mo) adds Meeting Intelligence, Upsell Detection, the Action Proposal Engine, and calendar/email sentiment for up to 20 clients. Agency ($499/mo) unlocks unlimited clients, team dashboard, white-label reports, Slack bot, Recursive Learning insights, and API access.",
+              },
+              {
+                q: 'Is there a discount for annual billing?',
+                a: "Yes — 20% off when you pay annually. That brings Starter to $47/mo, Pro to $159/mo, and Agency to $399/mo. Founding members also get an additional 30% off their first year, stackable with annual pricing.",
+              },
             ].map((faq, i) => (
               <div
                 key={i}
@@ -1061,7 +1163,7 @@ export default function Home() {
       <div className="py-5" style={{ borderTop: '1px solid var(--border-subtle)' }}>
         <div className="max-w-[1140px] mx-auto px-6">
           <div className="reveal text-center text-sm" style={{ color: 'var(--color-muted)' }}>
-            <span style={{ color: 'var(--reforge-gold)' }}>♻️</span>{' '}
+            <span className="inline-flex items-center align-middle" style={{ color: 'var(--reforge-gold)' }}>{Icon.refresh(16, 'var(--reforge-gold)')}</span>{' '}
             <strong style={{ color: 'var(--text-secondary)' }}>Also from Aurora:</strong>{' '}
             <a href="https://reforge.helloaurora.ai" className="no-underline" style={{ color: 'var(--teal)' }}>
               ReForge
