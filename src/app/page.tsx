@@ -32,16 +32,52 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const input = form.querySelector('input') as HTMLInputElement;
     const btn = form.querySelector('button') as HTMLButtonElement;
-    // Supabase waitlist integration would go here
-    input.value = '';
-    btn.textContent = '\u2713 You\'re on the list!';
+    const email = input.value.trim();
+
+    if (!email) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    // Extract UTM params from URL
+    const params = new URLSearchParams(window.location.search);
+
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          source: 'landing_page',
+          utm_source: params.get('utm_source'),
+          utm_medium: params.get('utm_medium'),
+          utm_campaign: params.get('utm_campaign'),
+        }),
+      });
+
+      if (res.ok) {
+        input.value = '';
+        btn.textContent = '\u2713 You\'re on the list!';
+        btn.style.background = 'var(--teal)';
+      } else {
+        const data = await res.json();
+        btn.textContent = data.error || 'Something went wrong';
+        btn.style.background = 'var(--pulse-red)';
+      }
+    } catch {
+      btn.textContent = 'Network error — try again';
+      btn.style.background = 'var(--pulse-red)';
+    }
+
+    btn.disabled = false;
     setTimeout(() => {
       btn.textContent = 'Get Early Access';
+      btn.style.background = 'var(--teal)';
     }, 3000);
   };
 
