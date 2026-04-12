@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch health score
-    const { data: healthScore, error: healthError } = await supabase
+    const { data: healthScore } = await supabase
       .from('client_health_scores')
       .select('overall_score, financial_score, relationship_score, delivery_score, engagement_score, computed_at')
       .eq('client_id', clientId)
@@ -177,6 +177,7 @@ export async function POST(request: NextRequest) {
       .order('meeting_date', { ascending: false })
       .limit(5);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recentMeetings = (meetings || []).map((m: any) => ({
       id: m.id,
       title: m.title,
@@ -194,6 +195,7 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(10);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recentAlerts = (alerts || []).map((a: any) => ({
       id: a.id,
       title: a.title,

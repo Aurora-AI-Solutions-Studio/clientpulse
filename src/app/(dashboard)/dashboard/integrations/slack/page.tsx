@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle, X, Zap } from 'lucide-react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -35,7 +34,7 @@ interface SlackSettings {
 
 export default function SlackIntegrationPage() {
   const [settings, setSettings] = useState<SlackSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [webhookInput, setWebhookInput] = useState('');
   const [channelInput, setChannelInput] = useState('');
@@ -283,7 +282,7 @@ export default function SlackIntegrationPage() {
                   <DialogHeader>
                     <DialogTitle className="text-white">Disconnect Slack?</DialogTitle>
                     <DialogDescription className="text-[#7a88a8]">
-                      You won't receive Slack notifications once disconnected. You can reconnect anytime.
+                      You won&apos;t receive Slack notifications once disconnected. You can reconnect anytime.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="flex gap-2 justify-end">

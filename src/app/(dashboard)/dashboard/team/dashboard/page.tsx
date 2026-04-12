@@ -6,7 +6,6 @@ import {
   Briefcase,
   AlertTriangle,
   TrendingUp,
-  MoreVertical,
 } from 'lucide-react';
 import {
   Card,
@@ -24,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -46,7 +45,7 @@ export default function TeamDashboardPage() {
   const [members, setMembers] = useState<TeamMemberSummary[]>([]);
   const [clients, setClients] = useState<ClientWithAssignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<ClientWithAssignment | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');

@@ -325,7 +325,7 @@ export class RecursiveLearningAgent {
       topNegativeCorrelators: PredictiveSignal[];
       mostCommonSignals: PredictiveSignal[];
     },
-    outcomes: ClientOutcome[]
+    _outcomes: ClientOutcome[]
   ): {
     current: SignalWeights;
     recommended: SignalWeights;

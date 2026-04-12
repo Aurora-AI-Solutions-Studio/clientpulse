@@ -8,14 +8,10 @@ import {
   DollarSign,
   AlertTriangle,
   CheckCircle2,
-  ChevronDown,
 } from 'lucide-react';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -53,7 +49,7 @@ export default function OutcomesPage() {
   const [outcomes, setOutcomes] = useState<ClientOutcome[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filterType, setFilterType] = useState<string>('all');
   const [form, setForm] = useState<OutcomeFormData>({
@@ -283,8 +279,8 @@ export default function OutcomesPage() {
                 </label>
                 <Select
                   value={form.outcomeType}
-                  onValueChange={(value: any) =>
-                    setForm({ ...form, outcomeType: value })
+                  onValueChange={(value: string) =>
+                    setForm({ ...form, outcomeType: value as OutcomeFormData['outcomeType'] })
                   }
                 >
                   <SelectTrigger className="bg-[#1a1f35] border-[#2a3050] text-white">

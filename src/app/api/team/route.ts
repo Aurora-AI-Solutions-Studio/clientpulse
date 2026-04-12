@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Map to response format
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const teamMembers = (members || []).map((m: any) => ({
       id: m.id,
       userId: m.user_id,

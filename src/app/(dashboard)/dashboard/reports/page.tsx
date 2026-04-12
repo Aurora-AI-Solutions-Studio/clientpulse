@@ -18,7 +18,7 @@ export default function ReportsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [report, setReport] = useState<ClientReportData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

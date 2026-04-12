@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { LearningDashboardData } from '@/types/learning';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Compute accuracy metrics
-    let totalPredictions = feedbackData?.length || 0;
+    const totalPredictions = feedbackData?.length || 0;
     let correctPredictions = 0;
     let falsePositives = 0;
     let falseNegatives = 0;
@@ -88,9 +88,9 @@ export async function GET(request: NextRequest) {
 
     const currentAccuracy =
       totalPredictions > 0 ? correctPredictions / totalPredictions : 0;
-    const falsePositiveRate =
+    const _falsePositiveRate =
       totalPredictions > 0 ? falsePositives / totalPredictions : 0;
-    const falseNegativeRate =
+    const _falseNegativeRate =
       totalPredictions > 0 ? falseNegatives / totalPredictions : 0;
 
     // Get recent outcomes
@@ -126,6 +126,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recentOutcomes = (outcomes || []).map((outcome: any) => ({
       id: outcome.id,
       clientId: outcome.client_id,
@@ -160,6 +161,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const accuracyTrend = (snapshots || []).map((snapshot: any) => ({
       date: snapshot.snapshot_date,
       accuracy: snapshot.accuracy_rate,

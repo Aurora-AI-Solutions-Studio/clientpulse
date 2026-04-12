@@ -14,9 +14,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -55,7 +52,7 @@ export default function TeamPage() {
   const [members, setMembers] = useState<AgencyMember[]>([]);
   const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
@@ -65,7 +62,7 @@ export default function TeamPage() {
     email: '',
     role: 'manager',
   });
-  const [changedRoles, setChangedRoles] = useState<Record<string, 'owner' | 'manager' | 'viewer'>>({});
+  const [, setChangedRoles] = useState<Record<string, 'owner' | 'manager' | 'viewer'>>({});
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -274,6 +271,7 @@ export default function TeamPage() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getInvitationStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
@@ -355,8 +353,8 @@ export default function TeamPage() {
                 </label>
                 <Select
                   value={inviteForm.role}
-                  onValueChange={(value: any) =>
-                    setInviteForm({ ...inviteForm, role: value })
+                  onValueChange={(value: string) =>
+                    setInviteForm({ ...inviteForm, role: value as InviteFormData['role'] })
                   }
                 >
                   <SelectTrigger className="bg-[#1a1f35] border-[#2a3050] text-white">
@@ -713,7 +711,7 @@ function MemberCard({
   onChangeRole,
   onRemove,
   getInitials,
-  getRoleColor,
+  getRoleColor: _getRoleColor,
 }: MemberCardProps) {
   return (
     <Card className="border-[#2a3050] hover:border-[#3a4060] transition-colors">
@@ -735,7 +733,7 @@ function MemberCard({
           <div className="flex items-center gap-3">
             <Select
               value={member.role}
-              onValueChange={(value: any) => onChangeRole(member.id, value)}
+              onValueChange={(value: string) => onChangeRole(member.id, value as 'owner' | 'manager' | 'viewer')}
             >
               <SelectTrigger className="w-32 bg-[#1a1f35] border-[#2a3050] text-white">
                 <SelectValue />

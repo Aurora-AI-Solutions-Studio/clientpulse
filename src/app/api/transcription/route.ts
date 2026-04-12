@@ -121,7 +121,7 @@ async function transcribeWithCloud(
   audioBuffer: Buffer,
   filename: string
 ) {
-  const agent = new WhisperTranscriptionAgent();
+  const _agent = new WhisperTranscriptionAgent();
 
   // Save buffer to temporary location for transcription
   // Note: The WhisperTranscriptionAgent expects a URL, but we'll need to create
@@ -199,6 +199,7 @@ async function transcribeWithLocal(
 /**
  * Build segments from transcription result
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildSegments(result: any) {
   const segments = [];
 
@@ -209,6 +210,7 @@ function buildSegments(result: any) {
 
   if (result.words && Array.isArray(result.words)) {
     // Parse word-level timing if available
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let currentSegment: any = null;
     for (const word of result.words) {
       if (currentSegment === null) {

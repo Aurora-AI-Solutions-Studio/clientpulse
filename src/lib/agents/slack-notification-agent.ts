@@ -166,7 +166,7 @@ export class SlackNotificationAgent {
     const deltaEmoji = n.weekDelta > 0 ? ':arrow_up:' : n.weekDelta < 0 ? ':arrow_down:' : '';
 
     const criticalEmoji = n.critical > 0 ? ':exclamation:' : '';
-    const atRiskEmoji = n.atRisk > 0 ? ':warning:' : '';
+    const _atRiskEmoji = n.atRisk > 0 ? ':warning:' : '';
 
     const blocks: SlackBlock[] = [
       {
@@ -267,7 +267,7 @@ export class SlackNotificationAgent {
       low: ':white_check_mark:',
     };
 
-    const riskColor: Record<string, string> = {
+    const _riskColor: Record<string, string> = {
       critical: '#c82333',
       high: '#ff9900',
       moderate: '#ffb81c',

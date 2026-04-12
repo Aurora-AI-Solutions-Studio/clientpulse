@@ -73,6 +73,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mapped = (outcomes || []).map((outcome: any) => ({
       id: outcome.id,
       clientId: outcome.client_id,

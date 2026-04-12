@@ -141,6 +141,7 @@ export async function PATCH(
     const { notes, reason } = body;
 
     // Only allow updating notes and reason
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updates: Record<string, any> = {};
     if (notes !== undefined) {
       updates.notes = notes;

@@ -8,7 +8,7 @@ import {
   SignalWeights,
 } from '@/types/learning';
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Map database outcomes to typed format
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const outcomes: ClientOutcome[] = (outcomesData || []).map((outcome: any) => ({
       id: outcome.id,
       clientId: outcome.client_id,
