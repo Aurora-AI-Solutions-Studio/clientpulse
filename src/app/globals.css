@@ -8,6 +8,24 @@
   --color-accent: #e74c3c;
   --color-pulse-red: #e74c3c;
 
+  /* Aurora Palette (landing page) */
+  --deep: #06090f;
+  --polar: #0c1220;
+  --twilight: #141e33;
+  --color-surface-hover: #223052;
+  --teal: #38e8c8;
+  --teal-glow: rgba(56, 232, 200, 0.15);
+  --teal-subtle: rgba(56, 232, 200, 0.08);
+  --aurora-blue: #4cc9f0;
+  --aurora-purple: #b388eb;
+  --aurora-pink: #e87fa5;
+  --reforge-gold: #f0c84c;
+  --border-teal: rgba(56, 232, 200, 0.12);
+  --border-subtle: rgba(122, 136, 168, 0.12);
+  --text-primary: #e8ecf5;
+  --text-secondary: #a0adc4;
+  --text-dim: #4a5672;
+
   /* Secondary Colors */
   --color-muted: #7a88a8;
   --color-border: #1a2540;
@@ -15,7 +33,7 @@
   --color-surface-light: #1a2540;
 
   /* Aurora Gradient */
-  --gradient-aurora: linear-gradient(90deg, #38e8c8, #4cc9f0, #7b8ff0, #b388eb, #e87fa5);
+  --gradient-aurora: linear-gradient(135deg, #38e8c8, #4cc9f0, #7b8ff0, #b388eb, #e87fa5);
 
   /* Fonts */
   --font-playfair: 'Playfair Display', serif;
@@ -266,6 +284,21 @@ textarea::placeholder {
   }
 }
 
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+}
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @layer utilities {
   .animate-fade-in {
     animation: fadeIn 300ms ease-in-out;
@@ -285,5 +318,9 @@ textarea::placeholder {
 
   .text-balance {
     text-wrap: balance;
+  }
+
+  .animate-dot-pulse {
+    animation: dot-pulse 2s ease-in-out infinite;
   }
 }
