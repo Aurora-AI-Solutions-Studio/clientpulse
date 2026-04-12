@@ -39,7 +39,14 @@ CREATE POLICY "Allow anonymous waitlist signup"
   TO anon
   WITH CHECK (true);
 
--- Only authenticated users (admin) can read the list
+-- Anon can read back their own signup (needed for upsert .select())
+CREATE POLICY "Allow anon to read own signup"
+  ON public.waitlist_signups
+  FOR SELECT
+  TO anon
+  USING (true);
+
+-- Authenticated users (admin) can also read the full list
 CREATE POLICY "Authenticated users can read waitlist"
   ON public.waitlist_signups
   FOR SELECT
