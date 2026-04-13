@@ -618,4 +618,4 @@ See `/docs/SECURITY.md` for encryption, access control, audit logging, and incid
 **Next Scheduled Review:** July 10, 2026  
 **Classification:** Public (no confidential data)
 
-For the latest version, visit: https://clientpulse.ai/model-card
+For the latest version, visit: https://clientpulse.helloaurora.ai/model-card

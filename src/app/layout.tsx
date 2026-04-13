@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   authors: [
     {
       name: 'Aurora AI Solutions Studio',
-      url: 'https://aurorastudio.ai',
+      url: 'https://helloaurora.ai',
     },
   ],
   creator: 'Aurora AI Solutions Studio UG (haftungsbeschränkt)',
@@ -42,14 +42,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: process.env.NEXT_PUBLIC_APP_URL || 'https://clientpulse.ai',
+    url: process.env.NEXT_PUBLIC_APP_URL || 'https://clientpulse.helloaurora.ai',
     siteName: 'ClientPulse',
     title: 'ClientPulse — AI Client Health Intelligence for Agencies',
     description:
       'Monitor client health, identify risks, and act before churn happens.',
     images: [
       {
-        url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://clientpulse.ai'}/og-image.png`,
+        url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://clientpulse.helloaurora.ai'}/og-image.png`,
         width: 1200,
         height: 630,
         alt: 'ClientPulse',
