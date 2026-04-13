@@ -11,7 +11,7 @@
  * 7. Score range validation (0-100)
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EngagementScoringAgent } from '@/lib/agents/engagement-scoring-agent';
 import {
   ClientCalendarMetrics,

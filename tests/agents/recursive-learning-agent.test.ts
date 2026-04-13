@@ -836,7 +836,7 @@ describe('RecursiveLearningAgent', () => {
         id: `o${i}`,
         clientId: `c${i}`,
         agencyId: 'agency1',
-        outcomeType: 'renewed',
+        outcomeType: 'renewed' as const,
         outcomeDate: '2025-01-01',
         createdAt: '2025-01-01',
       }));
@@ -845,7 +845,7 @@ describe('RecursiveLearningAgent', () => {
         id: `o${i}`,
         clientId: `c${i}`,
         agencyId: 'agency1',
-        outcomeType: 'renewed',
+        outcomeType: 'renewed' as const,
         outcomeDate: '2025-01-01',
         createdAt: '2025-01-01',
       }));
@@ -862,7 +862,7 @@ describe('RecursiveLearningAgent', () => {
         id: `o${i}`,
         clientId: `c${i}`,
         agencyId: 'agency1',
-        outcomeType: 'renewed',
+        outcomeType: 'renewed' as const,
         outcomeDate: '2025-01-01',
         createdAt: '2025-01-01',
       }));
