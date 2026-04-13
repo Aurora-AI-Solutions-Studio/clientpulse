@@ -187,6 +187,18 @@ export default function Home() {
     alertCircle: (size = 14, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     ),
+    // Link / Connection
+    link2: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    ),
+    // Eye / Visibility
+    eye: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    ),
+    // Bar chart (already have barChart but adding as chart variant)
+    barChart3: (size = 22, color = 'currentColor') => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+    ),
   };
 
   return (
@@ -340,7 +352,7 @@ export default function Home() {
               lineHeight: 1.7,
             }}
           >
-            ClientPulse combines your Stripe data, meeting intelligence, and engagement patterns into one Client Health Score — and predicts churn 60 days before it happens.
+            ClientPulse combines your Stripe data, meeting recordings, email patterns, and calendar signals into one Client Health Score per account. Get a Monday Brief with exactly who needs attention and what to do about it.
           </p>
 
           <form
@@ -491,118 +503,82 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ═══ DAY ONE VALUE — STRIPE FIRST WEDGE ═══ */}
+      {/* ═══ THE WORKFLOW ═══ */}
       <section id="how-it-works" className="py-[120px] max-md:py-[80px]" style={{ background: 'var(--polar)' }}>
         <div className="max-w-[1140px] mx-auto px-6">
-          <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4" style={{ color: 'var(--teal)' }}>
-            Value on Day One
+          <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4 text-center" style={{ color: 'var(--teal)' }}>
+            The Workflow
           </div>
           <h2
-            className="reveal font-playfair font-bold leading-[1.2] mb-5"
+            className="reveal font-playfair font-bold leading-[1.2] mb-5 text-center"
             style={{ fontSize: 'clamp(28px, 3.5vw, 42px)', letterSpacing: '-0.01em' }}
           >
-            Connect Stripe. See your portfolio health<br />in under 5 minutes.
+            Four workspaces. One morning routine.
           </h2>
-          <p className="reveal text-[17px] max-w-[640px] font-light leading-[1.7]" style={{ color: 'var(--text-secondary)' }}>
-            No complex setup. One OAuth click to Stripe delivers immediate financial intelligence. Each additional data source you connect makes the score smarter — but isn&apos;t required for value.
+          <p className="reveal text-[17px] max-w-[640px] font-light leading-[1.7] text-center mx-auto" style={{ color: 'var(--text-secondary)' }}>
+            ClientPulse turns scattered signals into a daily operating rhythm. Open it Monday morning, and in 5 minutes you know exactly where every client stands.
           </p>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mt-14">
-            {/* Steps */}
-            <div className="flex flex-col gap-7">
-              {[
-                { num: '1', title: 'Connect Stripe', desc: 'One click. Instantly see which clients are growing vs. shrinking, payment patterns that signal trouble, and revenue concentration risk.' },
-                { num: '2', title: 'Get your first Health Scores', desc: "Financial signals alone deliver 30% of the composite score — and it's the 30% agency owners care about most because it's tied to cash flow." },
-                { num: '3', title: 'Receive your Monday Brief', desc: 'Every Monday morning: "3 clients healthy, 1 at risk, 1 critical. Here\'s what to do." The email that replaces your spreadsheet.' },
-                { num: '4', title: 'Enrich over time', desc: "Add Google Calendar, Gmail, Zoom, Slack. Each connector sharpens the score. After 50+ clients, the system knows YOUR agency's specific churn patterns." },
-              ].map((step, i) => (
-                <div key={i} className="reveal flex gap-5 items-start">
-                  <div
-                    className="w-10 h-10 min-w-[40px] rounded-[10px] flex items-center justify-center font-bold text-base"
-                    style={{
-                      background: 'var(--teal-subtle)',
-                      border: '1px solid var(--border-teal)',
-                      color: 'var(--teal)',
-                    }}
-                  >
-                    {step.num}
-                  </div>
-                  <div>
-                    <h4 className="text-base font-semibold mb-1">{step.title}</h4>
-                    <p className="text-sm leading-relaxed" style={{ color: 'var(--color-muted)' }}>{step.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* Workflow Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-16 relative">
+            {/* Connectors between cards */}
+            <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--border-subtle)] to-transparent pointer-events-none" style={{ width: '100%' }} />
 
-            {/* Mock Dashboard */}
-            <div
-              className="reveal p-10 rounded-2xl relative overflow-hidden"
-              style={{
-                background: 'var(--twilight)',
-                border: '1px solid var(--border-subtle)',
-              }}
-            >
+            {[
+              {
+                step: 'Connect',
+                icon: Icon.link2(28, '#4cc9f0'),
+                color: '#4cc9f0',
+                title: 'Plug in your tools. Once.',
+                desc: "Connect your agency's Stripe account and you're live — partial Health Scores start building immediately from financial signals alone. Add Google Calendar, Gmail, and Zoom when you're ready, and the score gets smarter with every new data source.",
+              },
+              {
+                step: 'Monitor',
+                icon: Icon.eye(28, '#38e8c8'),
+                color: '#38e8c8',
+                title: 'See your entire portfolio in one view.',
+                desc: 'Health Scores (0-100) across four signal categories. Every Monday, receive a brief that tells you exactly which clients are healthy, which are at risk, and which need immediate action.',
+              },
+              {
+                step: 'Act',
+                icon: Icon.zap(28, '#e74c3c'),
+                color: '#e74c3c',
+                title: "Don't just know the problem. Solve it.",
+                desc: "When a client is at risk, ClientPulse prepares action plans. Draft check-in emails, QBR suggestions, upsell talking points — everything ready for your review and send.",
+              },
+              {
+                step: 'Review',
+                icon: Icon.barChart3(28, '#b388eb'),
+                color: '#b388eb',
+                title: 'Track what\'s working. Prove your value.',
+                desc: 'Monitor historical trends, track prediction accuracy, and generate portfolio health reports. Understand which clients are growing, shrinking, and why — and prove the impact of retention.',
+              },
+            ].map((card, i) => (
               <div
-                className="absolute top-0 right-0 w-[200px] h-[200px] pointer-events-none"
-                style={{ background: 'radial-gradient(circle, rgba(56, 232, 200, 0.06), transparent 70%)' }}
-              />
-              <div className="text-[11px] font-semibold tracking-[0.1em] uppercase mb-6" style={{ color: 'var(--text-dim)' }}>
-                Portfolio Health — Monday Brief Preview
-              </div>
-
-              {[
-                { initials: 'AC', name: 'Acme Creative', rev: '$8,200/mo · 14 months', score: 89, color: 'var(--teal)', bg: 'rgba(56, 232, 200, 0.15)', width: '89%', class: 'high' },
-                { initials: 'BV', name: 'BrightVista Media', rev: '$5,400/mo · 8 months', score: 62, color: 'var(--reforge-gold)', bg: 'rgba(240, 200, 76, 0.15)', width: '62%', class: 'mid' },
-                { initials: 'NX', name: 'NexGen Solutions', rev: '$6,100/mo · 11 months', score: 34, color: 'var(--pulse-red)', bg: 'rgba(231, 76, 60, 0.15)', width: '34%', class: 'low' },
-              ].map((client, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-4 rounded-[10px] mb-3"
-                  style={{
-                    background: 'var(--color-surface-light)',
-                    border: '1px solid var(--border-subtle)',
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold"
-                      style={{ background: client.bg, color: client.color }}
-                    >
-                      {client.initials}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold">{client.name}</div>
-                      <div className="text-xs" style={{ color: 'var(--text-dim)' }}>{client.rev}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-[60px] h-[6px] rounded-full overflow-hidden" style={{ background: 'var(--color-surface-hover)' }}>
-                      <div className="h-full rounded-full transition-all duration-700" style={{ width: client.width, background: client.color }} />
-                    </div>
-                    <span className="text-sm font-bold min-w-[28px] text-right" style={{ color: client.color }}>
-                      {client.score}
-                    </span>
-                  </div>
-                </div>
-              ))}
-
-              <div
-                className="mt-5 p-[14px_18px] rounded-[10px]"
+                key={i}
+                className="reveal p-8 rounded-2xl relative transition-all hover:-translate-y-[2px]"
                 style={{
-                  background: 'rgba(231, 76, 60, 0.08)',
-                  border: '1px solid rgba(231, 76, 60, 0.2)',
+                  background: 'var(--twilight)',
+                  border: '1px solid var(--border-subtle)',
                 }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = card.color)}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
               >
-                <div className="text-xs font-semibold mb-[6px] flex items-center gap-[6px]" style={{ color: 'var(--pulse-red)' }}>
-                  {Icon.alertCircle(14, 'var(--pulse-red)')} ACTION REQUIRED
+                <div className="flex items-center gap-3 mb-5">
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center"
+                    style={{ background: `${card.color}15` }}
+                  >
+                    {card.icon}
+                  </div>
+                  <div className="text-[12px] font-bold uppercase tracking-wider" style={{ color: card.color }}>
+                    {card.step}
+                  </div>
                 </div>
-                <div className="text-[13px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                  NexGen Solutions — 73% churn probability. Late payments (2 consecutive), no meetings in 3 weeks, declining email responsiveness.{' '}
-                  <span className="font-semibold" style={{ color: 'var(--teal)' }}>Draft check-in email ready →</span>
-                </div>
+                <h3 className="text-base font-semibold mb-3">{card.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--color-muted)' }}>{card.desc}</p>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -831,6 +807,56 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ═══ COMPETITIVE COMPARISON ═══ */}
+      <section className="py-[120px] max-md:py-[80px]" style={{ background: 'var(--polar)' }}>
+        <div className="max-w-[1140px] mx-auto px-6">
+          <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4 text-center" style={{ color: 'var(--teal)' }}>
+            Why Not Just Use...
+          </div>
+          <h2
+            className="reveal font-playfair font-bold leading-[1.2] mb-5 text-center"
+            style={{ fontSize: 'clamp(28px, 3.5vw, 42px)', letterSpacing: '-0.01em' }}
+          >
+            &ldquo;We already track clients in<br />[spreadsheet / CRM / gut feeling].&rdquo;
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-14">
+            {[
+              {
+                title: 'vs. Spreadsheets',
+                desc: 'Your spreadsheet can\'t process a meeting recording, detect sentiment shifts, cross-reference payment patterns, and draft a check-in email. ClientPulse can. Before you finish your first coffee.',
+              },
+              {
+                title: 'vs. ChurnZero / Gainsight / Vitally',
+                desc: 'Built for SaaS companies tracking product usage. You\'re an agency — you don\'t have product usage data. And they cost $26K–$40K/year. ClientPulse is built for agencies at 1/10th the price.',
+              },
+              {
+                title: 'vs. CRM (HubSpot, Salesforce)',
+                desc: 'CRMs track contacts and deals. They don\'t track ongoing client health, meeting sentiment, or financial risk signals. ClientPulse sits on top of your CRM, not instead of it.',
+              },
+              {
+                title: 'vs. Gong / Fireflies',
+                desc: 'Meeting intelligence tools built for sales prospecting, not client retention. They don\'t combine financial signals, delivery data, and engagement patterns into a predictive Health Score.',
+              },
+            ].map((card, i) => (
+              <div
+                key={i}
+                className="reveal p-8 rounded-2xl transition-all hover:-translate-y-[2px]"
+                style={{
+                  background: 'var(--twilight)',
+                  border: '1px solid var(--border-subtle)',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-teal)')}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
+              >
+                <h3 className="text-base font-semibold mb-3">{card.title}</h3>
+                <p className="text-sm leading-[1.65]" style={{ color: 'var(--color-muted)' }}>{card.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ═══ WHY CLIENTPULSE ═══ */}
       <section className="py-[120px] max-md:py-[80px] text-center">
         <div className="max-w-[1140px] mx-auto px-6">
@@ -988,18 +1014,36 @@ export default function Home() {
                 tier: 'Starter',
                 featured: false,
                 desc: 'For small agencies managing a handful of key accounts.',
+                workflows: {
+                  'CONNECT': ['Stripe financial sync'],
+                  'MONITOR': ['Up to 5 clients', 'Client Health Scores', 'Monday Client Brief'],
+                  'ACT': [],
+                  'REVIEW': ['Churn prediction alerts'],
+                },
                 features: ['Up to 5 clients', 'Client Health Scores', 'Monday Client Brief', 'Stripe financial sync', 'Churn prediction alerts', 'Email support'],
               },
               {
                 tier: 'Pro',
                 featured: true,
                 desc: "For growing agencies that can't afford to lose a single client.",
+                workflows: {
+                  'CONNECT': ['Stripe financial sync', 'Calendar & email sentiment sync'],
+                  'MONITOR': ['Up to 20 clients', 'Everything in Starter'],
+                  'ACT': ['Action Proposal Engine', 'Meeting Intelligence (Zoom, Google Meet)', 'Upsell Detection Agent'],
+                  'REVIEW': ['Historical trends & accuracy tracking'],
+                },
                 features: ['Up to 20 clients', 'Everything in Starter', 'Meeting Intelligence (Zoom, Google Meet)', 'Upsell Detection Agent', 'Action Proposal Engine', 'Calendar & email sentiment sync', 'Priority support'],
               },
               {
                 tier: 'Agency',
                 featured: false,
                 desc: 'For established agencies that treat client retention as a competitive advantage.',
+                workflows: {
+                  'CONNECT': ['Stripe financial sync', 'Calendar & email sentiment sync', 'Multi-data connectors'],
+                  'MONITOR': ['Unlimited clients', 'Team dashboard & multi-user'],
+                  'ACT': ['Everything in Pro', 'Slack bot integration'],
+                  'REVIEW': ['White-label PDF reports', 'Recursive Learning insights', 'Portfolio analytics'],
+                },
                 features: ['Unlimited clients', 'Everything in Pro', 'Team dashboard & multi-user', 'White-label PDF reports', 'Recursive Learning insights', 'Slack bot integration', 'API access', 'Dedicated onboarding'],
               },
             ].map((plan, i) => (
@@ -1160,18 +1204,27 @@ export default function Home() {
       </section>
 
       {/* ═══ CROSS-SELL BANNER ═══ */}
-      <div className="py-5" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+      <section className="py-[80px]" style={{ background: 'linear-gradient(to bottom, transparent, rgba(56, 232, 200, 0.02))' }}>
         <div className="max-w-[1140px] mx-auto px-6">
-          <div className="reveal text-center text-sm" style={{ color: 'var(--color-muted)' }}>
-            <span className="inline-flex items-center align-middle" style={{ color: 'var(--reforge-gold)' }}>{Icon.refresh(16, 'var(--reforge-gold)')}</span>{' '}
-            <strong style={{ color: 'var(--text-secondary)' }}>Also from Aurora:</strong>{' '}
-            <a href="https://reforge.helloaurora.ai" className="no-underline" style={{ color: 'var(--teal)' }}>
-              ReForge
-            </a>{' '}
-            — AI content intelligence for agencies. Win clients with better content. Keep them with ClientPulse.
+          <div className="text-center">
+            <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4" style={{ color: 'var(--reforge-gold)' }}>
+              <span className="inline-flex items-center align-middle" style={{ marginRight: '8px' }}>{Icon.refresh(16, 'var(--reforge-gold)')}</span>
+              Also from Aurora
+            </div>
+            <h3 className="reveal font-playfair font-bold leading-[1.2] mb-4" style={{ fontSize: 'clamp(24px, 3vw, 36px)', letterSpacing: '-0.01em' }}>
+              Creating content for clients?<br />Meet <a href="https://reforge.helloaurora.ai" className="no-underline" style={{ color: 'var(--teal)' }}>ReForge</a>.
+            </h3>
+            <p className="reveal text-base font-light leading-[1.7] max-w-[680px] mx-auto mb-8" style={{ color: 'var(--text-secondary)' }}>
+              ClientPulse tells you which clients need attention. ReForge helps you deliver the content that keeps them happy. Same workflow thinking. Same agency focus. Built to work together.
+            </p>
+            <div className="reveal text-sm" style={{ color: 'var(--color-muted)' }}>
+              <strong style={{ color: 'var(--text-primary)' }}>ReForge:</strong> Discover → Create → Engage → Learn<br />
+              <strong style={{ color: 'var(--text-primary)' }}>ClientPulse:</strong> Connect → Monitor → Act → Review<br />
+              <strong style={{ color: 'var(--text-primary)' }}>Two products. One operating system for your agency.</strong>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* ═══ FINAL CTA ═══ */}
       <section id="waitlist" className="py-[120px] max-md:py-[80px] text-center relative">
@@ -1199,7 +1252,7 @@ export default function Home() {
             className="reveal font-playfair font-bold leading-[1.2] mb-4"
             style={{ fontSize: 'clamp(28px, 4vw, 44px)' }}
           >
-            Stop losing clients you<br />
+            Stop finding out about churn<br />
             <span
               className="bg-clip-text"
               style={{
@@ -1209,7 +1262,7 @@ export default function Home() {
                 backgroundClip: 'text',
               }}
             >
-              could have saved
+              from a cancellation email
             </span>
           </h2>
 
