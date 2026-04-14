@@ -1327,9 +1327,10 @@ export default function Home() {
               {[
                 { label: 'Aurora', href: 'https://helloaurora.ai' },
                 { label: 'ReForge', href: 'https://reforge.helloaurora.ai' },
-                { label: 'Impressum', href: '#' },
-                { label: 'Privacy', href: '#' },
-                { label: 'Terms', href: '#' },
+                { label: 'Impressum', href: 'https://helloaurora.ai/impressum' },
+                { label: 'Privacy', href: 'https://helloaurora.ai/privacy' },
+                { label: 'Terms', href: 'https://helloaurora.ai/terms' },
+                { label: 'Refund', href: 'https://helloaurora.ai/refund' },
               ].map((link, i) => (
                 <li key={i}>
                   <a
