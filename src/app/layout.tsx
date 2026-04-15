@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Playfair_Display, Outfit } from 'next/font/google';
+import { CookieConsent } from '@/components/cookie-consent';
 import './globals.css';
 
 const playfairDisplay = Playfair_Display({
@@ -74,6 +75,7 @@ export default function RootLayout({
         className={`${playfairDisplay.variable} ${outfit.variable} bg-background text-foreground antialiased`}
       >
         {children}
+        <CookieConsent />
       </body>
     </html>
   );
