@@ -12,10 +12,10 @@ const store = new Map<string, RateLimitEntry>();
 // Clean stale entries every 5 minutes
 setInterval(() => {
   const now = Date.now();
-  for (const [key, entry] of store.entries()) {
+  store.forEach((entry, key) => {
     entry.timestamps = entry.timestamps.filter((t) => now - t < 60_000);
     if (entry.timestamps.length === 0) store.delete(key);
-  }
+  });
 }, 5 * 60 * 1000);
 
 export interface RateLimitConfig {
