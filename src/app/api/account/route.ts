@@ -30,7 +30,7 @@ export async function DELETE(request: Request) {
 
     // Delete in dependency order (children before parents)
     // Use service role for cross-table deletion
-    const { createClient: createServiceClient } = await import(
+    const { createServiceClient } = await import(
       '@/lib/supabase/service'
     );
     const admin = createServiceClient();
