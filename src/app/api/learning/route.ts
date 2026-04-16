@@ -2,8 +2,13 @@ export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { LearningDashboardData } from '@/types/learning';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+  // §12.2 Rate limit: 5/min per IP — expensive AI endpoint.
+  const rl = checkRateLimit(request, 'learning', RATE_LIMITS.aiExpensive);
+  if (rl) return rl;
+
   try {
     const supabase = await createClient();
 
