@@ -58,6 +58,26 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
+    // §11.7 Idempotency guard — reject duplicate event deliveries.
+    // Stripe retries webhooks aggressively (up to 3 days). Without this, every
+    // retry would re-apply subscription mutations. event_id has a UNIQUE PK
+    // constraint in stripe_webhook_events; the duplicate INSERT throws 23505.
+    const { error: idempotencyError } = await supabase
+      .from('stripe_webhook_events')
+      .insert({ event_id: event.id, event_type: event.type });
+
+    if (idempotencyError) {
+      if (idempotencyError.code === '23505') {
+        // Already processed (or in flight). 200 so Stripe stops retrying.
+        return NextResponse.json({ received: true, idempotent: true });
+      }
+      console.error('Idempotency insert failed:', idempotencyError);
+      return NextResponse.json(
+        { error: 'Idempotency check failed' },
+        { status: 500 }
+      );
+    }
+
     // Handle different event types
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -213,6 +233,12 @@ export async function POST(request: NextRequest) {
       default:
         console.log('Unhandled event type:', event.type);
     }
+
+    // §11.7 Mark event as processed — completes the idempotency lifecycle.
+    await supabase
+      .from('stripe_webhook_events')
+      .update({ processed_at: new Date().toISOString() })
+      .eq('event_id', event.id);
 
     return NextResponse.json({ received: true });
   } catch (error) {

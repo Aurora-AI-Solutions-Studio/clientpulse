@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { MondayBriefAgent, renderBriefEmailHtml } from '@/lib/agents/monday-brief-agent';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 
 /**
  * GET /api/monday-brief
@@ -51,6 +52,10 @@ export async function GET(_request: NextRequest) {
  * Body: { send?: boolean }
  */
 export async function POST(request: NextRequest) {
+  // §12.2 Rate limit: 5/min per IP — expensive AI endpoint.
+  const rl = checkRateLimit(request, 'monday-brief', RATE_LIMITS.aiExpensive);
+  if (rl) return rl;
+
   try {
     const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();

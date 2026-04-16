@@ -5,6 +5,7 @@ export const maxDuration = 300;
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { RecursiveLearningAgent } from '@/lib/agents/recursive-learning-agent';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 import {
   ClientOutcome,
   PredictiveSignal,
@@ -21,6 +22,10 @@ import {
  * RLS is bypassed via the service-role client.
  */
 export async function POST(request: NextRequest) {
+  // §12.2 Rate limit: 5/min per IP — expensive AI endpoint.
+  const rl = checkRateLimit(request, 'cron-learning', RATE_LIMITS.aiExpensive);
+  if (rl) return rl;
+
   const secret = process.env.LEARNING_CRON_SECRET;
   if (!secret) {
     console.error('[cron/learning] LEARNING_CRON_SECRET not configured');

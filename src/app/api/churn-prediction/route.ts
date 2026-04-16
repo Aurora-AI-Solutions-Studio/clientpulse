@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { ChurnPredictionAgent, ChurnPredictionInput } from '@/lib/agents/churn-prediction-agent';
 import { SlackNotificationAgent, ChurnAlertNotification } from '@/lib/agents/slack-notification-agent';
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 
 export async function GET(_request: NextRequest) {
   try {
@@ -68,6 +69,10 @@ export async function GET(_request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // §12.2 Rate limit: 5/min per IP — expensive AI endpoint.
+  const rl = checkRateLimit(request, 'churn-prediction', RATE_LIMITS.aiExpensive);
+  if (rl) return rl;
+
   try {
     const supabase = await createClient();
 

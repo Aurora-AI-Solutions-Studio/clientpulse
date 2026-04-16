@@ -1,8 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 
 export async function GET(request: NextRequest) {
+  // §12.1 Rate limit: 10/min per IP — blocks OAuth code-replay brute forcing.
+  const rl = checkRateLimit(request, 'auth-callback', RATE_LIMITS.auth);
+  if (rl) return rl;
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const error = searchParams.get('error');

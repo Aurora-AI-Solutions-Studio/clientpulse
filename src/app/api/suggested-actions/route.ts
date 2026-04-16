@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 import {
   SuggestedActionsAgent,
   SuggestedActionsInput,
@@ -12,6 +13,10 @@ import {
  * Body: { clientId: string }
  */
 export async function POST(request: NextRequest) {
+  // §12.2 Rate limit: 5/min per IP — expensive AI endpoint.
+  const rl = checkRateLimit(request, 'suggested-actions', RATE_LIMITS.aiExpensive);
+  if (rl) return rl;
+
   try {
     const supabase = await createClient();
 

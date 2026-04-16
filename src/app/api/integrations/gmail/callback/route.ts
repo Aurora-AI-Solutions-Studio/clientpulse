@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeGmailCode } from '@/lib/agents/email-intelligence-agent';
+import { encryptToken } from '@/lib/crypto/integration-tokens';
 
 /**
  * GET /api/integrations/gmail/callback
@@ -78,8 +79,8 @@ export async function GET(request: NextRequest) {
           user_id: user.id,
           provider: 'gmail',
           status: 'connected',
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
+          access_token: encryptToken(tokens.access_token),
+          refresh_token: encryptToken(tokens.refresh_token),
           token_expires_at: new Date(
             Date.now() + tokens.expires_in * 1000
           ).toISOString(),

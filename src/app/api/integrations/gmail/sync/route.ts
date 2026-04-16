@@ -8,6 +8,7 @@ import {
   computeEmailMetrics,
 } from '@/lib/agents/email-intelligence-agent';
 import { refreshCalendarToken } from '@/lib/agents/calendar-intelligence-agent';
+import { encryptToken, decryptToken } from '@/lib/crypto/integration-tokens';
 
 /**
  * POST /api/integrations/gmail/sync
@@ -52,11 +53,11 @@ export async function POST(_request: NextRequest) {
     }
 
     // Refresh token if expired (same Google OAuth, same refresh function)
-    let accessToken = connection.access_token;
+    let accessToken = connection.access_token ? decryptToken(connection.access_token) : null;
     if (connection.token_expires_at && new Date(connection.token_expires_at) <= new Date()) {
       try {
         const refreshed = await refreshCalendarToken(
-          connection.refresh_token!,
+          decryptToken(connection.refresh_token!),
           process.env.GOOGLE_CLIENT_ID!,
           process.env.GOOGLE_CLIENT_SECRET!
         );
@@ -64,7 +65,7 @@ export async function POST(_request: NextRequest) {
         await supabase
           .from('integration_connections')
           .update({
-            access_token: refreshed.access_token,
+            access_token: encryptToken(refreshed.access_token),
             token_expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
             updated_at: new Date().toISOString(),
           })

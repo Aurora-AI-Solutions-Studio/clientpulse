@@ -5,6 +5,7 @@ export const maxDuration = 300;
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { MondayBriefAgent, renderBriefEmailHtml } from '@/lib/agents/monday-brief-agent';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 
 /**
  * POST /api/cron/monday-brief
@@ -16,6 +17,10 @@ import { MondayBriefAgent, renderBriefEmailHtml } from '@/lib/agents/monday-brie
  * emails the owner via Resend. RLS is bypassed via the service-role client.
  */
 export async function POST(request: NextRequest) {
+  // §12.2 Rate limit: 5/min per IP — expensive AI endpoint.
+  const rl = checkRateLimit(request, 'cron-monday-brief', RATE_LIMITS.aiExpensive);
+  if (rl) return rl;
+
   const secret = process.env.MONDAY_BRIEF_CRON_SECRET;
   if (!secret) {
     console.error('[cron/monday-brief] MONDAY_BRIEF_CRON_SECRET not configured');

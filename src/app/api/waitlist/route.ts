@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 
 // Lazy-initialized Supabase client (avoids build-time env var errors)
 let _supabase: SupabaseClient | null = null;
@@ -14,6 +15,10 @@ function getSupabase() {
 }
 
 export async function POST(request: NextRequest) {
+  // §12.1 Rate limit: 10/min per IP — prevents email enumeration + spam.
+  const rl = checkRateLimit(request, 'waitlist', RATE_LIMITS.auth);
+  if (rl) return rl;
+
   try {
     const body = await request.json();
     const { email, source, utm_source, utm_medium, utm_campaign } = body;

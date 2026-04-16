@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCalendarCode } from '@/lib/agents/calendar-intelligence-agent';
+import { encryptToken } from '@/lib/crypto/integration-tokens';
 
 /**
  * GET /api/integrations/calendar/callback
@@ -82,8 +83,8 @@ export async function GET(request: NextRequest) {
           user_id: user.id,
           provider: 'google_calendar',
           status: 'connected',
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
+          access_token: encryptToken(tokens.access_token),
+          refresh_token: encryptToken(tokens.refresh_token),
           token_expires_at: new Date(
             Date.now() + tokens.expires_in * 1000
           ).toISOString(),

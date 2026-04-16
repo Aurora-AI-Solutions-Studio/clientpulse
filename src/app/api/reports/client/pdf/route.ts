@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import PDFDocument from 'pdfkit';
 import { ClientReportData } from '../route';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 
 // pdfkit supports moveDown in text options at runtime but @types/pdfkit doesn't declare it
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -14,6 +15,10 @@ type PdfTextOpts = PDFKit.Mixins.TextOptions & Record<string, any>;
  * Query: { clientId: string }
  */
 export async function GET(request: NextRequest) {
+  // §12.2 Rate limit: 5/min per IP — expensive AI endpoint.
+  const rl = checkRateLimit(request, 'reports-client-pdf', RATE_LIMITS.aiExpensive);
+  if (rl) return rl;
+
   try {
     const supabase = await createClient();
 

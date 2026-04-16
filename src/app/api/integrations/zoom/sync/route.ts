@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { encryptToken, decryptToken } from '@/lib/crypto/integration-tokens';
 import {
   fetchZoomMeetings,
   fetchZoomRecordings,
@@ -52,11 +53,11 @@ export async function POST(_request: NextRequest) {
     }
 
     // Refresh token if expired
-    let accessToken = connection.access_token;
+    let accessToken = connection.access_token ? decryptToken(connection.access_token) : null;
     if (connection.token_expires_at && new Date(connection.token_expires_at) <= new Date()) {
       try {
         const refreshed = await refreshZoomToken(
-          connection.refresh_token!,
+          decryptToken(connection.refresh_token!),
           process.env.ZOOM_CLIENT_ID!,
           process.env.ZOOM_CLIENT_SECRET!
         );
@@ -66,8 +67,8 @@ export async function POST(_request: NextRequest) {
         await supabase
           .from('integration_connections')
           .update({
-            access_token: refreshed.access_token,
-            refresh_token: refreshed.refresh_token,
+            access_token: encryptToken(refreshed.access_token),
+            refresh_token: encryptToken(refreshed.refresh_token),
             token_expires_at: new Date(
               Date.now() + refreshed.expires_in * 1000
             ).toISOString(),
