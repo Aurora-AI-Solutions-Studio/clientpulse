@@ -98,7 +98,16 @@ Ensure actions are specific: "Schedule QBR with finance team to review ROI" not 
       });
 
       const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-      const parsed = JSON.parse(responseText);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let parsed: any = [];
+      try {
+        parsed = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[suggested-actions-agent] JSON.parse failed:', {
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+          responseTextPreview: responseText.slice(0, 500),
+        });
+      }
 
       // Ensure parsed is an array
       const actions = Array.isArray(parsed) ? parsed : [];
