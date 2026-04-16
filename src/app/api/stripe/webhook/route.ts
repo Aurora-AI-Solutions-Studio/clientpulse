@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { getPlanByPriceId } from '@/lib/stripe-config';
 
 // Store raw body for signature verification
@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
-
+    const supabase = createServiceClient();
+    
     // §11.7 Idempotency guard — reject duplicate event deliveries.
     // Stripe retries webhooks aggressively (up to 3 days). Without this, every
     // retry would re-apply subscription mutations. event_id has a UNIQUE PK
