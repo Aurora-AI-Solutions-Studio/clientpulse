@@ -115,7 +115,16 @@ Respond with ONLY valid JSON (no markdown) in this exact format:
       const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
 
       // Parse JSON response
-      const parsed = JSON.parse(responseText);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let parsed: any = {};
+      try {
+        parsed = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[churn-prediction-agent] JSON.parse failed:', {
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+          responseTextPreview: responseText.slice(0, 500),
+        });
+      }
 
       const suggestedActions: SuggestedAction[] = (parsed.suggestedActions || []).map(
         (action: unknown) => {
@@ -199,7 +208,16 @@ Respond with ONLY valid JSON (no markdown):
       });
 
       const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-      const parsed = JSON.parse(responseText);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let parsed: any = {};
+      try {
+        parsed = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[churn-prediction-agent] JSON.parse failed:', {
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+          responseTextPreview: responseText.slice(0, 500),
+        });
+      }
 
       return {
         id: `save_${input.clientId}_${Date.now()}`,

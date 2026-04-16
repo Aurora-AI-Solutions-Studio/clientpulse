@@ -143,7 +143,16 @@ Ensure all fields are present even if empty arrays/null are needed. Return ONLY 
         message.content[0].type === 'text' ? message.content[0].text : '';
 
       // Parse JSON response
-      const parsed = JSON.parse(responseText);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let parsed: any = {};
+      try {
+        parsed = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[meeting-intelligence-agent] JSON.parse failed:', {
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+          responseTextPreview: responseText.slice(0, 500),
+        });
+      }
 
       return {
         sentiment_score: parsed.sentiment_score || 5,
