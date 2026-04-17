@@ -5,6 +5,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { UpsellOpportunity } from '../../types/alerts';
+import { createMessageWithRetry } from './anthropic-retry';
 
 /**
  * Input parameters for upsell detection
@@ -83,17 +84,16 @@ Respond with ONLY valid JSON array (no markdown):
 Return empty array [] if no valid upsell opportunities found.`;
 
     try {
-      const message = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-      });
+      const message = await createMessageWithRetry(
+        this.client,
+        {
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }],
+        },
+        '[upsell-detection-agent]'
+      );
 
       const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

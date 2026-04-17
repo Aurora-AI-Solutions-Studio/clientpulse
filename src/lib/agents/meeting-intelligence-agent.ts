@@ -4,6 +4,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { createMessageWithRetry } from './anthropic-retry';
 
 /**
  * Action item extracted from meeting transcript
@@ -127,16 +128,15 @@ Please analyze this meeting and respond with ONLY a valid JSON object (no markdo
 Ensure all fields are present even if empty arrays/null are needed. Return ONLY valid JSON.`;
 
     try {
-      const message = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      });
+      const message = await createMessageWithRetry(
+        this.client,
+        {
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          messages: [{ role: 'user', content: prompt }],
+        },
+        '[meeting-intelligence-agent]'
+      );
 
       // Extract text from response
       const responseText =
