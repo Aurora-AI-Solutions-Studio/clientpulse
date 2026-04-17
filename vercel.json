@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/learning",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/monday-brief",
+      "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/retention",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

@@ -5,6 +5,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { ChurnPrediction, SuggestedAction, SavePlan } from '../../types/alerts';
+import { createMessageWithRetry } from './anthropic-retry';
 
 /**
  * Input parameters for churn prediction
@@ -99,17 +100,16 @@ Respond with ONLY valid JSON (no markdown) in this exact format:
 }`;
 
     try {
-      const message = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-      });
+      const message = await createMessageWithRetry(
+        this.client,
+        {
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }],
+        },
+        '[churn-prediction-agent]'
+      );
 
       // Extract text from response
       const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
@@ -195,17 +195,16 @@ Respond with ONLY valid JSON (no markdown):
 }`;
 
     try {
-      const message = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-      });
+      const message = await createMessageWithRetry(
+        this.client,
+        {
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1500,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }],
+        },
+        '[churn-prediction-agent/save-plan]'
+      );
 
       const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
