@@ -27,6 +27,24 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()',
           },
+          {
+            // §4.4 LRA: CSP with no unsafe-eval. unsafe-inline retained for Next.js
+            // hydration scripts + Sentry SDK. Domains: Supabase (data + realtime),
+            // Stripe (checkout iframe + API), Sentry (error reporting).
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' https://js.stripe.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.sentry.io",
+              "frame-src https://js.stripe.com",
+              "worker-src blob:",
+              "object-src 'none'",
+              "base-uri 'self'",
+            ].join('; '),
+          },
         ],
       },
     ];
