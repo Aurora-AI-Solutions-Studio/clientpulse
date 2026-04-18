@@ -37,7 +37,9 @@ export class LLMProviderRegistry {
   }
 
   listProviders(): LLMProviderId[] {
-    return [...this.providers.keys()];
+    // Array.from (vs spread) so this compiles against CP's default
+    // `target` — CP's tsconfig doesn't opt into ES2015+ iteration.
+    return Array.from(this.providers.keys());
   }
 }
 
