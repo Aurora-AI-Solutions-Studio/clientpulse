@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('agency_id')
+      .select('agency_id, subscription_plan')
       .eq('id', user.id)
       .single();
 
@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     const agencyId = profile.agency_id as string;
+    const subscriptionPlan = (profile.subscription_plan as 'starter' | 'pro' | 'agency' | null) ?? 'starter';
 
     const body = await request.json();
     const { clientId } = body;
@@ -140,7 +141,8 @@ export async function POST(request: NextRequest) {
         );
         actions = getMockActions(agentInput);
       } else {
-        const agent = new SuggestedActionsAgent();
+        // Sprint 8A M1.1: pass plan so router selects the right model.
+        const agent = new SuggestedActionsAgent(subscriptionPlan);
         actions = await agent.generatePrioritizedActions(agentInput);
       }
     } catch (agentError) {

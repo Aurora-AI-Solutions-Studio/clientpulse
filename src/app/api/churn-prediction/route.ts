@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('agency_id')
+      .select('agency_id, subscription_plan')
       .eq('id', user.id)
       .single();
 
@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
     }
 
     const agencyId = profile.agency_id as string;
+    const subscriptionPlan = (profile.subscription_plan as 'starter' | 'pro' | 'agency' | null) ?? 'starter';
 
     const body = await request.json();
     const { clientId } = body;
@@ -222,8 +223,10 @@ export async function POST(request: NextRequest) {
         meetingFrequencyTrend,
       };
 
-      // Call ChurnPredictionAgent
-      const agent = new ChurnPredictionAgent();
+      // Call ChurnPredictionAgent — Sprint 8A M1.1: pass the tenant's
+      // subscription plan so the multi-model router selects the
+      // correct tier-gated model.
+      const agent = new ChurnPredictionAgent(subscriptionPlan);
       const agentPrediction = await agent.predictChurn(agentInput);
 
       prediction = agentPrediction;

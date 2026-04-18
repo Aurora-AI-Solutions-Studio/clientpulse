@@ -1,10 +1,18 @@
 /**
  * Meeting Intelligence Agent v1
- * Extracts structured intelligence from meeting transcripts using Claude API
+ *
+ * Sprint 8A M1.1: routes through the multi-model LLM client. Model
+ * selection follows the caller's subscription plan:
+ *   - starter  → gpt-4o-mini
+ *   - pro      → claude-sonnet-4-5
+ *   - agency   → claude-sonnet-4-5 (with capability-based auto-routing)
+ *
+ * Transcript analysis is tagged as `long-context` to hint the router
+ * toward models with sufficient effective context when auto-routing.
  */
-
-import Anthropic from '@anthropic-ai/sdk';
-import { createMessageWithRetry } from './anthropic-retry';
+import type { SubscriptionPlan } from '@/types/stripe';
+import { generateCompletionWithRetry } from '@/lib/llm/retry';
+import type { LLMMessage } from '@/lib/llm/types';
 
 /**
  * Action item extracted from meeting transcript
@@ -67,10 +75,16 @@ export interface MeetingIntelligenceResult {
  * MeetingIntelligenceAgent extracts structured intelligence from meeting transcripts
  */
 export class MeetingIntelligenceAgent {
-  private client: Anthropic;
+  private readonly plan: SubscriptionPlan;
 
-  constructor() {
-    this.client = new Anthropic();
+  /**
+   * @param plan - The calling tenant's subscription plan. Defaults to
+   *               'pro' so existing callers that use
+   *               `new MeetingIntelligenceAgent()` continue to select
+   *               Claude Sonnet 4.5 (the pre-M1.1 default model).
+   */
+  constructor(plan: SubscriptionPlan = 'pro') {
+    this.plan = plan;
   }
 
   /**
@@ -127,24 +141,28 @@ Please analyze this meeting and respond with ONLY a valid JSON object (no markdo
 
 Ensure all fields are present even if empty arrays/null are needed. Return ONLY valid JSON.`;
 
+    const messages: LLMMessage[] = [{ role: 'user', content: prompt }];
+
     try {
-      const message = await createMessageWithRetry(
-        this.client,
+      const response = await generateCompletionWithRetry(
         {
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
-          messages: [{ role: 'user', content: prompt }],
+          plan: this.plan,
+          request: {
+            model: 'claude-sonnet-4-5',
+            max_tokens: 2000,
+            messages,
+          },
+          routing: { capability: 'long-context', substituteOnTierMiss: true },
         },
-        '[meeting-intelligence-agent]'
+        '[meeting-intelligence-agent]',
       );
 
-      // Extract text from response
-      const responseText =
-        message.content[0].type === 'text' ? message.content[0].text : '';
+      const responseText = response.text;
 
-      // Parse JSON response
+      // Parse JSON response — propagate parse errors so callers can
+      // fall back / retry rather than silently producing defaults.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let parsed: any = {};
+      let parsed: any;
       try {
         parsed = JSON.parse(responseText);
       } catch (parseError) {
@@ -152,6 +170,11 @@ Ensure all fields are present even if empty arrays/null are needed. Return ONLY 
           error: parseError instanceof Error ? parseError.message : String(parseError),
           responseTextPreview: responseText.slice(0, 500),
         });
+        throw new Error(
+          `[meeting-intelligence-agent] Model returned non-JSON response: ${
+            parseError instanceof Error ? parseError.message : String(parseError)
+          }`,
+        );
       }
 
       return {

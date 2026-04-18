@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('agency_id')
+      .select('agency_id, subscription_plan')
       .eq('id', user.id)
       .single();
 
@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     const agencyId = profile.agency_id as string;
+    const subscriptionPlan = (profile.subscription_plan as 'starter' | 'pro' | 'agency' | null) ?? 'starter';
 
     const body = await request.json();
     const { clientId } = body;
@@ -194,9 +195,10 @@ export async function POST(request: NextRequest) {
             recentMeetingSummaries,
           };
 
-          // Call agent for real AI-powered detection
+          // Call agent for real AI-powered detection — Sprint 8A M1.1
+          // passes the tenant plan so the router selects the right model.
           try {
-            const agent = new UpsellDetectionAgent();
+            const agent = new UpsellDetectionAgent(subscriptionPlan);
             opportunities = await agent.detectUpsellOpportunities(agentInput);
           } catch (agentError) {
             console.warn('Agent detection failed:', agentError);

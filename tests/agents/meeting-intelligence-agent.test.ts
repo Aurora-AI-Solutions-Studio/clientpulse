@@ -1,17 +1,46 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MeetingIntelligenceAgent, MeetingIntelligenceResult } from '../../src/lib/agents/meeting-intelligence-agent';
 
-// Mock the Anthropic SDK
+// Sprint 8A M1.1: agents now call `generateCompletionWithRetry()`
+// from `@/lib/llm/retry`. The shim below translates the new arg/response
+// shape to the legacy Anthropic shape so existing tests keep working
+// without rewriting every assertion:
+//   - the shim calls `mockCreate(anthropicArgs)` so test-level
+//     `mockCreate.mock.calls[0][0].messages` still works
+//   - when `mockCreate` returns `{content:[{type:'text', text}]}`, the
+//     shim converts it to `{text, ...}` as the agent expects
+//   - when `mockCreate` rejects, the shim rejects too
 const mockCreate = vi.fn();
-vi.mock('@anthropic-ai/sdk', () => {
-  return {
-    default: class MockAnthropicClient {
-      messages = {
-        create: mockCreate,
-      };
-    },
-  };
-});
+vi.mock('@/lib/llm/retry', () => ({
+  generateCompletionWithRetry: async (args: {
+    plan: string;
+    request: {
+      model: string;
+      max_tokens: number;
+      system?: string;
+      messages: Array<{ role: string; content: string }>;
+    };
+  }) => {
+    const resp = await mockCreate({
+      model: args.request.model,
+      max_tokens: args.request.max_tokens,
+      system: args.request.system,
+      messages: args.request.messages,
+    });
+    const firstText = Array.isArray(resp?.content)
+      ? resp.content.find((b: { type: string }) => b.type === 'text')
+      : undefined;
+    const text = firstText && firstText.type === 'text' ? firstText.text : '';
+    return {
+      text,
+      model: args.request.model,
+      provider: 'anthropic',
+      usage: { input_tokens: 0, output_tokens: 0 },
+      stop_reason: 'end_turn',
+      routed: false,
+    };
+  },
+}));
 
 describe('MeetingIntelligenceAgent', () => {
   let agent: MeetingIntelligenceAgent;
@@ -950,7 +979,10 @@ describe('MeetingIntelligenceAgent', () => {
 
       expect(mockCreate).toHaveBeenCalled();
       const callArgs = mockCreate.mock.calls[0][0];
-      expect(callArgs.model).toBe('claude-sonnet-4-20250514');
+      // Sprint 8A M1.1: agents now request `claude-sonnet-4-5` as the
+      // logical model ID; the multi-model router maps it to the
+      // vendor model string before calling the provider.
+      expect(callArgs.model).toBe('claude-sonnet-4-5');
       expect(callArgs.max_tokens).toBe(2000);
     });
   });

@@ -15,15 +15,42 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UpsellDetectionAgent, UpsellDetectionInput } from '../../src/lib/agents/upsell-detection-agent';
 
-// Mock Anthropic SDK
+// Sprint 8A M1.1: agents now call `generateCompletionWithRetry()`
+// from `@/lib/llm/retry`. The shim below translates between the new
+// arg/response shape and the legacy Anthropic shape so the existing
+// assertions (on `mockCreate.mock.calls[0][0].messages`, etc.) keep
+// working unchanged.
 const mockCreate = vi.fn();
-vi.mock('@anthropic-ai/sdk', () => {
-  return {
-    default: class {
-      messages = { create: mockCreate };
-    },
-  };
-});
+vi.mock('@/lib/llm/retry', () => ({
+  generateCompletionWithRetry: async (args: {
+    plan: string;
+    request: {
+      model: string;
+      max_tokens: number;
+      system?: string;
+      messages: Array<{ role: string; content: string }>;
+    };
+  }) => {
+    const resp = await mockCreate({
+      model: args.request.model,
+      max_tokens: args.request.max_tokens,
+      system: args.request.system,
+      messages: args.request.messages,
+    });
+    const firstText = Array.isArray(resp?.content)
+      ? resp.content.find((b: { type: string }) => b.type === 'text')
+      : undefined;
+    const text = firstText && firstText.type === 'text' ? firstText.text : '';
+    return {
+      text,
+      model: args.request.model,
+      provider: 'anthropic',
+      usage: { input_tokens: 0, output_tokens: 0 },
+      stop_reason: 'end_turn',
+      routed: false,
+    };
+  },
+}));
 
 describe('UpsellDetectionAgent', () => {
   let agent: UpsellDetectionAgent;
