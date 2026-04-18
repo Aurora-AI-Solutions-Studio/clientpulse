@@ -26,10 +26,10 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
+    // Get user's agency ID and subscription plan (Sprint 8A M1.1)
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('agency_id')
+      .select('agency_id, subscription_plan')
       .eq('id', user.id)
       .single();
 
@@ -39,6 +39,8 @@ export async function POST(
         { status: 404 }
       );
     }
+
+    const subscriptionPlan = (profile.subscription_plan as 'starter' | 'pro' | 'agency' | null) ?? 'starter';
 
     // Get meeting record and verify ownership
     const { data: meeting, error: meetingError } = await supabase
@@ -111,7 +113,8 @@ export async function POST(
     }
 
     // Step 2: Extract meeting intelligence if we have transcript
-    const intelligenceAgent = new MeetingIntelligenceAgent();
+    // Sprint 8A M1.1: plan drives which model the router selects.
+    const intelligenceAgent = new MeetingIntelligenceAgent(subscriptionPlan);
     const clientName = client?.name || 'Unknown';
 
     let intelligenceData;

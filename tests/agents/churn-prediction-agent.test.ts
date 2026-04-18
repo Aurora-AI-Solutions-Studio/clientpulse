@@ -1,52 +1,59 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { ChurnPredictionAgent, ChurnPredictionInput } from '../../src/lib/agents/churn-prediction-agent';
-import { ChurnPrediction } from '../../src/types/alerts';
 
-// Mock the Anthropic SDK
-const mockCreate = vi.fn();
-vi.mock('@anthropic-ai/sdk', () => {
-  return {
-    default: class MockAnthropicClient {
-      messages = {
-        create: mockCreate,
-      };
-    },
-  };
-});
+// ─── Mock the LLM retry helper ───────────────────────────────────
+// Sprint 8A M1.1: agents now call `generateCompletionWithRetry()`
+// from `@/lib/llm/retry` instead of creating an Anthropic client
+// directly. Tests mock that single choke point.
+const mockGenerate = vi.fn();
+vi.mock('@/lib/llm/retry', () => ({
+  generateCompletionWithRetry: (...args: unknown[]) => mockGenerate(...args),
+}));
 
 describe('ChurnPredictionAgent', () => {
   let agent: ChurnPredictionAgent;
 
-  // Helper function to create valid mock response
+  // Helper to create a valid mock response in the shape returned by
+  // `generateCompletionWithRetry`: `{text, model, provider, usage, stop_reason, routed}`.
+  // Only `text` matters to the agent under test.
   const createMockResponse = (overrides: Record<string, unknown> = {}) => ({
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify({
-          churnProbability: 50,
-          riskLevel: 'moderate',
-          drivingFactors: [
-            {
-              category: 'financial',
-              signal: 'Slow payment history',
-              impact: -15,
-              details: 'Client has been paying invoices 10-15 days late',
-            },
-          ],
-          suggestedActions: [
-            {
-              id: 'action_1',
-              priority: 'this_week',
-              action: 'Follow up on outstanding invoice',
-              rationale: 'Establish payment terms clarity',
-              type: 'invoice_followup',
-            },
-          ],
-          shouldCreateSavePlan: false,
-          ...overrides,
-        }),
-      },
-    ],
+    text: JSON.stringify({
+      churnProbability: 50,
+      riskLevel: 'moderate',
+      drivingFactors: [
+        {
+          category: 'financial',
+          signal: 'Slow payment history',
+          impact: -15,
+          details: 'Client has been paying invoices 10-15 days late',
+        },
+      ],
+      suggestedActions: [
+        {
+          id: 'action_1',
+          priority: 'this_week',
+          action: 'Follow up on outstanding invoice',
+          rationale: 'Establish payment terms clarity',
+          type: 'invoice_followup',
+        },
+      ],
+      shouldCreateSavePlan: false,
+      ...overrides,
+    }),
+    model: 'claude-sonnet-4-5',
+    provider: 'anthropic',
+    usage: { input_tokens: 100, output_tokens: 200 },
+    stop_reason: 'end_turn',
+    routed: false,
+  });
+
+  const createSavePlanResponse = (body: Record<string, unknown>) => ({
+    text: JSON.stringify(body),
+    model: 'claude-sonnet-4-5',
+    provider: 'anthropic',
+    usage: { input_tokens: 50, output_tokens: 100 },
+    stop_reason: 'end_turn',
+    routed: false,
   });
 
   const createLowRiskInput = (): ChurnPredictionInput => ({
@@ -135,7 +142,7 @@ describe('ChurnPredictionAgent', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    agent = new ChurnPredictionAgent();
+    agent = new ChurnPredictionAgent('pro');
   });
 
   afterEach(() => {
@@ -143,16 +150,40 @@ describe('ChurnPredictionAgent', () => {
   });
 
   describe('Constructor', () => {
-    it('should create Anthropic client on initialization', () => {
+    it('should construct with the supplied subscription plan', () => {
       expect(agent).toBeDefined();
-      expect(agent['client']).toBeDefined();
+      // Plan is private; infer from ability to instantiate with each value.
+      expect(() => new ChurnPredictionAgent('starter')).not.toThrow();
+      expect(() => new ChurnPredictionAgent('pro')).not.toThrow();
+      expect(() => new ChurnPredictionAgent('agency')).not.toThrow();
+    });
+
+    it('should default to pro plan when no argument supplied', () => {
+      const a = new ChurnPredictionAgent();
+      expect(a).toBeDefined();
+    });
+  });
+
+  describe('Plan routing', () => {
+    it('should forward the plan to generateCompletionWithRetry', async () => {
+      const input = createLowRiskInput();
+      mockGenerate.mockResolvedValueOnce(createMockResponse({ churnProbability: 15, riskLevel: 'low' }));
+      const starterAgent = new ChurnPredictionAgent('starter');
+
+      await starterAgent.predictChurn(input);
+
+      expect(mockGenerate).toHaveBeenCalledTimes(1);
+      const [args] = mockGenerate.mock.calls[0];
+      expect(args.plan).toBe('starter');
+      expect(args.request.model).toBe('claude-sonnet-4-5');
+      expect(args.routing?.substituteOnTierMiss).toBe(true);
     });
   });
 
   describe('Low Risk Client - Healthy Metrics', () => {
     it('should predict low churn probability for healthy client', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 15,
           riskLevel: 'low',
@@ -167,7 +198,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should return low risk level for healthy metrics', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 12,
           riskLevel: 'low',
@@ -181,7 +212,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should not create save plan for low risk client', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 10,
           riskLevel: 'low',
@@ -192,13 +223,13 @@ describe('ChurnPredictionAgent', () => {
       const result = await agent.predictChurn(input);
 
       expect(result.savePlan).toBeUndefined();
-      // Should only call API once (no second call for save plan generation)
-      expect(mockCreate).toHaveBeenCalledTimes(1);
+      // Should only call the LLM once (no second call for save plan generation)
+      expect(mockGenerate).toHaveBeenCalledTimes(1);
     });
 
     it('should include driving factors for healthy client', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 10,
           riskLevel: 'low',
@@ -223,28 +254,23 @@ describe('ChurnPredictionAgent', () => {
   describe('High Risk Client - Critical Metrics', () => {
     it('should predict high churn probability for at-risk client', async () => {
       const input = createHighRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 85,
           riskLevel: 'critical',
           shouldCreateSavePlan: true,
         })
       );
-      mockCreate.mockResolvedValueOnce({
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              checkInEmail: {
-                subject: 'Let\'s talk about your needs',
-                body: 'We value your partnership...',
-              },
-              qbrAgenda: ['Account performance review', 'Roadmap discussion'],
-              talkingPoints: ['Recent wins', 'Future opportunities'],
-            }),
+      mockGenerate.mockResolvedValueOnce(
+        createSavePlanResponse({
+          checkInEmail: {
+            subject: "Let's talk about your needs",
+            body: 'We value your partnership...',
           },
-        ],
-      });
+          qbrAgenda: ['Account performance review', 'Roadmap discussion'],
+          talkingPoints: ['Recent wins', 'Future opportunities'],
+        })
+      );
 
       const result = await agent.predictChurn(input);
 
@@ -254,25 +280,20 @@ describe('ChurnPredictionAgent', () => {
 
     it('should return critical risk level for poor metrics', async () => {
       const input = createHighRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 88,
           riskLevel: 'critical',
           shouldCreateSavePlan: true,
         })
       );
-      mockCreate.mockResolvedValueOnce({
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              checkInEmail: { subject: 'Account check-in', body: 'Let\'s connect' },
-              qbrAgenda: [],
-              talkingPoints: [],
-            }),
-          },
-        ],
-      });
+      mockGenerate.mockResolvedValueOnce(
+        createSavePlanResponse({
+          checkInEmail: { subject: 'Account check-in', body: "Let's connect" },
+          qbrAgenda: [],
+          talkingPoints: [],
+        })
+      );
 
       const result = await agent.predictChurn(input);
 
@@ -281,28 +302,23 @@ describe('ChurnPredictionAgent', () => {
 
     it('should create save plan when churnProbability > 60', async () => {
       const input = createHighRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 75,
           riskLevel: 'critical',
           shouldCreateSavePlan: true,
         })
       );
-      mockCreate.mockResolvedValueOnce({
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              checkInEmail: {
-                subject: 'Let\'s reconnect',
-                body: 'We want to ensure your success',
-              },
-              qbrAgenda: ['Business review', 'Goals alignment'],
-              talkingPoints: ['Partnership value', 'Success metrics'],
-            }),
+      mockGenerate.mockResolvedValueOnce(
+        createSavePlanResponse({
+          checkInEmail: {
+            subject: "Let's reconnect",
+            body: 'We want to ensure your success',
           },
-        ],
-      });
+          qbrAgenda: ['Business review', 'Goals alignment'],
+          talkingPoints: ['Partnership value', 'Success metrics'],
+        })
+      );
 
       const result = await agent.predictChurn(input);
 
@@ -313,28 +329,23 @@ describe('ChurnPredictionAgent', () => {
 
     it('should populate save plan with email and agenda', async () => {
       const input = createHighRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 70,
           riskLevel: 'critical',
           shouldCreateSavePlan: true,
         })
       );
-      mockCreate.mockResolvedValueOnce({
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              checkInEmail: {
-                subject: 'Urgent: Account check-in needed',
-                body: 'We need to reconnect immediately',
-              },
-              qbrAgenda: ['Health assessment', 'Roadmap alignment', 'Support review'],
-              talkingPoints: ['Partnership concerns', 'Service improvements', 'Investment plans'],
-            }),
+      mockGenerate.mockResolvedValueOnce(
+        createSavePlanResponse({
+          checkInEmail: {
+            subject: 'Urgent: Account check-in needed',
+            body: 'We need to reconnect immediately',
           },
-        ],
-      });
+          qbrAgenda: ['Health assessment', 'Roadmap alignment', 'Support review'],
+          talkingPoints: ['Partnership concerns', 'Service improvements', 'Investment plans'],
+        })
+      );
 
       const result = await agent.predictChurn(input);
 
@@ -349,7 +360,7 @@ describe('ChurnPredictionAgent', () => {
   describe('Moderate Risk Client', () => {
     it('should predict moderate churn probability', async () => {
       const input = createModerateRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 48,
           riskLevel: 'moderate',
@@ -365,7 +376,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should not create save plan when churnProbability <= 60', async () => {
       const input = createModerateRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 55,
           riskLevel: 'moderate',
@@ -376,14 +387,14 @@ describe('ChurnPredictionAgent', () => {
       const result = await agent.predictChurn(input);
 
       expect(result.savePlan).toBeUndefined();
-      expect(mockCreate).toHaveBeenCalledTimes(1);
+      expect(mockGenerate).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('Response Parsing', () => {
     it('should correctly map suggested actions from API response', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           suggestedActions: [
             {
@@ -414,7 +425,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should correctly map driving factors from API response', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           drivingFactors: [
             {
@@ -442,7 +453,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should generate default IDs for actions without them', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           suggestedActions: [
             {
@@ -464,7 +475,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should use provided defaults for missing action fields', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           suggestedActions: [
             {
@@ -488,7 +499,7 @@ describe('ChurnPredictionAgent', () => {
   describe('Churn Probability Clamping', () => {
     it('should clamp probability to 100 when API returns > 100', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 150,
           riskLevel: 'critical',
@@ -502,7 +513,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should clamp probability to 0 when API returns < 0', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: -25,
           riskLevel: 'low',
@@ -516,7 +527,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should keep probability unchanged when in valid range', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 55,
           riskLevel: 'moderate',
@@ -530,7 +541,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should clamp probability at lower boundary (0)', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 0,
           riskLevel: 'low',
@@ -544,7 +555,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should clamp probability at upper boundary (100)', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 100,
           riskLevel: 'critical',
@@ -560,38 +571,33 @@ describe('ChurnPredictionAgent', () => {
   describe('Save Plan Generation', () => {
     it('should generate save plan when shouldCreateSavePlan=true AND churnProbability > 60', async () => {
       const input = createHighRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 65,
           riskLevel: 'critical',
           shouldCreateSavePlan: true,
         })
       );
-      mockCreate.mockResolvedValueOnce({
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              checkInEmail: {
-                subject: 'Account retention check-in',
-                body: 'We value your partnership...',
-              },
-              qbrAgenda: ['Strategic review'],
-              talkingPoints: ['Success metrics'],
-            }),
+      mockGenerate.mockResolvedValueOnce(
+        createSavePlanResponse({
+          checkInEmail: {
+            subject: 'Account retention check-in',
+            body: 'We value your partnership...',
           },
-        ],
-      });
+          qbrAgenda: ['Strategic review'],
+          talkingPoints: ['Success metrics'],
+        })
+      );
 
       const result = await agent.predictChurn(input);
 
       expect(result.savePlan).toBeDefined();
-      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(mockGenerate).toHaveBeenCalledTimes(2);
     });
 
     it('should NOT generate save plan when churnProbability <= 60 even if shouldCreateSavePlan=true', async () => {
       const input = createModerateRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 60,
           riskLevel: 'high',
@@ -602,12 +608,12 @@ describe('ChurnPredictionAgent', () => {
       const result = await agent.predictChurn(input);
 
       expect(result.savePlan).toBeUndefined();
-      expect(mockCreate).toHaveBeenCalledTimes(1);
+      expect(mockGenerate).toHaveBeenCalledTimes(1);
     });
 
     it('should NOT generate save plan when churnProbability > 60 but shouldCreateSavePlan=false', async () => {
       const input = createHighRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 70,
           riskLevel: 'critical',
@@ -618,19 +624,19 @@ describe('ChurnPredictionAgent', () => {
       const result = await agent.predictChurn(input);
 
       expect(result.savePlan).toBeUndefined();
-      expect(mockCreate).toHaveBeenCalledTimes(1);
+      expect(mockGenerate).toHaveBeenCalledTimes(1);
     });
 
     it('should generate basic save plan on save plan API error', async () => {
       const input = createHighRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 75,
           riskLevel: 'critical',
           shouldCreateSavePlan: true,
         })
       );
-      mockCreate.mockRejectedValueOnce(new Error('API error on save plan'));
+      mockGenerate.mockRejectedValueOnce(new Error('API error on save plan'));
 
       const result = await agent.predictChurn(input);
 
@@ -644,7 +650,7 @@ describe('ChurnPredictionAgent', () => {
   describe('Error Handling', () => {
     it('should throw with "Failed to predict churn" when API throws', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockRejectedValueOnce(new Error('API connection error'));
+      mockGenerate.mockRejectedValueOnce(new Error('API connection error'));
 
       await expect(agent.predictChurn(input)).rejects.toThrow('Failed to predict churn');
     });
@@ -652,20 +658,20 @@ describe('ChurnPredictionAgent', () => {
     it('should include original error message in thrown error', async () => {
       const input = createLowRiskInput();
       const originalError = new Error('Rate limit exceeded');
-      mockCreate.mockRejectedValueOnce(originalError);
+      mockGenerate.mockRejectedValueOnce(originalError);
 
       await expect(agent.predictChurn(input)).rejects.toThrow('Failed to predict churn: Rate limit exceeded');
     });
 
     it('should throw when API returns invalid JSON', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce({
-        content: [
-          {
-            type: 'text',
-            text: 'This is not valid JSON {invalid}',
-          },
-        ],
+      mockGenerate.mockResolvedValueOnce({
+        text: 'This is not valid JSON {invalid}',
+        model: 'claude-sonnet-4-5',
+        provider: 'anthropic',
+        usage: { input_tokens: 10, output_tokens: 20 },
+        stop_reason: 'end_turn',
+        routed: false,
       });
 
       await expect(agent.predictChurn(input)).rejects.toThrow('Failed to predict churn');
@@ -673,20 +679,20 @@ describe('ChurnPredictionAgent', () => {
 
     it('should throw on non-Error rejection', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockRejectedValueOnce('Unknown error string');
+      mockGenerate.mockRejectedValueOnce('Unknown error string');
 
       await expect(agent.predictChurn(input)).rejects.toThrow('Failed to predict churn: Unknown error');
     });
 
     it('should handle missing text in API response gracefully', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce({
-        content: [
-          {
-            type: 'text',
-            text: '',
-          },
-        ],
+      mockGenerate.mockResolvedValueOnce({
+        text: '',
+        model: 'claude-sonnet-4-5',
+        provider: 'anthropic',
+        usage: { input_tokens: 0, output_tokens: 0 },
+        stop_reason: 'end_turn',
+        routed: false,
       });
 
       await expect(agent.predictChurn(input)).rejects.toThrow('Failed to predict churn');
@@ -696,7 +702,7 @@ describe('ChurnPredictionAgent', () => {
   describe('Empty and Missing Fields', () => {
     it('should provide defaults for missing driving factors', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           drivingFactors: undefined,
         })
@@ -709,7 +715,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should provide defaults for missing suggested actions', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           suggestedActions: undefined,
         })
@@ -722,7 +728,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should use moderate as default riskLevel when missing', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           riskLevel: undefined,
         })
@@ -735,7 +741,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should use 0 as default churnProbability when missing', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: undefined,
         })
@@ -748,7 +754,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should preserve empty suggested actions array', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           suggestedActions: [],
         })
@@ -763,53 +769,53 @@ describe('ChurnPredictionAgent', () => {
   describe('Prompt Construction and Input Inclusion', () => {
     it('should include client name in the API call', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(createMockResponse());
+      mockGenerate.mockResolvedValueOnce(createMockResponse());
 
       await agent.predictChurn(input);
 
-      expect(mockCreate).toHaveBeenCalled();
-      const callArgs = mockCreate.mock.calls[0][0];
-      expect(callArgs.messages[0].content).toContain(input.clientName);
+      expect(mockGenerate).toHaveBeenCalled();
+      const [args] = mockGenerate.mock.calls[0];
+      expect(args.request.messages[0].content).toContain(input.clientName);
     });
 
     it('should include health scores in the API call', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(createMockResponse());
+      mockGenerate.mockResolvedValueOnce(createMockResponse());
 
       await agent.predictChurn(input);
 
-      const callArgs = mockCreate.mock.calls[0][0];
-      expect(callArgs.messages[0].content).toContain(String(input.currentHealthScore));
+      const [args] = mockGenerate.mock.calls[0];
+      expect(args.request.messages[0].content).toContain(String(input.currentHealthScore));
     });
 
     it('should include monthly retainer in the API call', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(createMockResponse());
+      mockGenerate.mockResolvedValueOnce(createMockResponse());
 
       await agent.predictChurn(input);
 
-      const callArgs = mockCreate.mock.calls[0][0];
-      expect(callArgs.messages[0].content).toContain(String(input.monthlyRetainer));
+      const [args] = mockGenerate.mock.calls[0];
+      expect(args.request.messages[0].content).toContain(String(input.monthlyRetainer));
     });
 
     it('should include service type in the API call', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(createMockResponse());
+      mockGenerate.mockResolvedValueOnce(createMockResponse());
 
       await agent.predictChurn(input);
 
-      const callArgs = mockCreate.mock.calls[0][0];
-      expect(callArgs.messages[0].content).toContain(input.serviceType);
+      const [args] = mockGenerate.mock.calls[0];
+      expect(args.request.messages[0].content).toContain(input.serviceType);
     });
 
     it('should include health breakdown scores in the API call', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(createMockResponse());
+      mockGenerate.mockResolvedValueOnce(createMockResponse());
 
       await agent.predictChurn(input);
 
-      const callArgs = mockCreate.mock.calls[0][0];
-      const content = callArgs.messages[0].content;
+      const [args] = mockGenerate.mock.calls[0];
+      const content = args.request.messages[0].content;
       expect(content).toContain(String(input.healthBreakdown.financial));
       expect(content).toContain(String(input.healthBreakdown.relationship));
       expect(content).toContain(String(input.healthBreakdown.delivery));
@@ -818,22 +824,22 @@ describe('ChurnPredictionAgent', () => {
 
     it('should include meeting sentiments in the API call', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(createMockResponse());
+      mockGenerate.mockResolvedValueOnce(createMockResponse());
 
       await agent.predictChurn(input);
 
-      const callArgs = mockCreate.mock.calls[0][0];
-      expect(callArgs.messages[0].content).toContain(input.recentMeetingSentiments.join(', '));
+      const [args] = mockGenerate.mock.calls[0];
+      expect(args.request.messages[0].content).toContain(input.recentMeetingSentiments.join(', '));
     });
 
     it('should include action item stats in the API call', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(createMockResponse());
+      mockGenerate.mockResolvedValueOnce(createMockResponse());
 
       await agent.predictChurn(input);
 
-      const callArgs = mockCreate.mock.calls[0][0];
-      const content = callArgs.messages[0].content;
+      const [args] = mockGenerate.mock.calls[0];
+      const content = args.request.messages[0].content;
       expect(content).toContain(String(input.actionItemStats.total));
       expect(content).toContain(String(input.actionItemStats.completed));
       expect(content).toContain(String(input.actionItemStats.overdue));
@@ -841,19 +847,19 @@ describe('ChurnPredictionAgent', () => {
 
     it('should include client ID in the API call', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(createMockResponse());
+      mockGenerate.mockResolvedValueOnce(createMockResponse());
 
       await agent.predictChurn(input);
 
-      const callArgs = mockCreate.mock.calls[0][0];
-      expect(callArgs.messages[0].content).toContain(input.clientId);
+      const [args] = mockGenerate.mock.calls[0];
+      expect(args.request.messages[0].content).toContain(input.clientId);
     });
   });
 
   describe('Response Structure', () => {
     it('should return ChurnPrediction with all required fields', async () => {
       const input = createLowRiskInput();
-      mockCreate.mockResolvedValueOnce(createMockResponse());
+      mockGenerate.mockResolvedValueOnce(createMockResponse());
 
       const result = await agent.predictChurn(input);
 
@@ -869,7 +875,7 @@ describe('ChurnPredictionAgent', () => {
     it('should include computedAt timestamp in ISO format', async () => {
       const input = createLowRiskInput();
       const beforeCall = new Date();
-      mockCreate.mockResolvedValueOnce(createMockResponse());
+      mockGenerate.mockResolvedValueOnce(createMockResponse());
 
       const result = await agent.predictChurn(input);
       const afterCall = new Date();
@@ -882,7 +888,7 @@ describe('ChurnPredictionAgent', () => {
 
     it('should preserve client metadata in response', async () => {
       const input = createHighRiskInput();
-      mockCreate.mockResolvedValueOnce(createMockResponse());
+      mockGenerate.mockResolvedValueOnce(createMockResponse());
 
       const result = await agent.predictChurn(input);
 
@@ -894,7 +900,7 @@ describe('ChurnPredictionAgent', () => {
   describe('Edge Cases and Boundary Conditions', () => {
     it('should handle churnProbability at exact threshold of 60', async () => {
       const input = createHighRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 60,
           riskLevel: 'high',
@@ -910,25 +916,20 @@ describe('ChurnPredictionAgent', () => {
 
     it('should handle churnProbability just above threshold of 60', async () => {
       const input = createHighRiskInput();
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           churnProbability: 60.1,
           riskLevel: 'critical',
           shouldCreateSavePlan: true,
         })
       );
-      mockCreate.mockResolvedValueOnce({
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              checkInEmail: { subject: 'Test', body: 'Test body' },
-              qbrAgenda: [],
-              talkingPoints: [],
-            }),
-          },
-        ],
-      });
+      mockGenerate.mockResolvedValueOnce(
+        createSavePlanResponse({
+          checkInEmail: { subject: 'Test', body: 'Test body' },
+          qbrAgenda: [],
+          talkingPoints: [],
+        })
+      );
 
       const result = await agent.predictChurn(input);
 
@@ -946,7 +947,7 @@ describe('ChurnPredictionAgent', () => {
         type: 'check_in',
       }));
 
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           suggestedActions: actions,
         })
@@ -966,7 +967,7 @@ describe('ChurnPredictionAgent', () => {
         details: `Details ${i + 1}`,
       }));
 
-      mockCreate.mockResolvedValueOnce(
+      mockGenerate.mockResolvedValueOnce(
         createMockResponse({
           drivingFactors: factors,
         })

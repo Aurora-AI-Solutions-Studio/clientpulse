@@ -1,11 +1,20 @@
 /**
  * Churn Prediction Agent v1
- * Predicts client churn risk based on health score, meeting intelligence, financial data, and action items
+ *
+ * Sprint 8A M1.1: routes through the multi-model LLM client so model
+ * selection follows the caller's subscription plan:
+ *   - starter  → gpt-4o-mini
+ *   - pro      → claude-sonnet-4-5
+ *   - agency   → claude-sonnet-4-5 (with capability-based auto-routing)
+ *
+ * The agent no longer imports `@anthropic-ai/sdk` directly. Provider
+ * details — retries, 429/timeout back-off, 401 safe logging — live in
+ * `src/lib/llm/retry.ts` and the provider layer.
  */
-
-import Anthropic from '@anthropic-ai/sdk';
+import type { SubscriptionPlan } from '@/types/stripe';
+import { generateCompletionWithRetry } from '@/lib/llm/retry';
+import type { LLMMessage } from '@/lib/llm/types';
 import { ChurnPrediction, SuggestedAction, SavePlan } from '../../types/alerts';
-import { createMessageWithRetry } from './anthropic-retry';
 
 /**
  * Input parameters for churn prediction
@@ -29,10 +38,16 @@ export interface ChurnPredictionInput {
  * ChurnPredictionAgent predicts client churn probability and suggests mitigation actions
  */
 export class ChurnPredictionAgent {
-  private client: Anthropic;
+  private readonly plan: SubscriptionPlan;
 
-  constructor() {
-    this.client = new Anthropic();
+  /**
+   * @param plan - The calling tenant's subscription plan. Defaults to
+   *               'pro' so existing test harnesses that call
+   *               `new ChurnPredictionAgent()` continue to select
+   *               Claude Sonnet 4.5 (the pre-M1.1 default model).
+   */
+  constructor(plan: SubscriptionPlan = 'pro') {
+    this.plan = plan;
   }
 
   /**
@@ -99,24 +114,30 @@ Respond with ONLY valid JSON (no markdown) in this exact format:
   "shouldCreateSavePlan": <boolean - true if churnProbability > 60>
 }`;
 
+    const messages: LLMMessage[] = [{ role: 'user', content: userPrompt }];
+
     try {
-      const message = await createMessageWithRetry(
-        this.client,
+      const response = await generateCompletionWithRetry(
         {
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
+          plan: this.plan,
+          request: {
+            model: 'claude-sonnet-4-5',
+            max_tokens: 2000,
+            system: systemPrompt,
+            messages,
+          },
+          routing: { capability: 'reasoning', substituteOnTierMiss: true },
         },
-        '[churn-prediction-agent]'
+        '[churn-prediction-agent]',
       );
 
-      // Extract text from response
-      const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+      const responseText = response.text;
 
-      // Parse JSON response
+      // Parse JSON response — propagate parse errors so callers know
+      // the model returned something unusable. M1.1 TODO: consider a
+      // structured retry here, but for now fail loudly.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let parsed: any = {};
+      let parsed: any;
       try {
         parsed = JSON.parse(responseText);
       } catch (parseError) {
@@ -124,6 +145,11 @@ Respond with ONLY valid JSON (no markdown) in this exact format:
           error: parseError instanceof Error ? parseError.message : String(parseError),
           responseTextPreview: responseText.slice(0, 500),
         });
+        throw new Error(
+          `[churn-prediction-agent] Model returned non-JSON response: ${
+            parseError instanceof Error ? parseError.message : String(parseError)
+          }`,
+        );
       }
 
       const suggestedActions: SuggestedAction[] = (parsed.suggestedActions || []).map(
@@ -194,28 +220,35 @@ Respond with ONLY valid JSON (no markdown):
   "talkingPoints": ["<point 1>", "<point 2>", ...]
 }`;
 
+    const messages: LLMMessage[] = [{ role: 'user', content: userPrompt }];
+
     try {
-      const message = await createMessageWithRetry(
-        this.client,
+      const response = await generateCompletionWithRetry(
         {
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1500,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
+          plan: this.plan,
+          request: {
+            model: 'claude-sonnet-4-5',
+            max_tokens: 1500,
+            system: systemPrompt,
+            messages,
+          },
+          routing: { capability: 'content', substituteOnTierMiss: true },
         },
-        '[churn-prediction-agent/save-plan]'
+        '[churn-prediction-agent/save-plan]',
       );
 
-      const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+      const responseText = response.text;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let parsed: any = {};
       try {
         parsed = JSON.parse(responseText);
       } catch (parseError) {
-        console.error('[churn-prediction-agent] JSON.parse failed:', {
+        console.error('[churn-prediction-agent/save-plan] JSON.parse failed:', {
           error: parseError instanceof Error ? parseError.message : String(parseError),
           responseTextPreview: responseText.slice(0, 500),
         });
+        // Save-plan is a soft fallback — fall through to the default
+        // below rather than failing the whole prediction.
       }
 
       return {

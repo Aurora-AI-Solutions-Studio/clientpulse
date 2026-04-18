@@ -1,11 +1,16 @@
 /**
  * Suggested Actions Agent v1
- * Generates specific, actionable recommendations based on churn prediction and client context
+ *
+ * Sprint 8A M1.1: routes through the multi-model LLM client. Model
+ * selection follows the caller's subscription plan:
+ *   - starter  → gpt-4o-mini
+ *   - pro      → claude-sonnet-4-5
+ *   - agency   → claude-sonnet-4-5 (with capability-based auto-routing)
  */
-
-import Anthropic from '@anthropic-ai/sdk';
+import type { SubscriptionPlan } from '@/types/stripe';
+import { generateCompletionWithRetry } from '@/lib/llm/retry';
+import type { LLMMessage } from '@/lib/llm/types';
 import { SuggestedAction } from '../../types/alerts';
-import { createMessageWithRetry } from './anthropic-retry';
 
 /**
  * Input parameters for suggested actions generation
@@ -26,10 +31,16 @@ export interface SuggestedActionsInput {
  * SuggestedActionsAgent generates specific account management recommendations
  */
 export class SuggestedActionsAgent {
-  private client: Anthropic;
+  private readonly plan: SubscriptionPlan;
 
-  constructor() {
-    this.client = new Anthropic();
+  /**
+   * @param plan - The calling tenant's subscription plan. Defaults to
+   *               'pro' so existing callers that use
+   *               `new SuggestedActionsAgent()` continue to select
+   *               Claude Sonnet 4.5 (the pre-M1.1 default model).
+   */
+  constructor(plan: SubscriptionPlan = 'pro') {
+    this.plan = plan;
   }
 
   /**
@@ -85,21 +96,27 @@ Respond with ONLY valid JSON array (no markdown):
 
 Ensure actions are specific: "Schedule QBR with finance team to review ROI" not "Have a meeting".`;
 
+    const messages: LLMMessage[] = [{ role: 'user', content: userPrompt }];
+
     try {
-      const message = await createMessageWithRetry(
-        this.client,
+      const response = await generateCompletionWithRetry(
         {
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
+          plan: this.plan,
+          request: {
+            model: 'claude-sonnet-4-5',
+            max_tokens: 2000,
+            system: systemPrompt,
+            messages,
+          },
+          routing: { capability: 'content', substituteOnTierMiss: true },
         },
-        '[suggested-actions-agent]'
+        '[suggested-actions-agent]',
       );
 
-      const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+      const responseText = response.text;
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let parsed: any = [];
+      let parsed: any;
       try {
         parsed = JSON.parse(responseText);
       } catch (parseError) {
@@ -107,6 +124,11 @@ Ensure actions are specific: "Schedule QBR with finance team to review ROI" not 
           error: parseError instanceof Error ? parseError.message : String(parseError),
           responseTextPreview: responseText.slice(0, 500),
         });
+        throw new Error(
+          `[suggested-actions-agent] Model returned non-JSON response: ${
+            parseError instanceof Error ? parseError.message : String(parseError)
+          }`,
+        );
       }
 
       // Ensure parsed is an array
