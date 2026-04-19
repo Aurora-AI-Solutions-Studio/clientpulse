@@ -4,9 +4,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { memberId: string } }
+  { params }: { params: Promise<{ memberId: string }> }
 ) {
   try {
+    const { memberId } = await params;
     const supabase = await createClient();
 
     // Get current user
@@ -52,7 +53,7 @@ export async function PATCH(
     const { data: member, error: memberCheckError } = await supabase
       .from('agency_members')
       .select('id, user_id')
-      .eq('id', params.memberId)
+      .eq('id', memberId)
       .eq('agency_id', profile.agency_id)
       .single();
 
@@ -85,7 +86,7 @@ export async function PATCH(
     const { data: updatedMember, error: updateError } = await supabase
       .from('agency_members')
       .update({ role: body.role })
-      .eq('id', params.memberId)
+      .eq('id', memberId)
       .select(
         `
         id,
@@ -131,9 +132,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { memberId: string } }
+  { params }: { params: Promise<{ memberId: string }> }
 ) {
   try {
+    const { memberId } = await params;
     const supabase = await createClient();
 
     // Get current user
@@ -179,7 +181,7 @@ export async function DELETE(
     const { data: member, error: memberCheckError } = await supabase
       .from('agency_members')
       .select('user_id')
-      .eq('id', params.memberId)
+      .eq('id', memberId)
       .eq('agency_id', profile.agency_id)
       .single();
 
@@ -202,7 +204,7 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from('agency_members')
       .delete()
-      .eq('id', params.memberId)
+      .eq('id', memberId)
       .eq('agency_id', profile.agency_id);
 
     if (deleteError) {

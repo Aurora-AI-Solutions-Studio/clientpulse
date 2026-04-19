@@ -9,13 +9,14 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // §12.2 Rate limit: 5/min per IP — expensive AI endpoint.
   const rl = checkRateLimit(request, 'monday-brief-id', RATE_LIMITS.aiExpensive);
   if (rl) return rl;
 
   try {
+    const { id } = await params;
     const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
@@ -35,7 +36,7 @@ export async function GET(
     const { data: brief, error } = await supabase
       .from('monday_briefs')
       .select('id, content, email_sent, sent_at, created_at')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('agency_id', profile.agency_id)
       .single();
 

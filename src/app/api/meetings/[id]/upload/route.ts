@@ -4,9 +4,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
 
     // Get current user
@@ -37,7 +38,7 @@ export async function POST(
     const { data: meeting, error: meetingError } = await supabase
       .from('meetings')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('agency_id', profile.agency_id)
       .single();
 
@@ -62,7 +63,7 @@ export async function POST(
 
     // Create storage path: {agency_id}/{meeting_id}/{filename}
     const filename = file.name || `audio_${Date.now()}.mp3`;
-    const storagePath = `${profile.agency_id}/${params.id}/${filename}`;
+    const storagePath = `${profile.agency_id}/${id}/${filename}`;
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
@@ -91,7 +92,7 @@ export async function POST(
     const { error: updateError } = await supabase
       .from('meetings')
       .update({ audio_url: audioUrl })
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (updateError) {
       console.error('Error updating meeting with audio URL:', updateError);

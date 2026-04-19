@@ -5,9 +5,10 @@ import { Client, ClientUpdateInput } from '@/types/client';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
 
     // Get current user
@@ -38,7 +39,7 @@ export async function GET(
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('agency_id', profile.agency_id)
       .single();
 
@@ -75,9 +76,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
 
     // Get current user
@@ -108,7 +110,7 @@ export async function PUT(
     const { data: existingClient, error: checkError } = await supabase
       .from('clients')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('agency_id', profile.agency_id)
       .single();
 
@@ -135,7 +137,7 @@ export async function PUT(
     const { data: updatedClient, error: updateError } = await supabase
       .from('clients')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -175,9 +177,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
 
     // Get current user
@@ -208,7 +211,7 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from('clients')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('agency_id', profile.agency_id);
 
     if (deleteError) {

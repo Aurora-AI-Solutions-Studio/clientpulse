@@ -4,9 +4,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { outcomeId: string } }
+  { params }: { params: Promise<{ outcomeId: string }> }
 ) {
   try {
+    const { outcomeId } = await params;
     const supabase = await createClient();
 
     const {
@@ -53,7 +54,7 @@ export async function GET(
         clients(id, name, company_name)
       `
       )
-      .eq('id', params.outcomeId)
+      .eq('id', outcomeId)
       .eq('agency_id', agencyId)
       .single();
 
@@ -93,9 +94,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { outcomeId: string } }
+  { params }: { params: Promise<{ outcomeId: string }> }
 ) {
   try {
+    const { outcomeId } = await params;
     const supabase = await createClient();
 
     const {
@@ -126,7 +128,7 @@ export async function PATCH(
     const { data: existingOutcome, error: checkError } = await supabase
       .from('client_outcomes')
       .select('id')
-      .eq('id', params.outcomeId)
+      .eq('id', outcomeId)
       .eq('agency_id', agencyId)
       .single();
 
@@ -160,7 +162,7 @@ export async function PATCH(
     const { data: updated, error: updateError } = await supabase
       .from('client_outcomes')
       .update(updates)
-      .eq('id', params.outcomeId)
+      .eq('id', outcomeId)
       .eq('agency_id', agencyId)
       .select(
         `
@@ -219,9 +221,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { outcomeId: string } }
+  { params }: { params: Promise<{ outcomeId: string }> }
 ) {
   try {
+    const { outcomeId } = await params;
     const supabase = await createClient();
 
     const {
@@ -252,7 +255,7 @@ export async function DELETE(
     const { data: existingOutcome, error: checkError } = await supabase
       .from('client_outcomes')
       .select('id')
-      .eq('id', params.outcomeId)
+      .eq('id', outcomeId)
       .eq('agency_id', agencyId)
       .single();
 
@@ -267,13 +270,13 @@ export async function DELETE(
     await supabase
       .from('prediction_feedback')
       .delete()
-      .eq('outcome_id', params.outcomeId);
+      .eq('outcome_id', outcomeId);
 
     // Delete the outcome
     const { error: deleteError } = await supabase
       .from('client_outcomes')
       .delete()
-      .eq('id', params.outcomeId)
+      .eq('id', outcomeId)
       .eq('agency_id', agencyId);
 
     if (deleteError) {
