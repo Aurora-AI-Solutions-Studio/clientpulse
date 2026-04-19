@@ -7,13 +7,14 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // §12.2 Rate limit: 5/min per IP — expensive AI endpoint.
   const rl = checkRateLimit(request, 'meetings-transcribe', RATE_LIMITS.aiExpensive);
   if (rl) return rl;
 
   try {
+    const { id } = await params;
     const supabase = await createClient();
 
     // Get current user
@@ -46,7 +47,7 @@ export async function POST(
     const { data: meeting, error: meetingError } = await supabase
       .from('meetings')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('agency_id', profile.agency_id)
       .single();
 
@@ -73,7 +74,7 @@ export async function POST(
     await supabase
       .from('meetings')
       .update({ status: 'processing' })
-      .eq('id', params.id);
+      .eq('id', id);
 
     // Step 1: Transcribe audio
     const transcriptionAgent = new WhisperTranscriptionAgent();
@@ -87,7 +88,7 @@ export async function POST(
       await supabase
         .from('meetings')
         .update({ status: 'failed' })
-        .eq('id', params.id);
+        .eq('id', id);
 
       return NextResponse.json(
         { error: `Transcription failed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}` },
@@ -102,7 +103,7 @@ export async function POST(
         transcript: transcript,
         status: 'completed',
       })
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (updateTranscriptError) {
       console.error('Error updating transcript:', updateTranscriptError);
@@ -134,7 +135,7 @@ export async function POST(
       const { error: intelligenceInsertError } = await supabase
         .from('meeting_intelligence')
         .upsert({
-          meeting_id: params.id,
+          meeting_id: id,
           sentiment_score: intelligenceData.sentiment_score,
           action_items: intelligenceData.action_items,
           scope_changes: intelligenceData.scope_changes,
@@ -144,7 +145,7 @@ export async function POST(
           summary: intelligenceData.summary,
           extracted_at: intelligenceData.extracted_at,
         })
-        .eq('meeting_id', params.id);
+        .eq('meeting_id', id);
 
       if (intelligenceInsertError) {
         console.error('Error inserting meeting intelligence:', intelligenceInsertError);
@@ -155,7 +156,7 @@ export async function POST(
       if (intelligenceData.action_items && intelligenceData.action_items.length > 0) {
         const actionItems = intelligenceData.action_items.map((item) => ({
           client_id: meeting.client_id,
-          meeting_id: params.id,
+          meeting_id: id,
           title: item.title,
           description: `From meeting: ${meeting.title}`,
           status: 'open',
@@ -177,7 +178,7 @@ export async function POST(
     // Return result with transcript and intelligence data
     return NextResponse.json({
       success: true,
-      meetingId: params.id,
+      meetingId: id,
       transcript,
       intelligence: intelligenceData || null,
     });
