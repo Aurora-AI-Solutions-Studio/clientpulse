@@ -76,7 +76,7 @@ export default function Home() {
 
     btn.disabled = false;
     setTimeout(() => {
-      btn.textContent = 'Get Early Access';
+      btn.textContent = 'Get Started';
       btn.style.background = 'var(--teal)';
     }, 3000);
   };
@@ -87,9 +87,9 @@ export default function Home() {
   };
 
   const prices = [
-    { monthly: '59', annual: '47' },
-    { monthly: '199', annual: '159' },
-    { monthly: '499', annual: '399' },
+    { monthly: '59', annual: '49' },
+    { monthly: '199', annual: '166' },
+    { monthly: '799', annual: '666' },
   ];
 
   // ── SVG Icon Components (premium look, no emojis) ──
@@ -284,7 +284,7 @@ export default function Home() {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                Get Early Access
+                Get Started
               </button>
             </li>
           </ul>
@@ -322,7 +322,7 @@ export default function Home() {
               className="w-[6px] h-[6px] rounded-full inline-block"
               style={{ background: 'var(--teal)', animation: 'dot-pulse 2s ease-in-out infinite' }}
             />
-            Launching June 2026
+            Private launch · Summer 2026
           </div>
 
           <h1
@@ -392,7 +392,7 @@ export default function Home() {
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              Get Early Access
+              Get Started
             </button>
           </form>
 
@@ -951,8 +951,8 @@ export default function Home() {
               </div>
               <div className="font-playfair text-2xl hidden md:block" style={{ color: 'var(--text-dim)' }}>vs.</div>
               <div className="p-6 rounded-xl" style={{ background: 'var(--color-surface-light)' }}>
-                <div className="font-playfair text-4xl font-bold leading-[1.2]" style={{ color: 'var(--teal)' }}>$2,388</div>
-                <div className="text-[13px] mt-[6px]" style={{ color: 'var(--color-muted)' }}>ClientPulse Pro — $199/mo annually</div>
+                <div className="font-playfair text-4xl font-bold leading-[1.2]" style={{ color: 'var(--teal)' }}>$1,990</div>
+                <div className="text-[13px] mt-[6px]" style={{ color: 'var(--color-muted)' }}>ClientPulse Pro — $199/mo, billed annually at $1,990 (2 months free)</div>
               </div>
             </div>
 
@@ -976,7 +976,7 @@ export default function Home() {
             Plans that pay for themselves
           </h2>
           <p className="reveal text-[17px] max-w-[640px] font-light leading-[1.7] text-center mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            Start with a 7-day free trial. No credit card required. Cancel anytime.
+            Plans from $59/mo. Cancel anytime.
           </p>
 
           {/* Toggle */}
@@ -1011,16 +1011,16 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4 max-md:max-w-[400px] max-md:mx-auto">
             {[
               {
-                tier: 'Starter',
+                tier: 'Solo',
                 featured: false,
-                desc: 'For small agencies managing a handful of key accounts.',
+                desc: 'For freelancers and solo consultants with a focused book of key accounts.',
                 workflows: {
                   'CONNECT': ['Stripe financial sync'],
-                  'MONITOR': ['Up to 5 clients', 'Client Health Scores', 'Monday Client Brief'],
+                  'MONITOR': ['Up to 3 clients', 'Daily health refresh', 'Client Health Scores', 'Monday Client Brief'],
                   'ACT': [],
-                  'REVIEW': ['Churn prediction alerts'],
+                  'REVIEW': ['Churn prediction alerts', '90-day retention'],
                 },
-                features: ['Up to 5 clients', 'Client Health Scores', 'Monday Client Brief', 'Stripe financial sync', 'Churn prediction alerts', 'Email support'],
+                features: ['Up to 3 clients', 'Client Health Scores', 'Monday Client Brief', 'Stripe financial sync', 'Churn prediction alerts', '90-day data retention', 'Email support'],
               },
               {
                 tier: 'Pro',
@@ -1028,11 +1028,11 @@ export default function Home() {
                 desc: "For growing agencies that can't afford to lose a single client.",
                 workflows: {
                   'CONNECT': ['Stripe financial sync', 'Calendar & email sentiment sync'],
-                  'MONITOR': ['Up to 20 clients', 'Everything in Starter'],
+                  'MONITOR': ['Up to 10 clients', 'Hourly health refresh', 'Everything in Solo'],
                   'ACT': ['Action Proposal Engine', 'Meeting Intelligence (Zoom, Google Meet)', 'Upsell Detection Agent'],
-                  'REVIEW': ['Historical trends & accuracy tracking'],
+                  'REVIEW': ['Historical trends & accuracy tracking', '12-month retention'],
                 },
-                features: ['Up to 20 clients', 'Everything in Starter', 'Meeting Intelligence (Zoom, Google Meet)', 'Upsell Detection Agent', 'Action Proposal Engine', 'Calendar & email sentiment sync', 'Priority support'],
+                features: ['Up to 10 clients', 'Everything in Solo', 'Meeting Intelligence (Zoom, Google Meet)', 'Upsell Detection Agent', 'Action Proposal Engine', 'Calendar & email sentiment sync', '12-month data retention', '3 seats', '3 MCP connections', 'All models (Claude, GPT, Gemini)', 'Priority support'],
               },
               {
                 tier: 'Agency',
@@ -1040,11 +1040,11 @@ export default function Home() {
                 desc: 'For established agencies that treat client retention as a competitive advantage.',
                 workflows: {
                   'CONNECT': ['Stripe financial sync', 'Calendar & email sentiment sync', 'Multi-data connectors'],
-                  'MONITOR': ['Unlimited clients', 'Team dashboard & multi-user'],
+                  'MONITOR': ['Unlimited clients', 'Real-time health refresh', 'Team dashboard & multi-user'],
                   'ACT': ['Everything in Pro', 'Slack bot integration'],
-                  'REVIEW': ['White-label PDF reports', 'Recursive Learning insights', 'Portfolio analytics'],
+                  'REVIEW': ['White-label PDF reports', 'Recursive Learning insights', 'Portfolio analytics', '36-month retention'],
                 },
-                features: ['Unlimited clients', 'Everything in Pro', 'Team dashboard & multi-user', 'White-label PDF reports', 'Recursive Learning insights', 'Slack bot integration', 'API access', 'Dedicated onboarding'],
+                features: ['Unlimited clients', 'Everything in Pro', 'Team dashboard & 8 seats', 'Real-time health refresh', 'White-label PDF reports', 'Recursive Learning insights', 'Slack bot integration', 'Full API · unlimited MCP', '36-month data retention', 'On-device (post-launch)', 'Dedicated onboarding'],
               },
             ].map((plan, i) => (
               <div
@@ -1129,7 +1129,7 @@ export default function Home() {
                     }
                   }}
                 >
-                  {plan.featured ? 'Get Early Access' : 'Join Waitlist'}
+                  {plan.featured ? 'Get Started' : 'Get Started'}
                 </button>
               </div>
             ))}
@@ -1170,19 +1170,19 @@ export default function Home() {
               },
               {
                 q: 'Can my whole team use it?',
-                a: 'The Agency plan ($499/mo) includes multi-user team access with role-based permissions. Account managers see their clients, agency owners see the full portfolio. The Monday Brief can be sent to multiple team members.',
+                a: 'The Agency plan ($799/mo) includes 8 seats with role-based permissions. Account managers see their clients, agency owners see the full portfolio. The Monday Brief can be sent to multiple team members.',
               },
               {
                 q: 'What happens after the 7-day trial?',
                 a: "You choose a plan or your account pauses — no surprise charges. Your data stays available for 30 days so you can pick up where you left off. Founding members get 30% off their first year.",
               },
               {
-                q: "What's the difference between Starter, Pro, and Agency?",
-                a: "Starter ($59/mo) covers up to 5 clients with Health Scores, Monday Brief, and Stripe sync — perfect for freelancers or small shops. Pro ($199/mo) adds Meeting Intelligence, Upsell Detection, the Action Proposal Engine, and calendar/email sentiment for up to 20 clients. Agency ($499/mo) unlocks unlimited clients, team dashboard, white-label reports, Slack bot, Recursive Learning insights, and API access.",
+                q: "What's the difference between Solo, Pro, and Agency?",
+                a: "Solo ($59/mo) covers up to 3 clients with Health Scores, Monday Brief, and Stripe sync — perfect for freelancers or solo consultants. Pro ($199/mo) adds Meeting Intelligence, Upsell Detection, the Action Proposal Engine, and calendar/email sentiment for up to 10 clients. Agency ($799/mo) unlocks unlimited clients, team dashboard with 8 seats, white-label reports, Slack bot, Recursive Learning insights, and full API access.",
               },
               {
                 q: 'Is there a discount for annual billing?',
-                a: "Yes — 20% off when you pay annually. That brings Starter to $47/mo, Pro to $159/mo, and Agency to $399/mo. Founding members also get an additional 30% off their first year, stackable with annual pricing.",
+                a: "Yes — annual plans get 2 months free (16.7% off). That brings Solo to $49/mo, Pro to $166/mo, and Agency to $666/mo. Early Adopters also get an additional 30% off the first year on Agency + Agency Suite — apply the EA-CP-AGENCY-30 or EA-SUITE-30 coupon at checkout (20 slots each).",
               },
             ].map((faq, i) => (
               <div
@@ -1304,12 +1304,12 @@ export default function Home() {
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              Get Early Access
+              Get Started
             </button>
           </form>
 
           <p className="reveal text-[13px]" style={{ color: 'var(--text-dim)' }}>
-            Launching June 2026 · No credit card required · Built for agencies managing 5–50 clients
+            Private launch · Summer 2026 · Built for agencies managing 5–50 clients
           </p>
         </div>
       </section>
