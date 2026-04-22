@@ -44,14 +44,13 @@ export function ConnectionHealthBanner() {
   if (dismissed || !state || state.unhealthy.length === 0) return null;
 
   async function onRefresh(provider: IntegrationProvider) {
-    if (provider === 'stripe') return; // no refresh path
+    if (provider === 'stripe') return; // no token-refresh concept for Stripe
     setRefreshing(provider);
     try {
-      await fetch('/api/integrations/refresh', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ provider }),
-      });
+      // Provider sync routes are session-authenticated; the browser
+      // carries the cookie. Each sync route handles expired-token
+      // refresh internally (see src/app/api/integrations/{provider}/sync/route.ts).
+      await fetch(`/api/integrations/${provider}/sync`, { method: 'POST' });
       await load();
     } finally {
       setRefreshing(null);
