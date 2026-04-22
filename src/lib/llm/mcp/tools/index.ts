@@ -10,6 +10,11 @@ import {
   listAtRiskClientsTool,
 } from './clients';
 import { listActionItemsTool, getLatestMondayBriefTool } from './actions';
+import {
+  createActionItemTool,
+  triggerHealthRefreshTool,
+  generateMondayBriefTool,
+} from './writes';
 
 /** Construct a fresh registry with all v1 tools registered. */
 export function buildRegistry(): ToolRegistry {
@@ -19,7 +24,10 @@ export function buildRegistry(): ToolRegistry {
     .register(getClientHealthTool)
     .register(listAtRiskClientsTool)
     .register(listActionItemsTool)
-    .register(getLatestMondayBriefTool);
+    .register(getLatestMondayBriefTool)
+    .register(createActionItemTool)
+    .register(triggerHealthRefreshTool)
+    .register(generateMondayBriefTool);
   return registry;
 }
 
@@ -29,4 +37,7 @@ export const TOOL_NAMES = [
   'list_at_risk_clients',
   'list_action_items',
   'get_latest_monday_brief',
+  'create_action_item',
+  'trigger_health_refresh',
+  'generate_monday_brief',
 ] as const;
