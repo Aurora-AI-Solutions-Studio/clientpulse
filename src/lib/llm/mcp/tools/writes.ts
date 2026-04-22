@@ -12,6 +12,11 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { MondayBriefAgent } from '@/lib/agents/monday-brief-agent';
 import { refreshClientHealth } from '@/lib/health/refresh';
+import {
+  ActionItemOwnershipError,
+  ActionItemValidationError,
+  createActionItem,
+} from '@/lib/action-items/create';
 import { requireApiScope } from '@/lib/tiers/mcp-guard';
 import type { MCPTool } from '../tool';
 import { MCPError, MCPInvalidParamsError } from '../errors';
@@ -44,74 +49,49 @@ export const createActionItemTool: MCPTool = {
   async handler(args, session) {
     await requireApiScope(session, 'write');
     const agencyId = await resolveAgencyId(session);
-
-    const clientId = args.client_id;
-    const title = args.title;
-    const description = args.description;
-    const dueDate = args.due_date;
-
-    if (typeof clientId !== 'string' || !clientId) {
-      throw new MCPInvalidParamsError('`client_id` is required');
-    }
-    if (typeof title !== 'string' || !title.trim()) {
-      throw new MCPInvalidParamsError('`title` must be a non-empty string');
-    }
-    if (description !== undefined && typeof description !== 'string') {
-      throw new MCPInvalidParamsError('`description` must be a string');
-    }
-    if (dueDate !== undefined) {
-      if (typeof dueDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
-        throw new MCPInvalidParamsError('`due_date` must be YYYY-MM-DD');
-      }
-    }
-
     const supabase = createServiceClient();
 
-    // Scope the client to this agency before inserting — we bypass RLS
-    // on the service client, so the app has to enforce ownership.
-    const { data: client, error: clientErr } = await supabase
-      .from('clients')
-      .select('id, company_name, name')
-      .eq('id', clientId)
-      .eq('agency_id', agencyId)
-      .maybeSingle();
-    if (clientErr) throw new MCPError(MCP_ERROR_CODES.INTERNAL_ERROR, clientErr.message);
-    if (!client) {
+    let inserted;
+    try {
+      inserted = await createActionItem({
+        supabase,
+        agencyId,
+        input: {
+          clientId: args.client_id as string,
+          title: args.title as string,
+          description: args.description as string | undefined,
+          dueDate: args.due_date as string | undefined,
+        },
+      });
+    } catch (err) {
+      if (err instanceof ActionItemValidationError) {
+        throw new MCPInvalidParamsError(err.message);
+      }
+      if (err instanceof ActionItemOwnershipError) {
+        throw new MCPError(MCP_ERROR_CODES.INVALID_PARAMS, err.message);
+      }
       throw new MCPError(
-        MCP_ERROR_CODES.INVALID_PARAMS,
-        'Client not found in this agency.'
+        MCP_ERROR_CODES.INTERNAL_ERROR,
+        err instanceof Error ? err.message : String(err)
       );
     }
 
-    const { data: inserted, error: insertErr } = await supabase
-      .from('action_items')
-      .insert({
-        client_id: clientId,
-        title: title.trim(),
-        description:
-          typeof description === 'string' && description.trim()
-            ? description.trim()
-            : null,
-        due_date: dueDate ?? null,
-        status: 'open',
-      })
-      .select(
-        'id, client_id, meeting_id, title, description, status, due_date, assigned_to, created_at'
-      )
-      .single();
-    if (insertErr || !inserted) {
-      throw new MCPError(
-        MCP_ERROR_CODES.INTERNAL_ERROR,
-        insertErr?.message ?? 'Failed to create action item'
-      );
-    }
+    // Resolve company name for the human-readable text envelope. The
+    // shared core only returns the raw row; name-for-display is an
+    // MCP-surface concern.
+    const { data: client } = await supabase
+      .from('clients')
+      .select('company_name, name')
+      .eq('id', inserted.client_id)
+      .maybeSingle();
+    const label = client?.company_name ?? client?.name ?? 'client';
 
     return {
       content: [
         {
           type: 'text',
           text:
-            `Created action item "${inserted.title}" on ${client.company_name} (id=${inserted.id})` +
+            `Created action item "${inserted.title}" on ${label} (id=${inserted.id})` +
             (inserted.due_date ? ` · due ${inserted.due_date}` : '') +
             '.',
         },

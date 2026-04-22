@@ -84,6 +84,7 @@ const workflowGroups: NavGroup[] = [
     description: 'Take action',
     color: '#e74c3c',
     items: [
+      { label: 'Proposals', icon: Zap, href: '/dashboard/proposals' },
       { label: 'Approvals', icon: ShieldCheck, href: '/dashboard/approvals' },
       { label: 'Check-ins', icon: MessageSquare, href: '/dashboard/check-ins' },
       { label: 'Upsell', icon: TrendingUp, href: '/dashboard/upsell' },

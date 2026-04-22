@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { ProposalsCard } from '@/components/dashboard/ProposalsCard';
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -161,6 +162,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* APE v1 — portfolio proposals */}
+      <ProposalsCard initialLimit={3} />
 
       {/* Recent Activity & Upcoming Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
