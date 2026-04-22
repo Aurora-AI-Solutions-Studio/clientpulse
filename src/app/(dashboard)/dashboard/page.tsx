@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ProposalsCard } from '@/components/dashboard/ProposalsCard';
+import { ConnectionHealthBanner } from '@/components/dashboard/ConnectionHealthBanner';
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -83,6 +84,9 @@ export default function DashboardPage() {
           Here&apos;s what&apos;s happening with your clients today.
         </p>
       </div>
+
+      {/* Connection health — hidden when all providers healthy */}
+      <ConnectionHealthBanner />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
