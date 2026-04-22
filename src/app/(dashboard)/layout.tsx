@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Sidebar from '@/components/dashboard/sidebar';
 import Header from '@/components/dashboard/header';
 import MobileSidebar from '@/components/dashboard/mobile-sidebar';
+import type { CPTier } from '@/lib/tiers';
 
 interface User {
   id: string;
@@ -16,13 +17,21 @@ interface User {
   };
 }
 
+interface MeSummary {
+  tier: CPTier;
+  tierLabel: string;
+  onboardingCompletedAt: string | null;
+}
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
+  const [me, setMe] = useState<MeSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -41,6 +50,17 @@ export default function DashboardLayout({
         }
 
         setUser(user);
+
+        // Best-effort profile fetch — feeds sidebar tier + onboarding gate.
+        try {
+          const meRes = await fetch('/api/me');
+          if (meRes.ok) {
+            const data: MeSummary = await meRes.json();
+            setMe(data);
+          }
+        } catch {
+          // Non-fatal — layout still renders, sidebar shows placeholder tier.
+        }
       } catch (error) {
         console.error('Auth error:', error);
         router.push('/auth/login');
@@ -51,6 +71,16 @@ export default function DashboardLayout({
 
     checkUser();
   }, [router]);
+
+  // Onboarding gate: redirect to the wizard until the user finishes it.
+  // The wizard itself is exempt so the gate doesn't loop.
+  useEffect(() => {
+    if (loading || !me) return;
+    const onOnboarding = pathname?.startsWith('/dashboard/onboarding');
+    if (!me.onboardingCompletedAt && !onOnboarding) {
+      router.replace('/dashboard/onboarding');
+    }
+  }, [loading, me, pathname, router]);
 
   if (loading) {
     return (
@@ -71,7 +101,7 @@ export default function DashboardLayout({
     <div className="flex h-screen bg-[#06090f]">
       {/* Desktop Sidebar */}
       <div className="hidden md:block w-[280px] fixed left-0 top-0 h-screen">
-        <Sidebar user={user} />
+        <Sidebar user={user} tierLabel={me?.tierLabel ?? null} />
       </div>
 
       {/* Mobile Sidebar */}
@@ -79,6 +109,7 @@ export default function DashboardLayout({
         user={user}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+        tierLabel={me?.tierLabel ?? null}
       />
 
       {/* Main Content Area */}

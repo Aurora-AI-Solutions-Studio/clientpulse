@@ -38,6 +38,7 @@ interface User {
 
 interface SidebarProps {
   user: User;
+  tierLabel?: string | null;
 }
 
 interface NavGroup {
@@ -104,7 +105,7 @@ const workflowGroups: NavGroup[] = [
   },
 ];
 
-export default function Sidebar({ }: SidebarProps) {
+export default function Sidebar({ tierLabel }: SidebarProps) {
   const pathname = usePathname();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     Connect: true,
@@ -114,7 +115,7 @@ export default function Sidebar({ }: SidebarProps) {
   });
 
   const getSubscriptionTier = () => {
-    return 'Free';
+    return tierLabel ?? 'Free';
   };
 
   const isActive = (href: string) => {
