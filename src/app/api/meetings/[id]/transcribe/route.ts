@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { WhisperTranscriptionAgent } from '@/lib/agents/whisper-transcription-agent';
 import { MeetingIntelligenceAgent } from '@/lib/agents/meeting-intelligence-agent';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
+import { requireTier, TierLimitError } from '@/lib/tiers';
 
 export async function POST(
   request: NextRequest,
@@ -39,6 +40,19 @@ export async function POST(
         { error: 'User profile not found' },
         { status: 404 }
       );
+    }
+
+    // Meeting transcription + Meeting Intelligence are Pro+ per D-D2.
+    try {
+      requireTier({ subscription_plan: profile.subscription_plan }, 'pro');
+    } catch (err) {
+      if (err instanceof TierLimitError) {
+        return NextResponse.json(
+          { error: err.message, dimension: err.dimension, tier: err.tier },
+          { status: err.status }
+        );
+      }
+      throw err;
     }
 
     const subscriptionPlan = (profile.subscription_plan as 'solo' | 'pro' | 'agency' | null) ?? 'solo';

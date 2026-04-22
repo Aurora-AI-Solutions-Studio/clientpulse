@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { UpsellDetectionAgent, UpsellDetectionInput } from '@/lib/agents/upsell-detection-agent';
 import { UpsellOpportunity } from '@/types/alerts';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
+import { requireTier, TierLimitError } from '@/lib/tiers';
 
 export async function GET(_request: NextRequest) {
   try {
@@ -20,7 +21,7 @@ export async function GET(_request: NextRequest) {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('agency_id')
+      .select('agency_id, subscription_plan')
       .eq('id', user.id)
       .single();
 
@@ -29,6 +30,19 @@ export async function GET(_request: NextRequest) {
         { error: 'User profile not found' },
         { status: 404 }
       );
+    }
+
+    // Upsell Detection is Pro+ per D-D2.
+    try {
+      requireTier({ subscription_plan: profile.subscription_plan }, 'pro');
+    } catch (err) {
+      if (err instanceof TierLimitError) {
+        return NextResponse.json(
+          { error: err.message, dimension: err.dimension, tier: err.tier },
+          { status: err.status }
+        );
+      }
+      throw err;
     }
 
     const agencyId = profile.agency_id as string;
@@ -100,6 +114,19 @@ export async function POST(request: NextRequest) {
         { error: 'User profile not found' },
         { status: 404 }
       );
+    }
+
+    // Upsell Detection is Pro+ per D-D2.
+    try {
+      requireTier({ subscription_plan: profile.subscription_plan }, 'pro');
+    } catch (err) {
+      if (err instanceof TierLimitError) {
+        return NextResponse.json(
+          { error: err.message, dimension: err.dimension, tier: err.tier },
+          { status: err.status }
+        );
+      }
+      throw err;
     }
 
     const agencyId = profile.agency_id as string;
