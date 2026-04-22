@@ -4,7 +4,7 @@
 // concrete provider SDK directly.
 //
 // Ported from reforge/lib/llm/types.ts (Sprint 7.6 M1).
-// CP adaptation: uses `SubscriptionPlan` (starter | pro | agency) from
+// CP adaptation: uses `SubscriptionPlan` (solo | pro | agency) from
 // `@/types/stripe` instead of RF's 5-tier `LaunchPlan`.
 
 import type { SubscriptionPlan } from '@/types/stripe';
@@ -40,7 +40,7 @@ export interface LLMMessage {
 export interface LLMCompletionRequest {
   /**
    * Preferred logical model. The router may substitute based on tier
-   * gating — e.g. a Starter tier request for `claude-sonnet-4-5` will
+   * gating — e.g. a Solo tier request for `claude-sonnet-4-5` will
    * be rewritten to `gpt-4o-mini` before reaching a provider.
    */
   model: LLMModelId;

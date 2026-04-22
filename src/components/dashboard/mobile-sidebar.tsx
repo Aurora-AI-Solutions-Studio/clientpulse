@@ -137,7 +137,7 @@ export default function MobileSidebar({
   const subscriptionTier = getSubscriptionTier();
   const tierColor = {
     Free: 'bg-[#1a2540] text-[#7a88a8]',
-    Starter: 'bg-blue-500/10 text-blue-400',
+    Solo: 'bg-blue-500/10 text-blue-400',
     Pro: 'bg-purple-500/10 text-purple-400',
     Agency: 'bg-[#e74c3c]/10 text-[#e74c3c]',
   } as Record<string, string>;

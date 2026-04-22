@@ -45,7 +45,7 @@ export const MODELS: Record<LLMModelId, LLMModelDescriptor> = {
     id: 'gpt-4o-mini',
     provider: 'openai',
     vendorId: 'gpt-4o-mini',
-    min_tier: 'starter',
+    min_tier: 'solo',
     capabilities: ['content', 'scoring'],
     cost_per_mtok_input: 0.15,
     cost_per_mtok_output: 0.6,

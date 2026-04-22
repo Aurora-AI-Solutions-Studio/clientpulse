@@ -1,5 +1,11 @@
 /**
  * Stripe configuration and plan definitions
+ *
+ * Canonical CP launch pricing (Pricing Deep-Dive Apr 14, aligned with the
+ * Agency Suite cross-sell narrative):
+ *   Solo    — $59/mo  (3 clients, Monday Brief, Stripe sync)
+ *   Pro     — $199/mo (10 clients, Meeting Intelligence, Action Proposal Engine)
+ *   Agency  — $799/mo (∞ clients, 8 seats, MCP unlimited, white-label reports)
  */
 
 import { SubscriptionPlan } from '@/types/stripe';
@@ -17,67 +23,66 @@ export interface PlanConfig {
 }
 
 export const STRIPE_PLANS: Record<SubscriptionPlan, PlanConfig> = {
-  starter: {
-    id: 'starter',
-    name: 'Starter',
-    description: 'Perfect for freelancers and small teams',
-    price: 29,
+  solo: {
+    id: 'solo',
+    name: 'Solo',
+    description: 'For freelancers and solo consultants',
+    price: 59,
     currency: 'usd',
     interval: 'month',
     productId: 'prod_UGHPAJi3MzjPFU',
     features: [
-      'Up to 10 clients',
-      'Basic financial signals',
+      'Up to 3 clients',
+      'Health Scores & Monday Brief',
+      'Stripe sync',
       'Email notifications',
-      'Invoice tracking',
     ],
   },
   pro: {
     id: 'pro',
     name: 'Pro',
-    description: 'For growing agencies and consultants',
-    price: 79,
+    description: 'For growing agencies',
+    price: 199,
     currency: 'usd',
     interval: 'month',
     productId: 'prod_UGHPMZvDuwJwGR',
     features: [
-      'Up to 50 clients',
-      'Advanced financial signals',
-      'Real-time alerts',
-      'Stripe integration',
-      'Custom reporting',
+      'Up to 10 clients',
+      'Meeting Intelligence + Action Proposal Engine',
+      'Upsell Detection',
+      'Calendar & email sentiment',
+      '3 seats',
     ],
   },
   agency: {
     id: 'agency',
     name: 'Agency',
-    description: 'For large teams and enterprises',
-    price: 199,
+    description: 'For multi-team agencies and enterprises',
+    price: 799,
     currency: 'usd',
     interval: 'month',
     productId: 'prod_UGHP5p2K5IaHoy',
     features: [
       'Unlimited clients',
-      'AI-powered Financial Signal Agent',
-      'Stripe Connect integration',
-      'Invoice ingestion & analysis',
-      'Advanced predictive analytics',
+      '8 seats',
+      'Team dashboard + white-label reports',
+      'Slack bot + Recursive Learning insights',
+      'Full API access + unlimited MCP connections',
       'Priority support',
-      'Custom integrations',
     ],
   },
 };
 
 /**
- * Load price IDs from environment variables
- * Format: STRIPE_PRICE_ID_STARTER, STRIPE_PRICE_ID_PRO, STRIPE_PRICE_ID_AGENCY
+ * Load price IDs from environment variables.
+ * Format: STRIPE_PRICE_ID_SOLO, STRIPE_PRICE_ID_PRO, STRIPE_PRICE_ID_AGENCY
  */
 export function initializeStripePriceIds() {
-  const starter = process.env.STRIPE_PRICE_ID_STARTER;
+  const solo = process.env.STRIPE_PRICE_ID_SOLO;
   const pro = process.env.STRIPE_PRICE_ID_PRO;
   const agency = process.env.STRIPE_PRICE_ID_AGENCY;
 
-  if (starter) STRIPE_PLANS.starter.priceId = starter;
+  if (solo) STRIPE_PLANS.solo.priceId = solo;
   if (pro) STRIPE_PLANS.pro.priceId = pro;
   if (agency) STRIPE_PLANS.agency.priceId = agency;
 }
@@ -111,7 +116,7 @@ export function getPlanByPriceId(priceId: string): SubscriptionPlan | null {
  * Feature comparison
  */
 export const PLAN_FEATURES = {
-  starter: STRIPE_PLANS.starter.features,
+  solo: STRIPE_PLANS.solo.features,
   pro: STRIPE_PLANS.pro.features,
   agency: STRIPE_PLANS.agency.features,
 };

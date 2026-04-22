@@ -42,6 +42,6 @@ describe('lib/llm/models — catalog integrity', () => {
     const defaults = listModels().filter((m) => m.is_tier_default);
     expect(defaults).toHaveLength(1);
     expect(defaults[0].id).toBe('gpt-4o-mini');
-    expect(defaults[0].min_tier).toBe('starter');
+    expect(defaults[0].min_tier).toBe('solo');
   });
 });

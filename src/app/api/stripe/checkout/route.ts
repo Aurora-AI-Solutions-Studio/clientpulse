@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { plan } = body as { plan: SubscriptionPlan };
 
-    if (!plan || !['starter', 'pro', 'agency'].includes(plan)) {
+    if (!plan || !['solo', 'pro', 'agency'].includes(plan)) {
       return NextResponse.json(
         { error: 'Invalid plan parameter' },
         { status: 400 }

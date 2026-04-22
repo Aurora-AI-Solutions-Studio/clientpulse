@@ -2,7 +2,7 @@
  * Stripe-related TypeScript types for ClientPulse
  */
 
-export type SubscriptionPlan = 'starter' | 'pro' | 'agency';
+export type SubscriptionPlan = 'solo' | 'pro' | 'agency';
 
 export type SubscriptionStatus =
   | 'active'

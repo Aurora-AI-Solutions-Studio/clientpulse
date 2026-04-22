@@ -3,7 +3,7 @@
  *
  * Sprint 8A M1.1: routes through the multi-model LLM client. Model
  * selection follows the caller's subscription plan:
- *   - starter  → gpt-4o-mini
+ *   - solo     → gpt-4o-mini
  *   - pro      → claude-sonnet-4-5
  *   - agency   → claude-sonnet-4-5 (with capability-based auto-routing)
  *

@@ -1,6 +1,6 @@
 /**
  * Upgrade Banner Component
- * Displays call-to-action for free/starter users to upgrade to next tier
+ * Displays call-to-action for free/solo users to upgrade to next tier
  */
 
 'use client';
@@ -23,23 +23,23 @@ const PLAN_UPGRADES: Record<string, {
   cta: string;
 }> = {
   free: {
-    nextPlan: 'starter',
-    nextPlanName: 'Starter',
+    nextPlan: 'solo',
+    nextPlanName: 'Solo',
     benefits: [
-      'Support up to 10 clients',
-      'Basic financial signals',
-      'Email notifications',
+      'Up to 3 clients',
+      'Health Scores & Monday Brief',
+      'Stripe sync',
     ],
-    cta: 'Upgrade to Starter',
+    cta: 'Upgrade to Solo',
   },
-  starter: {
+  solo: {
     nextPlan: 'pro',
     nextPlanName: 'Pro',
     benefits: [
-      'Support up to 50 clients',
-      'Advanced financial signals',
-      'Real-time alerts',
-      'Stripe integration',
+      'Up to 10 clients',
+      'Meeting Intelligence + Action Proposal Engine',
+      'Upsell Detection',
+      '3 seats',
     ],
     cta: 'Upgrade to Pro',
   },
@@ -103,7 +103,7 @@ export function UpgradeBanner({ currentPlan, onClose }: UpgradeBannerProps) {
 
   const iconMap: Record<string, typeof Zap> = {
     free: Zap,
-    starter: TrendingUp,
+    solo: TrendingUp,
     pro: Lock,
   };
 

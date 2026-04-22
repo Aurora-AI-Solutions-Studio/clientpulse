@@ -1,8 +1,8 @@
 // ─── Tier-aware routing ───────────────────────────────────────────
 // Canonical tier rules (Apr 14 Pricing Deep-Dive):
-//   Starter  (= Solo) → GPT-4o-mini only (locked)
-//   Pro              → all models, caller chooses
-//   Agency           → all models + automatic cost/quality routing
+//   Solo    → GPT-4o-mini only (locked)
+//   Pro     → all models, caller chooses
+//   Agency  → all models + automatic cost/quality routing
 //
 // Ported from reforge/lib/llm/routing.ts (Sprint 7.6 M1).
 // CP adaptation: 3-tier only (no 'free' or 'enterprise' in CP's plan).
@@ -19,7 +19,7 @@ import {
 // ─── Tier ordering ────────────────────────────────────────────────
 
 const TIER_RANK: Record<LLMTier, number> = {
-  starter: 1, // Solo
+  solo: 1,
   pro: 2,
   agency: 3,
 };
@@ -30,11 +30,10 @@ export function tierMeetsMin(plan: LLMTier, min: LLMTier): boolean {
 
 // ─── Per-tier defaults ────────────────────────────────────────────
 // The default model picked when the caller doesn't specify one.
-// Starter (Solo) is locked — the router NEVER substitutes something
-// more expensive.
+// Solo is locked — the router NEVER substitutes something more expensive.
 
 export const DEFAULT_MODELS: Record<LLMTier, LLMModelId> = {
-  starter: 'gpt-4o-mini',
+  solo: 'gpt-4o-mini',
   pro: 'claude-sonnet-4-5',
   agency: 'claude-sonnet-4-5',
 };
@@ -76,10 +75,10 @@ export interface ResolvedModel {
 export function resolveModel(plan: LLMTier, opts: ResolveModelOptions = {}): ResolvedModel {
   const { requested, capability, substituteOnTierMiss = true } = opts;
 
-  // Starter (Solo) is locked. Always return the default, regardless of
-  // what was requested — this is the hard guarantee from the Pricing
-  // Deep-Dive ("Solo = GPT-4o-mini, no substitutions").
-  if (plan === 'starter') {
+  // Solo is locked. Always return the default, regardless of what was
+  // requested — this is the hard guarantee from the Pricing Deep-Dive
+  // ("Solo = GPT-4o-mini, no substitutions").
+  if (plan === 'solo') {
     const def = DEFAULT_MODELS[plan];
     if (requested && requested !== def) {
       if (!substituteOnTierMiss) {
