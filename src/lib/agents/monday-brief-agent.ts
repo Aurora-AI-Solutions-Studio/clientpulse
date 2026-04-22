@@ -315,6 +315,8 @@ export class MondayBriefAgent {
       trendingRisks,
       risingStars,
       topActionItemsCount: topActionItems.length,
+      recommendedActionsCount: recommendedActions.length,
+      topRecommendedAction: recommendedActions[0],
     });
 
     return {
@@ -488,6 +490,8 @@ export class MondayBriefAgent {
     trendingRisks: MondayBriefClientEntry[];
     risingStars: MondayBriefClientEntry[];
     topActionItemsCount: number;
+    recommendedActionsCount: number;
+    topRecommendedAction?: MondayBriefRecommendedAction;
   }): { headline: string; summary: string; recommendation: string } {
     const deltaLabel =
       ctx.weekOverWeekDelta > 0
@@ -496,19 +500,31 @@ export class MondayBriefAgent {
           ? `down ${Math.abs(ctx.weekOverWeekDelta)} pts`
           : 'flat';
 
+    // Sprint 8A: the brief is a decision surface — lead with state +
+    // a proposal count when available. Critical state still takes
+    // headline precedence over proposal-count-only framing.
+    const proposalTail =
+      ctx.recommendedActionsCount > 0
+        ? ` · ${ctx.recommendedActionsCount} proposal${ctx.recommendedActionsCount > 1 ? 's' : ''} ready`
+        : '';
     const headline =
       ctx.critical > 0
-        ? `${ctx.critical} client${ctx.critical > 1 ? 's' : ''} in critical — act today`
+        ? `${ctx.critical} client${ctx.critical > 1 ? 's' : ''} in critical — act today${proposalTail}`
         : ctx.atRisk > 0
-          ? `${ctx.atRisk} at-risk client${ctx.atRisk > 1 ? 's' : ''} this week`
-          : ctx.totalClients === 0
-            ? 'No clients yet — add your first client to start tracking health'
-            : 'Portfolio is healthy — keep the momentum';
+          ? `${ctx.atRisk} at-risk client${ctx.atRisk > 1 ? 's' : ''} this week${proposalTail}`
+          : ctx.recommendedActionsCount > 0
+            ? `${ctx.recommendedActionsCount} proposal${ctx.recommendedActionsCount > 1 ? 's' : ''} ready for your review`
+            : ctx.totalClients === 0
+              ? 'No clients yet — add your first client to start tracking health'
+              : 'Portfolio is healthy — keep the momentum';
 
     const summary = [
       `${ctx.totalClients} active clients tracked.`,
       `Avg health ${ctx.averageScore}/100 (${deltaLabel} WoW).`,
       `${ctx.healthy} healthy · ${ctx.atRisk} at-risk · ${ctx.critical} critical.`,
+      ctx.recommendedActionsCount > 0
+        ? `${ctx.recommendedActionsCount} proposed action${ctx.recommendedActionsCount > 1 ? 's' : ''} below — Accept to add to your action items.`
+        : '',
       ctx.trendingRisks.length > 0
         ? `${ctx.trendingRisks.length} client${ctx.trendingRisks.length > 1 ? 's' : ''} trending down this week.`
         : 'No sharp declines this week.',
@@ -516,20 +532,24 @@ export class MondayBriefAgent {
         ? `${ctx.risingStars.length} client${ctx.risingStars.length > 1 ? 's' : ''} improving.`
         : '',
       ctx.topActionItemsCount > 0
-        ? `${ctx.topActionItemsCount} action item${ctx.topActionItemsCount > 1 ? 's' : ''} due this week.`
+        ? `${ctx.topActionItemsCount} action item${ctx.topActionItemsCount > 1 ? 's' : ''} already open and due this week.`
         : '',
     ]
       .filter(Boolean)
       .join(' ');
 
+    // Sprint 8A: lead the recommendation with the top proposal when
+    // one is available — gives the user a concrete first move.
     const recommendation =
-      ctx.critical > 0
-        ? `Focus block on ${ctx.needsAttention[0]?.companyName ?? 'critical clients'} first thing today. Review financial + relationship signals and schedule a direct check-in.`
-        : ctx.atRisk > 0
-          ? `Schedule check-ins with the ${ctx.atRisk} at-risk account${ctx.atRisk > 1 ? 's' : ''} this week. Start with ${ctx.needsAttention[0]?.companyName ?? 'the lowest-scoring account'}.`
-          : ctx.risingStars.length > 0
-            ? `Portfolio is strong. Consider upsell conversations with your rising accounts.`
-            : `Maintain cadence. Keep weekly check-ins on the calendar.`;
+      ctx.topRecommendedAction
+        ? `Start here: ${ctx.topRecommendedAction.title} — ${ctx.topRecommendedAction.companyName || ctx.topRecommendedAction.clientName}. ${ctx.topRecommendedAction.rationale}`
+        : ctx.critical > 0
+          ? `Focus block on ${ctx.needsAttention[0]?.companyName ?? 'critical clients'} first thing today. Review financial + relationship signals and schedule a direct check-in.`
+          : ctx.atRisk > 0
+            ? `Schedule check-ins with the ${ctx.atRisk} at-risk account${ctx.atRisk > 1 ? 's' : ''} this week. Start with ${ctx.needsAttention[0]?.companyName ?? 'the lowest-scoring account'}.`
+            : ctx.risingStars.length > 0
+              ? `Portfolio is strong. Consider upsell conversations with your rising accounts.`
+              : `Maintain cadence. Keep weekly check-ins on the calendar.`;
 
     return { headline, summary, recommendation };
   }

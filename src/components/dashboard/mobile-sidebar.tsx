@@ -40,6 +40,7 @@ interface MobileSidebarProps {
   user: User;
   isOpen: boolean;
   onClose: () => void;
+  tierLabel?: string | null;
 }
 
 interface NavGroup {
@@ -108,6 +109,7 @@ const workflowGroups: NavGroup[] = [
 export default function MobileSidebar({
   isOpen,
   onClose,
+  tierLabel,
 }: MobileSidebarProps) {
   const pathname = usePathname();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
@@ -118,7 +120,7 @@ export default function MobileSidebar({
   });
 
   const getSubscriptionTier = () => {
-    return 'Free';
+    return tierLabel ?? 'Free';
   };
 
   const isActive = (href: string) => {

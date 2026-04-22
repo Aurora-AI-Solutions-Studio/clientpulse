@@ -30,7 +30,7 @@ export async function GET(_request: NextRequest) {
 
     const { data: connections, error } = await supabase
       .from('integration_connections')
-      .select('id, provider, status, account_email, account_name, connected_at, last_sync_at, error, scopes')
+      .select('id, provider, status, account_email, account_name, connected_at, last_sync_at, token_expires_at, error, scopes')
       .eq('agency_id', profile.agency_id)
       .order('connected_at', { ascending: false });
 

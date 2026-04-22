@@ -41,6 +41,37 @@ export default function BriefPage() {
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [acceptedIds, setAcceptedIds] = useState<Set<string>>(new Set());
+
+  async function acceptProposal(a: {
+    id: string;
+    clientId: string;
+    title: string;
+    rationale: string;
+  }) {
+    setAcceptingId(a.id);
+    setError(null);
+    try {
+      const res = await fetch('/api/action-items', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          clientId: a.clientId,
+          title: a.title,
+          description: a.rationale,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? `Accept failed (${res.status})`);
+        return;
+      }
+      setAcceptedIds((s) => new Set(s).add(a.id));
+    } finally {
+      setAcceptingId(null);
+    }
+  }
 
   const latest = briefs[0];
 
@@ -138,7 +169,12 @@ export default function BriefPage() {
           </CardContent>
         </Card>
       ) : (
-        <BriefPreview record={latest} />
+        <BriefPreview
+          record={latest}
+          acceptedIds={acceptedIds}
+          acceptingId={acceptingId}
+          onAccept={acceptProposal}
+        />
       )}
 
       {/* History */}
@@ -176,7 +212,24 @@ export default function BriefPage() {
   );
 }
 
-function BriefPreview({ record }: { record: BriefRecord }) {
+interface BriefPreviewProps {
+  record: BriefRecord;
+  acceptedIds: Set<string>;
+  acceptingId: string | null;
+  onAccept: (a: {
+    id: string;
+    clientId: string;
+    title: string;
+    rationale: string;
+  }) => void;
+}
+
+function BriefPreview({
+  record,
+  acceptedIds,
+  acceptingId,
+  onAccept,
+}: BriefPreviewProps) {
   const brief = record.content;
   return (
     <Card>
@@ -268,6 +321,7 @@ function BriefPreview({ record }: { record: BriefRecord }) {
                   medium: 'text-amber-400',
                   low: 'text-green-400',
                 };
+                const accepted = acceptedIds.has(action.id);
                 return (
                   <div
                     key={action.id}
@@ -287,6 +341,29 @@ function BriefPreview({ record }: { record: BriefRecord }) {
                             <span className="text-blue-400">{action.engagementContext}</span>
                           </p>
                         )}
+                        <div className="mt-2">
+                          {accepted ? (
+                            <span className="text-xs text-green-400 inline-flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> Added to action items
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={acceptingId === action.id}
+                              onClick={() =>
+                                onAccept({
+                                  id: action.id,
+                                  clientId: action.clientId,
+                                  title: action.title,
+                                  rationale: action.rationale,
+                                })
+                              }
+                              className="text-xs bg-[#38e8c8]/10 border border-[#38e8c8]/30 text-[#38e8c8] hover:bg-[#38e8c8]/20 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                            >
+                              {acceptingId === action.id ? 'Accepting…' : 'Accept'}
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <span className="text-2xl font-bold text-[#1a2540]/50">{i + 1}</span>
                     </div>
