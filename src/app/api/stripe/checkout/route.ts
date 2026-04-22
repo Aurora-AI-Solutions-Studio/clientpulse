@@ -7,13 +7,15 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient } from '@/lib/supabase/server';
-import { getPriceId } from '@/lib/stripe-config';
+import { BillingInterval, getPriceIdForInterval, initializeStripePriceIds } from '@/lib/stripe-config';
 import { SubscriptionPlan } from '@/types/stripe';
+
+initializeStripePriceIds();
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { plan } = body as { plan: SubscriptionPlan };
+    const { plan, interval } = body as { plan: SubscriptionPlan; interval?: BillingInterval };
 
     if (!plan || !['solo', 'pro', 'agency'].includes(plan)) {
       return NextResponse.json(
@@ -21,6 +23,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const billingInterval: BillingInterval =
+      interval === 'year' || interval === 'month' ? interval : 'month';
 
     // Get authenticated user
     const supabase = await createClient();
@@ -36,7 +41,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const priceId = getPriceId(plan);
+    let priceId: string;
+    try {
+      priceId = getPriceIdForInterval(plan, billingInterval);
+    } catch {
+      return NextResponse.json(
+        { error: `No ${billingInterval === 'year' ? 'annual' : 'monthly'} price configured for plan ${plan}` },
+        { status: 500 }
+      );
+    }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
@@ -56,6 +69,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         userId: user.id,
         plan,
+        interval: billingInterval,
       },
     });
 

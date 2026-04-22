@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, FormEvent } from 'react';
+import { STRIPE_PLANS, getAnnualMonthly } from '@/lib/stripe-config';
+import { SubscriptionPlan } from '@/types/stripe';
 
 export default function Home() {
   const [isAnnual, setIsAnnual] = useState(false);
@@ -86,11 +88,16 @@ export default function Home() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const prices = [
-    { monthly: '59', annual: '49' },
-    { monthly: '199', annual: '166' },
-    { monthly: '799', annual: '666' },
-  ];
+  // Price cards are driven off STRIPE_PLANS (single source of truth with
+  // src/lib/stripe-config.ts). Annual is 2 months free (10/12 multiplier =
+  // 16.7% off) computed via getAnnualMonthly(). Order matches the cards
+  // below: Solo, Pro, Agency.
+  const PLAN_ORDER: SubscriptionPlan[] = ['solo', 'pro', 'agency'];
+  const prices = PLAN_ORDER.map((p) => ({
+    monthly: String(STRIPE_PLANS[p].price),
+    annual: String(getAnnualMonthly(p)),
+    yearlyTotal: STRIPE_PLANS[p].priceYearly,
+  }));
 
   // ── SVG Icon Components (premium look, no emojis) ──
   const Icon = {
@@ -976,7 +983,7 @@ export default function Home() {
             Plans that pay for themselves
           </h2>
           <p className="reveal text-[17px] max-w-[640px] font-light leading-[1.7] text-center mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            Plans from $59/mo. Cancel anytime.
+            Plans from ${STRIPE_PLANS.solo.price}/mo. Cancel anytime.
           </p>
 
           {/* Toggle */}
@@ -1003,7 +1010,7 @@ export default function Home() {
               className="text-xs font-semibold py-1 px-[10px] rounded-full"
               style={{ color: 'var(--teal)', background: 'var(--teal-subtle)' }}
             >
-              Save 20%
+              2 months free
             </span>
           </div>
 
@@ -1133,6 +1140,45 @@ export default function Home() {
                 </button>
               </div>
             ))}
+          </div>
+
+          {/* ─── Agency Suite cross-link (CP + ReForge bundle teaser) ─── */}
+          <div className="reveal mt-14 max-w-[820px] mx-auto p-[28px_32px] max-md:p-[24px] rounded-[16px] flex items-center justify-between gap-6 max-md:flex-col max-md:items-start"
+            style={{
+              background: 'linear-gradient(135deg, rgba(56, 232, 200, 0.05), var(--color-surface-light))',
+              border: '1px solid var(--border-subtle)',
+            }}
+          >
+            <div className="flex-1">
+              <div className="text-xs font-semibold uppercase tracking-[0.15em] mb-2" style={{ color: 'var(--teal)' }}>
+                Agency Suite
+              </div>
+              <h3 className="font-playfair text-[22px] font-bold leading-[1.3] mb-2" style={{ color: 'var(--text-primary)' }}>
+                Bundle ClientPulse with ReForge — content velocity meets client retention
+              </h3>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                Agencies running both get a bundled price and a built-in upsell loop: ReForge publishing signals feed ClientPulse health scores. See the Suite pricing on the ReForge site.
+              </p>
+            </div>
+            <a
+              href="https://reforge.helloaurora.ai/pricing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 py-[12px] px-[22px] rounded-[10px] text-sm font-semibold whitespace-nowrap transition-all"
+              style={{
+                background: 'var(--color-surface-light)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-teal)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--color-surface-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--color-surface-light)';
+              }}
+            >
+              Explore Agency Suite →
+            </a>
           </div>
         </div>
       </section>

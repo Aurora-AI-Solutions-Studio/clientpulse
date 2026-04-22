@@ -254,6 +254,17 @@ export default function Sidebar({ }: SidebarProps) {
           </Badge>
         </div>
 
+        <Link
+          href="/dashboard/upgrade"
+          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
+            isActive('/dashboard/upgrade')
+              ? 'bg-[#38e8c8]/10 text-[#38e8c8] border border-[#38e8c8]/30'
+              : 'bg-[#0f1420] text-[#7a88a8] border border-[#1a2540] hover:text-white hover:border-[#38e8c8]/30'
+          }`}
+        >
+          View plans & upgrade
+        </Link>
+
         <div className="text-xs text-[#7a88a8] text-center pt-2 border-t border-[#1a2540]">
           by Aurora
         </div>
