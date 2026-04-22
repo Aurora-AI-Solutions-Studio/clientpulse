@@ -13,6 +13,22 @@ import {
   type TierProfile,
 } from './limits';
 
+// ─── Tier ladder — used by requireTier ────────────────────────────
+// Canonical CP ordering. Solo is the entry paid tier; free sits below
+// it (pre-launch signup default only).
+
+const CP_TIER_RANK: Record<CPTier, number> = {
+  free: 0,
+  solo: 1,
+  pro: 2,
+  agency: 3,
+};
+
+/** True when `tier` meets or exceeds `min`. */
+export function tierMeetsMin(tier: CPTier, min: CPTier): boolean {
+  return CP_TIER_RANK[tier] >= CP_TIER_RANK[min];
+}
+
 /** Thrown when a tier cap or gate denies the operation. */
 export class TierLimitError extends Error {
   /** HTTP status the API route should return. */
@@ -31,6 +47,32 @@ export class TierLimitError extends Error {
     this.dimension = opts.dimension;
     this.tier = opts.tier;
   }
+}
+
+// ─── 0. Minimum-tier gate — feature-level access ─────────────────
+
+/**
+ * Enforce a minimum tier for a feature/route. Throws TierLimitError
+ * with dimension='tier' when the caller's tier is below `minTier`.
+ *
+ * Canonical CP use:
+ *   - `requireTier(profile, 'pro')` on /api/churn-prediction,
+ *     /api/upsell-detection, /api/suggested-actions, and the
+ *     meeting-intelligence / transcription path. These are the Pro+
+ *     agents per D-D2 (Solo is "Summary only" — Monday Brief + health
+ *     scores — nothing under Meeting Intelligence / Action Proposal
+ *     Engine / Upsell Detection / Churn Prediction).
+ *   - `requireTier(profile, 'agency')` for Agency-only capabilities
+ *     like white-label reports, Slack bot, recursive learning exports.
+ */
+export function requireTier(profile: TierProfile, minTier: CPTier): void {
+  const tier = resolveTier(profile);
+  if (tierMeetsMin(tier, minTier)) return;
+  throw new TierLimitError(
+    `This feature requires ${tierDisplayName(minTier)} or higher. ` +
+      `Your ${tierDisplayName(tier)} plan does not have access. Upgrade to continue.`,
+    { status: 403, dimension: 'tier', tier }
+  );
 }
 
 // ─── 1. Client-count limit ────────────────────────────────────────

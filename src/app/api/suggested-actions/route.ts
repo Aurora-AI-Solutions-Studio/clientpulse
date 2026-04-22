@@ -6,6 +6,7 @@ import {
   SuggestedActionsAgent,
   SuggestedActionsInput,
 } from '@/lib/agents/suggested-actions-agent';
+import { requireTier, TierLimitError } from '@/lib/tiers';
 
 /**
  * POST /api/suggested-actions
@@ -40,6 +41,19 @@ export async function POST(request: NextRequest) {
         { error: 'User profile not found' },
         { status: 404 }
       );
+    }
+
+    // Action Proposal Engine is Pro+ per D-D2.
+    try {
+      requireTier({ subscription_plan: profile.subscription_plan }, 'pro');
+    } catch (err) {
+      if (err instanceof TierLimitError) {
+        return NextResponse.json(
+          { error: err.message, dimension: err.dimension, tier: err.tier },
+          { status: err.status }
+        );
+      }
+      throw err;
     }
 
     const agencyId = profile.agency_id as string;

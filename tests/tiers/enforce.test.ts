@@ -83,6 +83,8 @@ import {
   enforceApiAccess,
   enforceClientLimit,
   enforceSeatsLimit,
+  requireTier,
+  tierMeetsMin,
 } from '@/lib/tiers/enforce';
 
 beforeEach(() => {
@@ -266,7 +268,60 @@ describe('enforceSeatsLimit', () => {
   });
 });
 
-// ─── 5. enforceApiAccess ─────────────────────────────────────────
+// ─── 5. requireTier ──────────────────────────────────────────────
+
+describe('tierMeetsMin', () => {
+  it('respects the free < solo < pro < agency ladder', () => {
+    expect(tierMeetsMin('free', 'free')).toBe(true);
+    expect(tierMeetsMin('solo', 'free')).toBe(true);
+    expect(tierMeetsMin('pro', 'solo')).toBe(true);
+    expect(tierMeetsMin('agency', 'pro')).toBe(true);
+
+    expect(tierMeetsMin('free', 'solo')).toBe(false);
+    expect(tierMeetsMin('solo', 'pro')).toBe(false);
+    expect(tierMeetsMin('pro', 'agency')).toBe(false);
+  });
+});
+
+describe('requireTier — Pro+ feature gate', () => {
+  it('free is rejected on requireTier(pro)', () => {
+    expect(() => requireTier({ subscription_plan: 'free' }, 'pro')).toThrow(TierLimitError);
+  });
+
+  it('solo is rejected on requireTier(pro) — the key launch-gate case', () => {
+    try {
+      requireTier({ subscription_plan: 'solo' }, 'pro');
+      expect.fail('expected throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(TierLimitError);
+      const e = err as TierLimitError;
+      expect(e.dimension).toBe('tier');
+      expect(e.status).toBe(403);
+      expect(e.tier).toBe('solo');
+      expect(e.message).toContain('Pro');
+    }
+  });
+
+  it('pro is allowed on requireTier(pro)', () => {
+    expect(() => requireTier({ subscription_plan: 'pro' }, 'pro')).not.toThrow();
+  });
+
+  it('agency is allowed on requireTier(pro) and requireTier(agency)', () => {
+    expect(() => requireTier({ subscription_plan: 'agency' }, 'pro')).not.toThrow();
+    expect(() => requireTier({ subscription_plan: 'agency' }, 'agency')).not.toThrow();
+  });
+
+  it('pro is rejected on requireTier(agency)', () => {
+    expect(() => requireTier({ subscription_plan: 'pro' }, 'agency')).toThrow(TierLimitError);
+  });
+
+  it('null/unknown plan collapses to free and is rejected', () => {
+    expect(() => requireTier({ subscription_plan: null }, 'pro')).toThrow(TierLimitError);
+    expect(() => requireTier({ subscription_plan: 'starter' }, 'pro')).toThrow(TierLimitError);
+  });
+});
+
+// ─── 6. enforceApiAccess ─────────────────────────────────────────
 
 describe('enforceApiAccess', () => {
   it('free rejects any scope', () => {
