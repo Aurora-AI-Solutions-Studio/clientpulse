@@ -138,12 +138,12 @@ export interface CallToolResult {
 // ─── Tier gate ───────────────────────────────────────────────────
 // Per-tier MCP connection allowance per Pricing D-D2.
 // Keys mirror the `profiles.subscription_plan` CHECK constraint
-// ('free' | 'starter' | 'pro' | 'agency'). The tier-naming sweep
-// (starter → solo) happens with the Tier Metering milestone.
+// ('free' | 'solo' | 'pro' | 'agency'). Solo and free both have MCP
+// disabled — MCP is a Pro+ capability.
 
 export const MCP_CONNECTION_LIMITS = {
   free: 0,
-  starter: 0,
+  solo: 0,
   pro: 3,
   agency: Infinity,
 } as const;

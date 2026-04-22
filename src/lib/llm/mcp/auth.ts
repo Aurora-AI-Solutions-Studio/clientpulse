@@ -56,7 +56,7 @@ export function hashApiKey(key: string): string {
  */
 export function resolveTier(profile: Pick<ProfileRow, 'subscription_plan'>): MCPTier {
   const p = profile.subscription_plan;
-  if (p === 'pro' || p === 'agency' || p === 'starter' || p === 'free') return p;
+  if (p === 'pro' || p === 'agency' || p === 'solo' || p === 'free') return p;
   return 'free';
 }
 
@@ -80,7 +80,7 @@ export interface AuthContext {
  *
  * Throws:
  *   - MCPAuthRequiredError — missing or invalid api key
- *   - MCPTierGateError     — tier has MCP disabled (free, starter)
+ *   - MCPTierGateError     — tier has MCP disabled (free, solo)
  *   - MCPConnectionLimitError — too many active connections on this tier
  */
 export async function authenticateMCPRequest(ctx: AuthContext): Promise<MCPSession> {
@@ -123,7 +123,7 @@ export async function authenticateMCPRequest(ctx: AuthContext): Promise<MCPSessi
   const tier = resolveTier(profile as ProfileRow);
   const limit = MCP_CONNECTION_LIMITS[tier];
 
-  // Tier gate — free/starter are not allowed to open MCP at all.
+  // Tier gate — free/solo are not allowed to open MCP at all.
   if (limit === 0) {
     throw new MCPTierGateError('pro', tier);
   }

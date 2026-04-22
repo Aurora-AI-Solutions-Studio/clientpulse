@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
-            subscription_plan: plan || 'starter',
+            subscription_plan: plan || 'solo',
             subscription_status: 'active',
             stripe_customer_id: customerId,
             subscription_start_date: new Date().toISOString(),

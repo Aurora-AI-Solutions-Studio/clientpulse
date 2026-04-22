@@ -153,7 +153,7 @@ describe('ChurnPredictionAgent', () => {
     it('should construct with the supplied subscription plan', () => {
       expect(agent).toBeDefined();
       // Plan is private; infer from ability to instantiate with each value.
-      expect(() => new ChurnPredictionAgent('starter')).not.toThrow();
+      expect(() => new ChurnPredictionAgent('solo')).not.toThrow();
       expect(() => new ChurnPredictionAgent('pro')).not.toThrow();
       expect(() => new ChurnPredictionAgent('agency')).not.toThrow();
     });
@@ -168,13 +168,13 @@ describe('ChurnPredictionAgent', () => {
     it('should forward the plan to generateCompletionWithRetry', async () => {
       const input = createLowRiskInput();
       mockGenerate.mockResolvedValueOnce(createMockResponse({ churnProbability: 15, riskLevel: 'low' }));
-      const starterAgent = new ChurnPredictionAgent('starter');
+      const soloAgent = new ChurnPredictionAgent('solo');
 
-      await starterAgent.predictChurn(input);
+      await soloAgent.predictChurn(input);
 
       expect(mockGenerate).toHaveBeenCalledTimes(1);
       const [args] = mockGenerate.mock.calls[0];
-      expect(args.plan).toBe('starter');
+      expect(args.plan).toBe('solo');
       expect(args.request.model).toBe('claude-sonnet-4-5');
       expect(args.routing?.substituteOnTierMiss).toBe(true);
     });

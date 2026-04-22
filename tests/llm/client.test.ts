@@ -35,10 +35,10 @@ function mkRegistry() {
 }
 
 describe('generateCompletion — end-to-end routing', () => {
-  it('Starter (Solo) tier request for Claude is rewritten to gpt-4o-mini on OpenAI', async () => {
+  it('Solo tier request for Claude is rewritten to gpt-4o-mini on OpenAI', async () => {
     const { registry, oai, anth } = mkRegistry();
     const result = await generateCompletion({
-      plan: 'starter',
+      plan: 'solo',
       request: {
         model: 'claude-sonnet-4-5',
         messages: [{ role: 'user', content: 'hi' }],

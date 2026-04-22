@@ -148,7 +148,7 @@ describe('resolveTier', () => {
   it('maps known plans through', () => {
     expect(resolveTier({ subscription_plan: 'agency' })).toBe('agency');
     expect(resolveTier({ subscription_plan: 'pro' })).toBe('pro');
-    expect(resolveTier({ subscription_plan: 'starter' })).toBe('starter');
+    expect(resolveTier({ subscription_plan: 'solo' })).toBe('solo');
     expect(resolveTier({ subscription_plan: 'free' })).toBe('free');
   });
 
@@ -193,8 +193,8 @@ describe('authenticateMCPRequest', () => {
     ).rejects.toBeInstanceOf(MCPTierGateError);
   });
 
-  it('blocks starter-tier users with TIER_GATE (MCP is pro+)', async () => {
-    const key = 'cp_sk_starterabc999';
+  it('blocks solo-tier users with TIER_GATE (MCP is pro+)', async () => {
+    const key = 'cp_sk_soloabc9999a';
     state.apiKeys = [
       {
         id: 'k1a',
@@ -205,7 +205,7 @@ describe('authenticateMCPRequest', () => {
         last_used_at: null,
       },
     ];
-    state.profiles = [{ id: 'u1a', subscription_plan: 'starter' }];
+    state.profiles = [{ id: 'u1a', subscription_plan: 'solo' }];
 
     await expect(
       authenticateMCPRequest({ authorizationHeader: `Bearer ${key}` })

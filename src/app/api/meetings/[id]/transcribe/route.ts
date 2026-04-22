@@ -41,7 +41,7 @@ export async function POST(
       );
     }
 
-    const subscriptionPlan = (profile.subscription_plan as 'starter' | 'pro' | 'agency' | null) ?? 'starter';
+    const subscriptionPlan = (profile.subscription_plan as 'solo' | 'pro' | 'agency' | null) ?? 'solo';
 
     // Get meeting record and verify ownership
     const { data: meeting, error: meetingError } = await supabase

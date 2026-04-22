@@ -10,18 +10,18 @@ import { LLMTierGateError } from '@/lib/llm/types';
 describe('lib/llm/routing — tier gating', () => {
   describe('tierMeetsMin', () => {
     it('respects the tier ladder', () => {
-      expect(tierMeetsMin('starter', 'starter')).toBe(true);
-      expect(tierMeetsMin('pro', 'starter')).toBe(true);
+      expect(tierMeetsMin('solo', 'solo')).toBe(true);
+      expect(tierMeetsMin('pro', 'solo')).toBe(true);
       expect(tierMeetsMin('agency', 'pro')).toBe(true);
       expect(tierMeetsMin('pro', 'agency')).toBe(false);
-      expect(tierMeetsMin('starter', 'pro')).toBe(false);
+      expect(tierMeetsMin('solo', 'pro')).toBe(false);
     });
   });
 
   describe('getAvailableModels', () => {
-    it('Starter (Solo) sees only tier-starter models', () => {
-      const models = getAvailableModels('starter');
-      expect(models.every((m) => m.min_tier === 'starter')).toBe(true);
+    it('Solo sees only tier-solo models', () => {
+      const models = getAvailableModels('solo');
+      expect(models.every((m) => m.min_tier === 'solo')).toBe(true);
       expect(models.some((m) => m.id === 'gpt-4o-mini')).toBe(true);
       expect(models.some((m) => m.id === 'claude-sonnet-4-5')).toBe(false);
     });
@@ -39,22 +39,22 @@ describe('lib/llm/routing — tier gating', () => {
     });
   });
 
-  describe('resolveModel — Starter (Solo) is locked', () => {
+  describe('resolveModel — Solo is locked', () => {
     it('returns gpt-4o-mini even when no model is requested', () => {
-      const r = resolveModel('starter');
+      const r = resolveModel('solo');
       expect(r.model).toBe('gpt-4o-mini');
       expect(r.reason).toBe('tier-default');
     });
 
     it('substitutes a requested higher-tier model for the default', () => {
-      const r = resolveModel('starter', { requested: 'claude-sonnet-4-5' });
+      const r = resolveModel('solo', { requested: 'claude-sonnet-4-5' });
       expect(r.model).toBe('gpt-4o-mini');
       expect(r.substituted).toBe(true);
       expect(r.reason).toBe('tier-substitution');
     });
 
     it('does not substitute when the request already matches the default', () => {
-      const r = resolveModel('starter', { requested: 'gpt-4o-mini' });
+      const r = resolveModel('solo', { requested: 'gpt-4o-mini' });
       expect(r.model).toBe('gpt-4o-mini');
       expect(r.substituted).toBe(false);
     });
@@ -96,7 +96,7 @@ describe('lib/llm/routing — tier gating', () => {
   describe('resolveModel — strict mode throws on tier miss', () => {
     it('throws LLMTierGateError when substituteOnTierMiss is false', () => {
       expect(() =>
-        resolveModel('starter', {
+        resolveModel('solo', {
           requested: 'claude-sonnet-4-5',
           substituteOnTierMiss: false,
         }),

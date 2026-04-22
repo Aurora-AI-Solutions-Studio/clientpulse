@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   full_name text,
   email text NOT NULL,
   avatar_url text,
-  subscription_plan text NOT NULL DEFAULT 'free' CHECK (subscription_plan IN ('free', 'starter', 'pro', 'agency')),
+  subscription_plan text NOT NULL DEFAULT 'free' CHECK (subscription_plan IN ('free', 'solo', 'pro', 'agency')),
   subscription_status text NOT NULL DEFAULT 'active' CHECK (subscription_status IN ('active', 'canceled', 'past_due', 'trialing')),
   stripe_customer_id text UNIQUE,
   stripe_subscription_id text,
