@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { Client, ClientCreateInput, HealthScore } from '@/types/client';
+import { enforceClientLimit, TierLimitError } from '@/lib/tiers';
 
 // Generate mock health score for demonstration
 function generateMockHealthScore(): HealthScore {
@@ -129,10 +130,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's agency ID
+    // Get user's agency ID + tier
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('agency_id')
+      .select('agency_id, subscription_plan')
       .eq('id', user.id)
       .single();
 
@@ -151,6 +152,21 @@ export async function POST(request: NextRequest) {
         { error: 'Client name and company are required' },
         { status: 400 }
       );
+    }
+
+    // Enforce tier-based client-count cap.
+    try {
+      await enforceClientLimit(profile.agency_id, {
+        subscription_plan: profile.subscription_plan,
+      });
+    } catch (err) {
+      if (err instanceof TierLimitError) {
+        return NextResponse.json(
+          { error: err.message, dimension: err.dimension, tier: err.tier },
+          { status: err.status }
+        );
+      }
+      throw err;
     }
 
     // Create client in database
