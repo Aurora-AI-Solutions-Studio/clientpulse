@@ -36,6 +36,10 @@ export const STRIPE_PLANS: Record<SubscriptionPlan, PlanConfig> = {
     priceYearly: 590,
     currency: 'usd',
     productId: 'prod_UGHPAJi3MzjPFU',
+    // Test-mode defaults (Sandbox acct_1TE0IeLER55AcgjY). Verified live in Stripe 2026-04-25.
+    // Env vars STRIPE_PRICE_ID_SOLO[_YEARLY] override at livemode flip.
+    priceId: 'price_1TOCSyLER55AcgjYTjr0Ymxk',
+    priceIdYearly: 'price_1TOCSzLER55AcgjYlwd6ps8j',
     features: [
       'Up to 3 clients',
       'Health Scores & Monday Brief',
@@ -51,6 +55,8 @@ export const STRIPE_PLANS: Record<SubscriptionPlan, PlanConfig> = {
     priceYearly: 1990,
     currency: 'usd',
     productId: 'prod_UGHPMZvDuwJwGR',
+    priceId: 'price_1TOCT1LER55AcgjYLFyuBIOM',
+    priceIdYearly: 'price_1TOCT2LER55AcgjY2esRF5FH',
     features: [
       'Up to 10 clients',
       'Meeting Intelligence + Action Proposal Engine',
@@ -67,6 +73,8 @@ export const STRIPE_PLANS: Record<SubscriptionPlan, PlanConfig> = {
     priceYearly: 7990,
     currency: 'usd',
     productId: 'prod_UGHP5p2K5IaHoy',
+    priceId: 'price_1TOCT4LER55AcgjYFuQNxk2Y',
+    priceIdYearly: 'price_1TOCT5LER55AcgjYD7CC8P7C',
     features: [
       'Unlimited clients',
       '8 seats',
