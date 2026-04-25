@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveTier, tierDisplayName } from '@/lib/tiers';
+import { ensureAgencyForUser } from '@/lib/agency/bootstrap';
 
 // GET /api/me
 //
@@ -20,13 +21,31 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    let { data: profile } = await supabase
       .from('profiles')
       .select(
         'agency_id, subscription_plan, subscription_status, stripe_customer_id, onboarding_completed_at, full_name, email'
       )
       .eq('id', user.id)
       .maybeSingle();
+
+    // Self-heal: backfill agency for users whose accounts predate the
+    // handle_new_user trigger (migration 20260411). Idempotent.
+    if (!profile?.agency_id) {
+      await ensureAgencyForUser(supabase, {
+        userId: user.id,
+        email: profile?.email ?? user.email ?? null,
+        fullName: profile?.full_name ?? null,
+      });
+      const { data: healed } = await supabase
+        .from('profiles')
+        .select(
+          'agency_id, subscription_plan, subscription_status, stripe_customer_id, onboarding_completed_at, full_name, email'
+        )
+        .eq('id', user.id)
+        .maybeSingle();
+      profile = healed;
+    }
 
     if (!profile) {
       return NextResponse.json({ error: 'No profile' }, { status: 404 });
