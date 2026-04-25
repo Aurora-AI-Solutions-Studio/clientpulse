@@ -78,9 +78,10 @@ export async function POST(request: NextRequest) {
       url: session.url,
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('Checkout error:', error);
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      { error: `Stripe checkout failed: ${message}` },
       { status: 500 }
     );
   }
