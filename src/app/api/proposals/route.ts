@@ -1,8 +1,8 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { getPortfolioProposals } from '@/lib/proposals/rollup';
 import { resolveTier } from '@/lib/tiers';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 // GET /api/proposals?limit=20
 //
@@ -11,26 +11,9 @@ import { resolveTier } from '@/lib/tiers';
 // /dashboard/proposals page. Free tier returns empty without DB hit.
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id, subscription_plan')
-      .eq('id', user.id)
-      .single();
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, subscriptionPlan, serviceClient } = auth.ctx;
 
     const url = new URL(request.url);
     const limitRaw = url.searchParams.get('limit');
@@ -39,13 +22,8 @@ export async function GET(request: NextRequest) {
         ? Math.min(Math.max(parseInt(limitRaw, 10) || 20, 1), 100)
         : undefined;
 
-    const tier = resolveTier({ subscription_plan: profile.subscription_plan });
-    const result = await getPortfolioProposals(
-      supabase,
-      profile.agency_id as string,
-      tier,
-      { limit }
-    );
+    const tier = resolveTier({ subscription_plan: subscriptionPlan });
+    const result = await getPortfolioProposals(serviceClient, agencyId, tier, { limit });
     return NextResponse.json(result);
   } catch (error) {
     console.error('[/api/proposals GET]', error);

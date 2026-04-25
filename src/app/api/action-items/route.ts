@@ -1,5 +1,4 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   ActionItemOwnershipError,
@@ -7,6 +6,7 @@ import {
   createActionItem,
 } from '@/lib/action-items/create';
 import { requireTier, TierLimitError } from '@/lib/tiers';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 // POST /api/action-items
 //
@@ -19,29 +19,12 @@ import { requireTier, TierLimitError } from '@/lib/tiers';
 // is friendlier than a 404 on the ownership lookup.
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id, subscription_plan')
-      .eq('id', user.id)
-      .single();
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, subscriptionPlan, serviceClient } = auth.ctx;
 
     try {
-      requireTier({ subscription_plan: profile.subscription_plan }, 'solo');
+      requireTier({ subscription_plan: subscriptionPlan }, 'solo');
     } catch (err) {
       if (err instanceof TierLimitError) {
         return NextResponse.json(
@@ -57,8 +40,8 @@ export async function POST(request: NextRequest) {
 
     try {
       const row = await createActionItem({
-        supabase,
-        agencyId: profile.agency_id as string,
+        supabase: serviceClient,
+        agencyId,
         input: { clientId, title, description, dueDate, meetingId },
       });
       return NextResponse.json({ actionItem: row }, { status: 201 });
@@ -87,14 +70,9 @@ export async function POST(request: NextRequest) {
 // the session-bound supabase client.
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient } = auth.ctx;
 
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
@@ -102,11 +80,22 @@ export async function GET(request: NextRequest) {
     const limitRaw = url.searchParams.get('limit');
     const limit = Math.min(Math.max(parseInt(limitRaw ?? '50', 10) || 50, 1), 200);
 
-    let q = supabase
+    // Scope to agency via clients join (action_items has client_id, no direct agency_id)
+    const { data: agencyClients } = await serviceClient
+      .from('clients')
+      .select('id')
+      .eq('agency_id', agencyId);
+    const agencyClientIds = (agencyClients ?? []).map((c) => c.id as string);
+    if (agencyClientIds.length === 0) {
+      return NextResponse.json({ actionItems: [] });
+    }
+
+    let q = serviceClient
       .from('action_items')
       .select(
         'id, client_id, meeting_id, title, description, status, due_date, assigned_to, created_at'
       )
+      .in('client_id', agencyClientIds)
       .order('created_at', { ascending: false })
       .limit(limit);
 

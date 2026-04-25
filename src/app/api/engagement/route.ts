@@ -1,9 +1,9 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { EngagementScoringAgent } from '@/lib/agents/engagement-scoring-agent';
 import { computeCalendarMetrics } from '@/lib/agents/calendar-intelligence-agent';
 import { computeEmailMetrics } from '@/lib/agents/email-intelligence-agent';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 /**
  * POST /api/engagement
@@ -11,25 +11,9 @@ import { computeEmailMetrics } from '@/lib/agents/email-intelligence-agent';
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.agency_id) {
-      return NextResponse.json({ error: 'No agency found' }, { status: 404 });
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient: supabase } = auth.ctx;
 
     const body = await request.json();
     const { clientId } = body;
@@ -43,7 +27,7 @@ export async function POST(request: NextRequest) {
       .from('clients')
       .select('id, agency_id')
       .eq('id', clientId)
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .single();
 
     if (!client) {
@@ -54,7 +38,7 @@ export async function POST(request: NextRequest) {
     const { data: calendarEvents } = await supabase
       .from('calendar_events')
       .select('id, client_id, start_time, end_time, attendees, status, is_recurring')
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .eq('client_id', clientId);
 
     let calendarMetrics = undefined;
@@ -77,7 +61,7 @@ export async function POST(request: NextRequest) {
     const { data: emailThreads } = await supabase
       .from('email_threads')
       .select('id, client_id, last_message_date, message_count, participants, is_inbound, synced_at')
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .eq('client_id', clientId);
 
     let emailMetrics = undefined;
@@ -126,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     // Compute engagement score
     const agent = new EngagementScoringAgent();
-    const metrics = agent.computeEngagementScore(clientId, profile.agency_id, {
+    const metrics = agent.computeEngagementScore(clientId, agencyId, {
       calendarMetrics,
       emailMetrics,
       meetingFrequencyTrend,
@@ -138,7 +122,7 @@ export async function POST(request: NextRequest) {
       .from('engagement_metrics')
       .upsert(
         {
-          agency_id: profile.agency_id,
+          agency_id: agencyId,
           client_id: clientId,
           calendar_score: metrics.calendarScore,
           meeting_frequency: metrics.meetingFrequency,
@@ -179,25 +163,9 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.agency_id) {
-      return NextResponse.json({ error: 'No agency found' }, { status: 404 });
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient: supabase } = auth.ctx;
 
     const clientId = request.nextUrl.searchParams.get('clientId');
 
@@ -206,7 +174,7 @@ export async function GET(request: NextRequest) {
       const { data, error } = await supabase
         .from('engagement_metrics')
         .select('*')
-        .eq('agency_id', profile.agency_id)
+        .eq('agency_id', agencyId)
         .eq('client_id', clientId)
         .single();
 
@@ -219,7 +187,7 @@ export async function GET(request: NextRequest) {
       const { data, error } = await supabase
         .from('engagement_metrics')
         .select('*')
-        .eq('agency_id', profile.agency_id)
+        .eq('agency_id', agencyId)
         .order('overall_engagement_score', { ascending: false });
 
       if (error) {

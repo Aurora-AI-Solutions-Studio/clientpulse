@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 /**
  * GET /api/integrations/connections
@@ -8,30 +9,14 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(_request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient } = auth.ctx;
 
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.agency_id) {
-      return NextResponse.json({ error: 'No agency found' }, { status: 404 });
-    }
-
-    const { data: connections, error } = await supabase
+    const { data: connections, error } = await serviceClient
       .from('integration_connections')
       .select('id, provider, status, account_email, account_name, connected_at, last_sync_at, token_expires_at, error, scopes')
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .order('connected_at', { ascending: false });
 
     if (error) {

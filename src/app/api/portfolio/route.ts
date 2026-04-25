@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 export interface PortfolioClient {
   clientId: string;
@@ -35,26 +35,14 @@ export interface PortfolioSnapshot {
  */
 export async function GET(_request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient: supabase } = auth.ctx;
 
     const { data: clientsRaw } = await supabase
       .from('clients')
       .select('id, name, company_name')
-      .eq('agency_id', profile.agency_id);
+      .eq('agency_id', agencyId);
 
     const clients = clientsRaw ?? [];
     const clientIds = clients.map((c) => c.id as string);

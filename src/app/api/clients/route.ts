@@ -1,8 +1,8 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { Client, ClientCreateInput, HealthScore } from '@/types/client';
 import { enforceClientLimit, TierLimitError } from '@/lib/tiers';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 // Generate mock health score for demonstration
 function generateMockHealthScore(): HealthScore {
@@ -22,37 +22,15 @@ function generateMockHealthScore(): HealthScore {
 
 export async function GET(_request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID from profiles table
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient: supabase } = auth.ctx;
 
     // Fetch clients for the user's agency
     const { data: clients, error: clientError } = await supabase
       .from('clients')
       .select('*')
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .order('created_at', { ascending: false });
 
     if (clientError) {
@@ -118,31 +96,9 @@ export async function GET(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID + tier
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id, subscription_plan')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, subscriptionPlan, serviceClient: supabase } = auth.ctx;
 
     const body: ClientCreateInput = await request.json();
 
@@ -156,8 +112,8 @@ export async function POST(request: NextRequest) {
 
     // Enforce tier-based client-count cap.
     try {
-      await enforceClientLimit(profile.agency_id, {
-        subscription_plan: profile.subscription_plan,
+      await enforceClientLimit(agencyId, {
+        subscription_plan: subscriptionPlan,
       });
     } catch (err) {
       if (err instanceof TierLimitError) {
@@ -179,7 +135,7 @@ export async function POST(request: NextRequest) {
         monthly_retainer: body.monthlyRetainer,
         service_type: body.serviceType,
         notes: body.notes,
-        agency_id: profile.agency_id,
+        agency_id: agencyId,
         status: 'active',
       })
       .select()
