@@ -38,6 +38,21 @@ interface IntegrationConnection {
   error?: string;
 }
 
+interface MeSummary {
+  subscriptionPlan: string;
+  subscriptionStatus: string;
+  stripeCustomerId: string | null;
+  tier: 'free' | 'solo' | 'pro' | 'agency';
+  tierLabel: string;
+}
+
+const TIER_DESCRIPTION: Record<MeSummary['tier'], string> = {
+  free: 'Read-only · upgrade to add clients',
+  solo: 'Up to 3 clients · 90-day retention · daily health refresh',
+  pro: 'Up to 10 clients · 12-month retention · hourly refresh · 3 seats',
+  agency: 'Unlimited clients · 36-month retention · real-time refresh · 8 seats',
+};
+
 export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +61,8 @@ export default function SettingsPage() {
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
   const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+  const [me, setMe] = useState<MeSummary | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   const fetchConnections = useCallback(async () => {
     try {
@@ -79,6 +96,14 @@ export default function SettingsPage() {
 
     fetchUserData();
     fetchConnections();
+    void (async () => {
+      try {
+        const res = await fetch('/api/me', { cache: 'no-store' });
+        if (res.ok) setMe(await res.json());
+      } catch {
+        // /api/me is best-effort; leave me null and the UI degrades to Free.
+      }
+    })();
 
     // Check URL params for recently connected provider
     const params = new URLSearchParams(window.location.search);
@@ -580,47 +605,82 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <h3 className="text-sm font-medium text-white mb-4">
-              Current Plan
-            </h3>
+            <h3 className="text-sm font-medium text-white mb-4">Current Plan</h3>
             <div className="border border-[#1a2540] rounded-lg p-4">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="text-lg font-semibold text-white">Free Plan</p>
+                  <p className="text-lg font-semibold text-white">
+                    {me?.tierLabel ?? 'Free'} Plan
+                  </p>
                   <p className="text-xs text-[#7a88a8] mt-1">
-                    Up to 5 clients &bull; Basic analytics
+                    {TIER_DESCRIPTION[me?.tier ?? 'free']}
                   </p>
                 </div>
-                <span className="text-xs px-3 py-1 bg-[#e74c3c]/10 text-[#e74c3c] rounded-full">
-                  Active
+                <span
+                  className={`text-xs px-3 py-1 rounded-full capitalize ${
+                    me?.subscriptionStatus === 'active'
+                      ? 'bg-green-500/10 text-green-400'
+                      : me?.subscriptionStatus === 'past_due'
+                      ? 'bg-amber-500/10 text-amber-400'
+                      : 'bg-[#e74c3c]/10 text-[#e74c3c]'
+                  }`}
+                >
+                  {me?.subscriptionStatus ?? 'active'}
                 </span>
               </div>
-              <div className="text-sm text-[#7a88a8]">
-                <p>Renews on April 4, 2027</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-[#1a2540]/30 border border-[#e74c3c]/20 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-[#e74c3c] flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-white mb-1">
-                  Upgrade to unlock more features
-                </p>
-                <p className="text-sm text-[#7a88a8] mb-3">
-                  Get access to unlimited clients, advanced health scoring, and
-                  integrations.
-                </p>
+              <div className="flex flex-wrap gap-2">
+                {me?.tier && me.tier !== 'free' && me.stripeCustomerId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={portalLoading}
+                    onClick={async () => {
+                      setPortalLoading(true);
+                      try {
+                        const res = await fetch('/api/stripe/portal', { method: 'POST' });
+                        const data = await res.json().catch(() => ({}));
+                        if (data.url) window.location.href = data.url;
+                      } finally {
+                        setPortalLoading(false);
+                      }
+                    }}
+                  >
+                    {portalLoading ? 'Opening…' : 'Manage billing'}
+                  </Button>
+                )}
                 <Button
-                  className="bg-[#e74c3c] hover:bg-[#c0392b] text-white text-sm"
+                  variant="outline"
+                  size="sm"
                   onClick={() => { window.location.href = '/dashboard/upgrade'; }}
                 >
-                  View Plans
+                  {me?.tier === 'agency' ? 'Compare plans' : 'Upgrade'}
                 </Button>
               </div>
             </div>
           </div>
+
+          {(!me || me.tier === 'free') && (
+            <div className="bg-[#1a2540]/30 border border-[#e74c3c]/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-[#e74c3c] flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-white mb-1">
+                    Upgrade to unlock more features
+                  </p>
+                  <p className="text-sm text-[#7a88a8] mb-3">
+                    Get access to unlimited clients, advanced health scoring, and
+                    integrations.
+                  </p>
+                  <Button
+                    className="bg-[#e74c3c] hover:bg-[#c0392b] text-white text-sm"
+                    onClick={() => { window.location.href = '/dashboard/upgrade'; }}
+                  >
+                    View Plans
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div>
             <h3 className="text-sm font-medium text-white mb-3">
