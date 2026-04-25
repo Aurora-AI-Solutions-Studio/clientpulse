@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
       ],
       mode: 'subscription',
       customer_email: user.email,
-      success_url: `${appUrl}/(dashboard)?session_id={CHECKOUT_SESSION_ID}&success=true`,
-      cancel_url: `${appUrl}/(dashboard)?cancel=true`,
+      success_url: `${appUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}&success=true`,
+      cancel_url: `${appUrl}/dashboard/upgrade?cancel=true`,
       metadata: {
         userId: user.id,
         plan,

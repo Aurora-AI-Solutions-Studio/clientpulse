@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { MondayBriefAgent, renderBriefEmailHtml } from '@/lib/agents/monday-brief-agent';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
+import { ensureAgencyForUser } from '@/lib/agency/bootstrap';
 
 /**
  * GET /api/monday-brief
@@ -16,13 +17,28 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile, error: profileError } = await supabase
+    // Self-heal agency for legacy users (mirrors handle_new_user trigger)
+    let { data: profile } = await supabase
       .from('profiles')
-      .select('agency_id')
+      .select('agency_id, email, full_name')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile?.agency_id) {
+    if (!profile?.agency_id) {
+      await ensureAgencyForUser(supabase, {
+        userId: user.id,
+        email: profile?.email ?? user.email ?? null,
+        fullName: profile?.full_name ?? null,
+      });
+      const { data: healed } = await supabase
+        .from('profiles')
+        .select('agency_id, email, full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      profile = healed;
+    }
+
+    if (!profile?.agency_id) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     }
 
@@ -63,13 +79,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile, error: profileError } = await supabase
+    // Self-heal agency for legacy users (mirrors handle_new_user trigger)
+    let { data: profile } = await supabase
       .from('profiles')
       .select('agency_id, email, full_name')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile?.agency_id) {
+    if (!profile?.agency_id) {
+      await ensureAgencyForUser(supabase, {
+        userId: user.id,
+        email: profile?.email ?? user.email ?? null,
+        fullName: profile?.full_name ?? null,
+      });
+      const { data: healed } = await supabase
+        .from('profiles')
+        .select('agency_id, email, full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      profile = healed;
+    }
+
+    if (!profile?.agency_id) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     }
 

@@ -106,6 +106,7 @@ function resolveCurrentTier(subscriptionPlan: string | null | undefined): string
 
 export default function UpgradePage() {
   const [loadingPlan, setLoadingPlan] = useState<Tier | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('month');
   const [currentTier, setCurrentTier] = useState<string>('free');
@@ -132,19 +133,25 @@ export default function UpgradePage() {
 
   async function handleUpgrade(tier: Tier) {
     setLoadingPlan(tier);
+    setCheckoutError(null);
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: tier, interval: billingInterval }),
       });
-      const data = await res.json();
-      if (data.url) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) {
         window.location.href = data.url;
-      } else {
-        setLoadingPlan(null);
+        return;
       }
-    } catch {
+      const msg =
+        data?.error ??
+        `Checkout failed (${res.status}). Stripe price ID for ${tier}/${billingInterval} may not be configured in Vercel env.`;
+      setCheckoutError(msg);
+    } catch (e) {
+      setCheckoutError(e instanceof Error ? e.message : 'Network error');
+    } finally {
       setLoadingPlan(null);
     }
   }
@@ -241,6 +248,12 @@ export default function UpgradePage() {
             ? 'Compare plans or upgrade to unlock more.'
             : 'Client intelligence that pays for itself — prevent one churn, you break even.'}
         </p>
+
+        {checkoutError && (
+          <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/5 p-3 text-sm text-red-300">
+            {checkoutError}
+          </div>
+        )}
 
         <div
           className="mt-6 inline-flex items-center gap-1 rounded-full p-1"

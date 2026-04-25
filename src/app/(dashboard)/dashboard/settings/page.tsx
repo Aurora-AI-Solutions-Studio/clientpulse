@@ -612,7 +612,10 @@ export default function SettingsPage() {
                   Get access to unlimited clients, advanced health scoring, and
                   integrations.
                 </p>
-                <Button className="bg-[#e74c3c] hover:bg-[#c0392b] text-white text-sm">
+                <Button
+                  className="bg-[#e74c3c] hover:bg-[#c0392b] text-white text-sm"
+                  onClick={() => { window.location.href = '/dashboard/upgrade'; }}
+                >
                   View Plans
                 </Button>
               </div>
