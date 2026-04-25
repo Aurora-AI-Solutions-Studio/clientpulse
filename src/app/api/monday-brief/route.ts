@@ -1,9 +1,8 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { MondayBriefAgent, renderBriefEmailHtml } from '@/lib/agents/monday-brief-agent';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
-import { ensureAgencyForUser } from '@/lib/agency/bootstrap';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 /**
  * GET /api/monday-brief
@@ -11,41 +10,14 @@ import { ensureAgencyForUser } from '@/lib/agency/bootstrap';
  */
 export async function GET(_request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient } = auth.ctx;
 
-    // Self-heal agency for legacy users (mirrors handle_new_user trigger)
-    let { data: profile } = await supabase
-      .from('profiles')
-      .select('agency_id, email, full_name')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (!profile?.agency_id) {
-      await ensureAgencyForUser(supabase, {
-        userId: user.id,
-        email: profile?.email ?? user.email ?? null,
-        fullName: profile?.full_name ?? null,
-      });
-      const { data: healed } = await supabase
-        .from('profiles')
-        .select('agency_id, email, full_name')
-        .eq('id', user.id)
-        .maybeSingle();
-      profile = healed;
-    }
-
-    if (!profile?.agency_id) {
-      return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
-    }
-
-    const { data: briefs, error } = await supabase
+    const { data: briefs, error } = await serviceClient
       .from('monday_briefs')
       .select('id, content, email_sent, sent_at, created_at')
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .order('created_at', { ascending: false })
       .limit(25);
 
@@ -73,55 +45,28 @@ export async function POST(request: NextRequest) {
   if (rl) return rl;
 
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, email, serviceClient } = auth.ctx;
 
-    // Self-heal agency for legacy users (mirrors handle_new_user trigger)
-    let { data: profile } = await supabase
-      .from('profiles')
-      .select('agency_id, email, full_name')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (!profile?.agency_id) {
-      await ensureAgencyForUser(supabase, {
-        userId: user.id,
-        email: profile?.email ?? user.email ?? null,
-        fullName: profile?.full_name ?? null,
-      });
-      const { data: healed } = await supabase
-        .from('profiles')
-        .select('agency_id, email, full_name')
-        .eq('id', user.id)
-        .maybeSingle();
-      profile = healed;
-    }
-
-    if (!profile?.agency_id) {
-      return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
-    }
-
-    const { data: agency } = await supabase
+    const { data: agency } = await serviceClient
       .from('agencies')
       .select('id, name')
-      .eq('id', profile.agency_id)
+      .eq('id', agencyId)
       .single();
 
     const body = await request.json().catch(() => ({}));
     const shouldSend: boolean = Boolean(body?.send);
 
     // Generate the brief
-    const agent = new MondayBriefAgent(supabase);
-    const content = await agent.generate(profile.agency_id);
+    const agent = new MondayBriefAgent(serviceClient);
+    const content = await agent.generate(agencyId);
 
     // Persist
-    const { data: saved, error: insertError } = await supabase
+    const { data: saved, error: insertError } = await serviceClient
       .from('monday_briefs')
       .insert({
-        agency_id: profile.agency_id,
+        agency_id: agencyId,
         content,
         email_sent: false,
       })
@@ -134,14 +79,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Optional send via Resend
-    if (shouldSend && profile.email) {
+    if (shouldSend && email) {
       const sent = await sendBriefEmail({
-        to: profile.email as string,
+        to: email,
         subject: `ClientPulse Monday Brief — Week of ${content.weekOf}`,
         html: renderBriefEmailHtml(content, (agency?.name as string) ?? undefined),
       });
       if (sent) {
-        await supabase
+        await serviceClient
           .from('monday_briefs')
           .update({ email_sent: true, sent_at: new Date().toISOString() })
           .eq('id', saved.id);
