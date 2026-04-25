@@ -62,6 +62,7 @@ export default function SettingsPage() {
   const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [me, setMe] = useState<MeSummary | null>(null);
+  const [meDebug, setMeDebug] = useState<string>('not fetched yet');
   const [portalLoading, setPortalLoading] = useState(false);
 
   const fetchConnections = useCallback(async () => {
@@ -98,10 +99,14 @@ export default function SettingsPage() {
     fetchConnections();
     void (async () => {
       try {
-        const res = await fetch('/api/me', { cache: 'no-store' });
-        if (res.ok) setMe(await res.json());
-      } catch {
-        // /api/me is best-effort; leave me null and the UI degrades to Free.
+        const res = await fetch('/api/me?t=' + Date.now(), { cache: 'no-store' });
+        const text = await res.text();
+        let parsed: unknown = null;
+        try { parsed = JSON.parse(text); } catch {}
+        setMeDebug(`status=${res.status} body=${text.slice(0, 300)}`);
+        if (res.ok && parsed && typeof parsed === 'object') setMe(parsed as MeSummary);
+      } catch (e) {
+        setMeDebug(`fetch error: ${e instanceof Error ? e.message : String(e)}`);
       }
     })();
 
@@ -604,6 +609,9 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="text-[10px] text-amber-400/80 font-mono break-all border border-amber-500/20 bg-amber-500/5 rounded p-2 mb-4">
+            DEBUG /api/me → {meDebug}
+          </div>
           <div>
             <h3 className="text-sm font-medium text-white mb-4">Current Plan</h3>
             <div className="border border-[#1a2540] rounded-lg p-4">
