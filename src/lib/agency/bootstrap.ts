@@ -14,19 +14,36 @@ interface BootstrapResult {
 
 /**
  * Ensure the user has an agency. Returns the agency_id, creating one
- * if missing. Idempotent.
+ * only if no membership exists. Idempotent — safe to call on every request.
  *
  * Mirrors the `handle_new_user` trigger from migration 20260411 for users
- * whose accounts predate the trigger and were never backfilled. Uses the
- * service-role client because the agencies table is locked down to
- * SECURITY DEFINER inserts at the row-level-security layer.
+ * whose accounts predate the trigger and were never backfilled.
+ *
+ * **Lessons baked in (Apr 25 2026 incident — created 21 duplicate agencies
+ * for a single user before this rewrite):**
+ *
+ * 1. ALWAYS use the service client for reads in here. The auth client is
+ *    RLS-restricted; on a profile row that exists but the policy doesn't
+ *    surface, agency_id reads as null and the slow path fires every time.
+ * 2. Check agency_members BEFORE creating an agency. Owner-of-orphan
+ *    agencies leak in here otherwise.
+ * 3. NEVER use upsert on profiles for backfill. Use plain update, and only
+ *    touch the columns we're actually backfilling — never subscription_plan,
+ *    subscription_status, stripe_customer_id, or any other field that
+ *    represents user-visible state. We had a bug where the backfill upsert
+ *    wrote `subscription_plan: 'free'` and clobbered an Agency subscription.
+ *
+ * The first arg is kept for API back-compat but no longer used — service
+ * client is used for everything internally.
  */
 export async function ensureAgencyForUser(
-  authClient: SupabaseClient,
+  _authClient: SupabaseClient,
   input: BootstrapInput,
 ): Promise<BootstrapResult> {
-  // Fast path: profile already linked to an agency.
-  const { data: profile } = await authClient
+  const service = createServiceClient();
+
+  // 1. Fast path A — profile already linked to an agency.
+  const { data: profile } = await service
     .from('profiles')
     .select('agency_id')
     .eq('id', input.userId)
@@ -36,8 +53,28 @@ export async function ensureAgencyForUser(
     return { agencyId: profile.agency_id as string, created: false };
   }
 
-  // Slow path: backfill via service role (mirrors handle_new_user trigger).
-  const service = createServiceClient();
+  // 2. Fast path B — user is already a member of one or more agencies (e.g.
+  //    profile.agency_id was nulled by an earlier bug; agency_members still
+  //    holds the relationship). Use the oldest = original agency.
+  const { data: memberships } = await service
+    .from('agency_members')
+    .select('agency_id, created_at')
+    .eq('user_id', input.userId)
+    .order('created_at', { ascending: true })
+    .limit(1);
+
+  const existingAgencyId = memberships?.[0]?.agency_id as string | undefined;
+
+  if (existingAgencyId) {
+    // Backfill the profile's agency_id only — leave subscription state alone.
+    await service
+      .from('profiles')
+      .update({ agency_id: existingAgencyId })
+      .eq('id', input.userId);
+    return { agencyId: existingAgencyId, created: false };
+  }
+
+  // 3. Slow path — genuinely no agency exists for this user. Create one.
   const displayName = input.fullName ?? input.email?.split('@')[0] ?? 'Owner';
   const agencyName = `${displayName}'s Agency`;
 
@@ -53,30 +90,36 @@ export async function ensureAgencyForUser(
 
   const agencyId = agency.id as string;
 
-  // Profile may not exist yet for very-old accounts — upsert to be safe.
-  const { error: profileErr } = await service.from('profiles').upsert(
-    {
+  // Profile may not exist yet for very-old accounts. INSERT only — never
+  // upsert — and never write subscription_* fields here.
+  const { data: existingProfile } = await service
+    .from('profiles')
+    .select('id')
+    .eq('id', input.userId)
+    .maybeSingle();
+
+  if (!existingProfile) {
+    await service.from('profiles').insert({
       id: input.userId,
       email: input.email,
       full_name: input.fullName,
       agency_id: agencyId,
       subscription_plan: 'free',
       subscription_status: 'active',
-    },
-    { onConflict: 'id' },
-  );
-  if (profileErr) {
-    throw new Error(`Failed to upsert profile: ${profileErr.message}`);
+    });
+  } else {
+    // Profile exists — only fill in agency_id, leave everything else alone.
+    await service
+      .from('profiles')
+      .update({ agency_id: agencyId })
+      .eq('id', input.userId);
   }
 
   // Add the user as agency owner. Idempotent — ignore conflicts.
-  const { error: memberErr } = await service.from('agency_members').upsert(
+  await service.from('agency_members').upsert(
     { agency_id: agencyId, user_id: input.userId, role: 'owner' },
     { onConflict: 'agency_id,user_id', ignoreDuplicates: true },
   );
-  if (memberErr) {
-    throw new Error(`Failed to upsert agency_member: ${memberErr.message}`);
-  }
 
   return { agencyId, created: true };
 }
