@@ -24,7 +24,13 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let { data: profile } = await supabase
+    // Use service client for profile reads. We've already verified the user
+    // via auth.getUser() above; the .eq('id', user.id) filter scopes the
+    // query to their row alone. This bypasses any RLS context drift caused
+    // by JWT/cookie issues. (Previous bug: RLS returned null even when the
+    // row existed, causing /api/me to 404 silently.)
+    const profileService = createServiceClient();
+    let { data: profile } = await profileService
       .from('profiles')
       .select(
         'agency_id, subscription_plan, subscription_status, stripe_customer_id, onboarding_completed_at, full_name, email'
@@ -40,7 +46,7 @@ export async function GET(_request: NextRequest) {
         email: profile?.email ?? user.email ?? null,
         fullName: profile?.full_name ?? null,
       });
-      const { data: healed } = await supabase
+      const { data: healed } = await profileService
         .from('profiles')
         .select(
           'agency_id, subscription_plan, subscription_status, stripe_customer_id, onboarding_completed_at, full_name, email'
