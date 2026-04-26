@@ -98,9 +98,21 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-[#06090f]">
+    <div className="relative flex h-screen bg-[#06090f] overflow-hidden">
+      {/* Aurora ambient depth — subtle radial glows the eye barely
+          registers but that lift the page off "flat black". Mirrors the
+          atmospheric depth of the landing-page hero. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background:
+            'radial-gradient(60vw 60vh at 18% 10%, rgba(56,232,200,0.06), transparent 60%), radial-gradient(50vw 50vh at 90% 90%, rgba(179,136,235,0.05), transparent 60%), radial-gradient(40vw 40vh at 50% 100%, rgba(76,201,240,0.04), transparent 60%)',
+        }}
+      />
+
       {/* Desktop Sidebar */}
-      <div className="hidden md:block w-[280px] fixed left-0 top-0 h-screen">
+      <div className="hidden md:block w-[280px] fixed left-0 top-0 h-screen z-30">
         <Sidebar user={user} tierLabel={me?.tierLabel ?? null} />
       </div>
 
@@ -113,16 +125,11 @@ export default function DashboardLayout({
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col md:ml-[280px]">
-        {/* Header */}
-        <Header
-          user={user}
-          onMenuClick={() => setMobileMenuOpen(true)}
-        />
+      <div className="flex-1 flex flex-col md:ml-[280px] relative z-10">
+        <Header user={user} onMenuClick={() => setMobileMenuOpen(true)} />
 
-        {/* Page Content */}
         <main className="flex-1 overflow-auto">
-          <div className="p-4 md:p-8">
+          <div className="p-4 md:p-8 max-w-[1400px] mx-auto w-full">
             {children}
           </div>
         </main>

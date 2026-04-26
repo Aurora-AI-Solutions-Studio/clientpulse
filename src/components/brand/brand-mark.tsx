@@ -137,9 +137,9 @@ export function AuroraWordmark({ className = '' }: { className?: string }) {
 // -----------------------------
 
 /**
- * CP mark inner glyph — a rounded "monitor screen" with an EKG trace
- * crossing it, plus a small heart accent at the right. Captures the
- * "client health monitor" idea instead of just a bare pulse line.
+ * CP mark inner glyph — a small head + shoulders silhouette with an EKG
+ * line drawn THROUGH it. Reads as "monitoring this person's pulse",
+ * matching the brand reference (not a generic monitor screen).
  */
 function PulseMonitorGlyph({ size }: { size: number }) {
   return (
@@ -150,39 +150,33 @@ function PulseMonitorGlyph({ size }: { size: number }) {
       fill="none"
       aria-hidden="true"
     >
-      {/* Monitor frame */}
-      <rect
-        x="2.4"
-        y="5"
-        width="19.2"
-        height="14"
-        rx="2.4"
-        stroke="#0a3a32"
-        strokeWidth="1.6"
-        fill="rgba(10,58,50,0.18)"
-      />
-      {/* EKG trace */}
+      {/* Head — small filled dot top-center */}
+      <circle cx="12" cy="6" r="1.7" fill="#0a3a32" />
+      {/* Shoulders / upper-body arc */}
       <path
-        d="M4.6 12.5h2.6l1.4-3.6 2.4 7.6 1.6-4 1.2 1.7h2.6"
+        d="M5.5 13.5c0-3.5 2.9-5.5 6.5-5.5s6.5 2 6.5 5.5"
         stroke="#0a3a32"
         strokeWidth="1.7"
         strokeLinecap="round"
-        strokeLinejoin="round"
         fill="none"
       />
-      {/* Heart accent */}
+      {/* EKG line through the silhouette */}
       <path
-        d="M18.8 12.5c0-0.9 0.7-1.6 1.5-1.6 0.5 0 1 0.3 1.2 0.7 0.2-0.4 0.7-0.7 1.2-0.7 0.8 0 1.5 0.7 1.5 1.6 0 1.4-2.7 3.1-2.7 3.1s-2.7-1.7-2.7-3.1z"
-        fill="#0a3a32"
-        transform="translate(-1.6 -0.5) scale(0.55)"
+        d="M2.5 14.5h4l1.4-3.4 2.5 6.4 1.6-3.5 1.2 1.5h8.3"
+        stroke="#0a3a32"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
       />
     </svg>
   );
 }
 
 /**
- * RF mark glyph — gold "fast-forward / forge" abstract. Three parallel
- * arrow shapes converging right, suggesting motion + velocity.
+ * RF mark glyph — gold left-pointing arrowhead with motion-trail
+ * chevrons extending right. Reads as "moving fast, leaving trails",
+ * matching the brand reference (not a row of identical chevrons).
  */
 function ForgeGlyph({ size }: { size: number }) {
   return (
@@ -193,27 +187,38 @@ function ForgeGlyph({ size }: { size: number }) {
       fill="none"
       aria-hidden="true"
     >
+      {/* Solid arrowhead pointing left */}
       <path
-        d="M3 6l5 6-5 6"
+        d="M3 12l8-6v12z"
+        fill="#f0c84c"
         stroke="#f0c84c"
-        strokeWidth="2.2"
-        strokeLinecap="round"
+        strokeWidth="0.6"
         strokeLinejoin="round"
       />
+      {/* Motion trail — three diverging strokes leaving right, fading */}
       <path
-        d="M11 6l5 6-5 6"
+        d="M12 7l4 5-4 5"
         stroke="#f0c84c"
-        strokeWidth="2.2"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
+        opacity="0.95"
       />
       <path
-        d="M19 6l3 6-3 6"
+        d="M16 7l3 5-3 5"
         stroke="#f0c84c"
-        strokeWidth="2.2"
+        strokeWidth="1.7"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity="0.6"
+        opacity="0.7"
+      />
+      <path
+        d="M19.5 7l2 5-2 5"
+        stroke="#f0c84c"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.45"
       />
     </svg>
   );

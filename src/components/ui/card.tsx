@@ -8,7 +8,13 @@ const Card = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("rounded-lg border border-[#1a2540] bg-[#0d1422] text-white shadow-sm", className)}
+    className={cn(
+      // Subtle vertical gradient + ring + soft drop shadow lifts every
+      // card off the page background. Single source for elevation —
+      // changing this lifts the whole product.
+      "rounded-xl border border-[#1a2540]/70 bg-gradient-to-b from-[#0e1422] to-[#0a1020] text-white shadow-[0_2px_20px_-8px_rgba(0,0,0,0.6)] backdrop-blur-[1px]",
+      className,
+    )}
     {...props}
   />
 ))
