@@ -1,9 +1,9 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { AuthFooter } from '@/components/ui/auth-footer';
 
 export default function SignupPage() {
   const router = useRouter();
+  const search = useSearchParams();
   const supabase = createClient();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -20,6 +21,17 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  /** When email confirmation is required by the Supabase project,
+   *  signUp returns a user but no session — show this state so the
+   *  user knows to check their inbox instead of staring at a blank
+   *  /dashboard redirect that bounces back to /auth/login. */
+  const [confirmEmailFor, setConfirmEmailFor] = useState<string | null>(null);
+
+  // Pre-fill email from ?email=… (landing-page hero hands it off).
+  useEffect(() => {
+    const e = search.get('email');
+    if (e) setEmail(e);
+  }, [search]);
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +50,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -53,7 +65,15 @@ export default function SignupPage() {
         return;
       }
 
-      router.push('/dashboard');
+      // Two cases:
+      //   1) project has email confirmation OFF → session present → redirect.
+      //   2) project requires email confirmation → user object but no
+      //      session → show "Check your email" message.
+      if (data?.session) {
+        router.push('/dashboard');
+        return;
+      }
+      setConfirmEmailFor(email);
     } catch {
       setError('An unexpected error occurred');
     } finally {
@@ -93,11 +113,27 @@ export default function SignupPage() {
                 Client<span className="text-[#e74c3c]">Pulse</span>
               </h1>
             </div>
-            <CardTitle className="text-2xl">Create Account</CardTitle>
-            <CardDescription>Get started with ClientPulse today</CardDescription>
+            <CardTitle className="text-2xl">
+              {confirmEmailFor ? 'Check your inbox' : 'Create Account'}
+            </CardTitle>
+            <CardDescription>
+              {confirmEmailFor
+                ? `We sent a confirmation link to ${confirmEmailFor}. Click it to finish creating your account, then sign in.`
+                : 'Get started with ClientPulse today'}
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-6">
+            {confirmEmailFor && (
+              <Link
+                href="/auth/login"
+                className="block w-full bg-[#e74c3c] hover:bg-[#ff5e45] text-white font-medium text-center py-2.5 rounded-md transition"
+              >
+                Go to sign in
+              </Link>
+            )}
+
+            {!confirmEmailFor && (<>
             {error && (
               <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 text-red-400 text-sm">
                 {error}
@@ -193,6 +229,7 @@ export default function SignupPage() {
                 </Link>
               </p>
             </div>
+            </>)}
           </CardContent>
         </Card>
       </div>

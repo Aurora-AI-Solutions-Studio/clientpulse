@@ -13,8 +13,9 @@
 export const DEMO_USER_EMAIL = 'demo@helloaurora.ai';
 /** Set on demo account creation. Sasa logs in via the regular login
  *  form to verify the seed; production "See demo" autologin is a
- *  separate slice and won't reuse this constant. */
-export const DEMO_USER_PASSWORD = 'AuroraDemo2026!Suite';
+ *  separate slice and won't reuse this constant. Kept simple
+ *  (alphanumerics only) so manual login isn't a typo lottery. */
+export const DEMO_USER_PASSWORD = 'AuroraDemo2026';
 export const DEMO_AGENCY_NAME = 'Aurora Demo Agency';
 export const DEMO_ORG_NAME = 'Aurora Demo Studio';
 
