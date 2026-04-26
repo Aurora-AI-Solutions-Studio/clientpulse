@@ -2,85 +2,42 @@ export const dynamic = 'force-dynamic';
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { sendEmail } from '@/lib/email/resend';
 
-// ─── Email delivery (Resend) ───────────────────────────────────
-async function sendInvitationEmail(params: {
-  to: string;
-  agencyName: string;
-  inviteUrl: string;
-}): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.warn('[team] RESEND_API_KEY not configured — skipping email');
-    return false;
-  }
-
-  const from = process.env.RESEND_FROM_EMAIL || 'ClientPulse <hello@helloaurora.ai>';
-
-  const htmlBody = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
-    .content { background: #f9f9f9; padding: 30px 20px; border-radius: 0 0 8px 8px; }
-    .cta-button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin: 20px 0; }
-    .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; text-align: center; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>You're Invited!</h1>
-    </div>
-    <div class="content">
-      <p>Hello,</p>
-      <p>You've been invited to join <strong>${params.agencyName}</strong> on ClientPulse, a platform for managing client relationships and predicting churn.</p>
-      <p>Click the button below to create your account and get started:</p>
-      <div style="text-align: center;">
-        <a href="${params.inviteUrl}" class="cta-button">Accept Invitation</a>
-      </div>
-      <p style="margin-top: 20px; font-size: 14px;">Or copy this link into your browser:</p>
-      <p style="word-break: break-all; background: #e8e8e8; padding: 10px; border-radius: 4px; font-size: 12px;">${params.inviteUrl}</p>
-      <p style="margin-top: 30px; font-size: 14px; color: #666;">This invitation expires in 7 days.</p>
-    </div>
-    <div class="footer">
-      <p>ClientPulse by Aurora | Questions? Contact your agency administrator</p>
-    </div>
+function renderInvitationHtml(agencyName: string, inviteUrl: string): string {
+  const escName = escapeHtml(agencyName);
+  const escUrl = escapeHtml(inviteUrl);
+  return `<!doctype html>
+<html><body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;color:#333;">
+<div style="max-width:600px;margin:0 auto;padding:20px;">
+  <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:30px 20px;border-radius:8px 8px 0 0;text-align:center;">
+    <h1 style="margin:0;">You're Invited!</h1>
   </div>
-</body>
-</html>
-  `.trim();
+  <div style="background:#f9f9f9;padding:30px 20px;border-radius:0 0 8px 8px;">
+    <p>Hello,</p>
+    <p>You've been invited to join <strong>${escName}</strong> on ClientPulse, a platform for managing client relationships and predicting churn.</p>
+    <p>Click the button below to create your account and get started:</p>
+    <div style="text-align:center;">
+      <a href="${escUrl}" style="display:inline-block;background:#667eea;color:#fff;padding:12px 30px;border-radius:6px;text-decoration:none;font-weight:bold;margin:20px 0;">Accept Invitation</a>
+    </div>
+    <p style="margin-top:20px;font-size:14px;">Or copy this link into your browser:</p>
+    <p style="word-break:break-all;background:#e8e8e8;padding:10px;border-radius:4px;font-size:12px;">${escUrl}</p>
+    <p style="margin-top:30px;font-size:14px;color:#666;">This invitation expires in 7 days.</p>
+  </div>
+  <div style="margin-top:20px;padding-top:20px;border-top:1px solid #ddd;font-size:12px;color:#666;text-align:center;">
+    <p>ClientPulse by Aurora · Questions? Contact your agency administrator</p>
+  </div>
+</div>
+</body></html>`;
+}
 
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from,
-        to: params.to,
-        subject: `You've been invited to join ${params.agencyName} on ClientPulse`,
-        html: htmlBody,
-      }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      console.error('[team] Resend send failed', res.status, text);
-      return false;
-    }
-
-    return true;
-  } catch (err) {
-    console.error('[team] Resend send error', err);
-    return false;
-  }
+function escapeHtml(s: string): string {
+  return (s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export async function GET(_request: NextRequest) {
@@ -291,10 +248,16 @@ export async function POST(request: NextRequest) {
     const signupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://clientpulse.helloaurora.ai'}/auth/signup?invite=${token}`;
 
     // Send email without awaiting (fire-and-forget)
-    sendInvitationEmail({
+    sendEmail({
       to: body.email,
-      agencyName,
-      inviteUrl: signupUrl,
+      subject: `You've been invited to join ${agencyName} on ClientPulse`,
+      html: renderInvitationHtml(agencyName, signupUrl),
+      from: process.env.RESEND_FROM_EMAIL || 'ClientPulse <hello@helloaurora.ai>',
+      tags: { product: 'clientpulse', kind: 'team-invitation' },
+    }).then((r) => {
+      if (!r.ok && !r.skipped) {
+        console.warn('[team] Resend send failed', r.status, r.error);
+      }
     }).catch((err) => {
       console.warn('[team] Failed to send invitation email:', err);
     });
