@@ -16,7 +16,10 @@
 
 import { config as loadEnv } from 'dotenv';
 import { resolve as resolvePath } from 'node:path';
-loadEnv({ path: resolvePath(process.cwd(), '.env.local') });
+// `override: true` because vercel/zsh sometimes export NEXT_PUBLIC_*
+// vars into the shell, and dotenv won't replace already-set vars by
+// default — silently leaving the wrong project's URL active.
+loadEnv({ path: resolvePath(process.cwd(), '.env.local'), override: true });
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
