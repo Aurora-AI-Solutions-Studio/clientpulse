@@ -99,15 +99,16 @@ export default function DashboardLayout({
 
   return (
     <div className="relative flex h-screen bg-[#06090f] overflow-hidden">
-      {/* Aurora ambient depth — subtle radial glows the eye barely
-          registers but that lift the page off "flat black". Mirrors the
-          atmospheric depth of the landing-page hero. */}
+      {/* Aurora ambient depth — large radial glows that lift the page
+          off "flat black". Mirrors the atmospheric depth of the landing
+          hero. Opacity bumped after first review — too subtle to read
+          before. */}
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 z-0"
         style={{
           background:
-            'radial-gradient(60vw 60vh at 18% 10%, rgba(56,232,200,0.06), transparent 60%), radial-gradient(50vw 50vh at 90% 90%, rgba(179,136,235,0.05), transparent 60%), radial-gradient(40vw 40vh at 50% 100%, rgba(76,201,240,0.04), transparent 60%)',
+            'radial-gradient(70vw 60vh at 22% 8%, rgba(56,232,200,0.10), transparent 55%), radial-gradient(55vw 55vh at 88% 92%, rgba(179,136,235,0.09), transparent 55%), radial-gradient(45vw 45vh at 50% 105%, rgba(76,201,240,0.07), transparent 55%), radial-gradient(35vw 30vh at 95% 12%, rgba(232,127,165,0.05), transparent 60%)',
         }}
       />
 

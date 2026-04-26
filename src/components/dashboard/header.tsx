@@ -15,6 +15,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, Menu, Search } from 'lucide-react';
+import { ClientPulseMark, ReForgeMark } from '@/components/brand/brand-mark';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -176,29 +177,29 @@ export default function Header({ user, onMenuClick }: HeaderProps) {
 
 function ProductSwitcher() {
   return (
-    <div className="flex items-center bg-[#0c1220] border border-[#141e33] rounded-md p-0.5 gap-0.5">
-      <span
-        className="text-[11px] font-semibold text-white px-2.5 py-1 rounded inline-flex items-center gap-1.5 shadow-[0_0_18px_-4px_rgba(56,232,200,0.45)]"
+    <div className="flex items-center bg-[#0c1220] border border-[#141e33] rounded-lg p-1 gap-1">
+      {/* Active: ClientPulse — full mark + soft teal halo so it reads as
+          the current product, not just another link in the row. */}
+      <div
+        className="px-2 py-1 rounded-md inline-flex items-center"
         style={{
-          background: 'linear-gradient(135deg, #38e8c8 0%, #4cc9f0 100%)',
-          color: '#0a1f1a',
+          background: 'linear-gradient(135deg, rgba(56,232,200,0.18) 0%, rgba(76,201,240,0.10) 100%)',
+          boxShadow: 'inset 0 0 0 1px rgba(56,232,200,0.25), 0 0 18px -6px rgba(56,232,200,0.4)',
         }}
+        title="You are here — ClientPulse"
       >
-        <span
-          aria-hidden="true"
-          className="w-1.5 h-1.5 rounded-full bg-[#0a1f1a]/70"
-        />
-        ClientPulse
-      </span>
+        <ClientPulseMark size="sm" />
+      </div>
+      {/* Inactive: ReForge — full mark, hover lifts to gold */}
       <a
         href="https://reforge.helloaurora.ai"
         target="_blank"
         rel="noreferrer"
-        className="text-[11px] font-playfair text-[#a0adc4] hover:text-[#f0c84c] px-2.5 py-1 inline-flex items-center gap-1 transition-colors"
+        className="px-2 py-1 rounded-md inline-flex items-center gap-1 opacity-75 hover:opacity-100 hover:bg-white/[0.03] transition-all"
         title="Switch to ReForge — opens in new tab"
       >
-        ReForge
-        <span className="text-[8px] uppercase tracking-wider opacity-70">↗</span>
+        <ReForgeMark size="sm" />
+        <span className="text-[9px] uppercase tracking-wider text-[#5a6580] ml-0.5">↗</span>
       </a>
     </div>
   );
