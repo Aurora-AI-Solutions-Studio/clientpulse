@@ -1,7 +1,20 @@
 'use client';
 
+// Unified Suite Shell — CP top header.
+//
+// Layout, left to right:
+//   [mobile menu] · breadcrumb · . . . · product switcher · search · user
+//
+// The product switcher (CP ⇄ RF) makes the suite framing visible from
+// the first second the user lands. RF is "Soon" until step 3 (RF nav
+// reshape) ships; the link goes to a simple soon-page so a click doesn't
+// 404. Search is a placeholder for cmd-K-style global search; no
+// behavior wired yet, but the slot is fixed so future work doesn't move
+// chrome around.
+
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, Bell, LogOut } from 'lucide-react';
+import { LogOut, Menu, Search } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +24,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { createClient } from '@/lib/supabase/client';
+import { WORKSPACES } from '@/components/dashboard/sidebar-config';
 
 interface User {
   id: string;
@@ -26,28 +40,42 @@ interface HeaderProps {
   onMenuClick: () => void;
 }
 
-const pageNames: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/dashboard/clients': 'Clients',
-  '/dashboard/meetings': 'Meetings',
-  '/dashboard/brief': 'Monday Brief',
-  '/dashboard/health': 'Health Scores',
-  '/dashboard/settings': 'Settings',
-};
+const ACCENT = '#e74c3c';
+
+interface CrumbInfo {
+  workspace: string | null;
+  page: string;
+}
+
+function buildBreadcrumb(pathname: string): CrumbInfo {
+  if (!pathname || pathname === '/dashboard') {
+    return { workspace: null, page: 'Home' };
+  }
+  for (const ws of WORKSPACES) {
+    for (const item of ws.items) {
+      if (pathname === item.href || pathname.startsWith(item.href + '/')) {
+        return { workspace: ws.label, page: item.label };
+      }
+    }
+  }
+  if (pathname.startsWith('/dashboard/settings')) return { workspace: null, page: 'Settings' };
+  if (pathname.startsWith('/dashboard/upgrade')) return { workspace: null, page: 'Plans &amp; upgrade' };
+  if (pathname.startsWith('/dashboard/onboarding')) return { workspace: null, page: 'Onboarding' };
+  if (pathname.startsWith('/dashboard/proposals/accepted')) return { workspace: 'Decide', page: 'Accepted' };
+  return { workspace: null, page: 'Dashboard' };
+}
 
 export default function Header({ user, onMenuClick }: HeaderProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const router = useRouter();
+  const { workspace, page } = buildBreadcrumb(pathname);
 
-  const pageTitle = pageNames[pathname] || 'Dashboard';
-
-  const getInitials = (email: string) => {
-    const parts = email.split('@')[0].split('.');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return email.substring(0, 2).toUpperCase();
-  };
+  const userInitials = (() => {
+    const e = user?.email ?? 'User';
+    const parts = e.split('@')[0].split('.');
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return e.substring(0, 2).toUpperCase();
+  })();
 
   const handleSignOut = async () => {
     try {
@@ -59,95 +87,114 @@ export default function Header({ user, onMenuClick }: HeaderProps) {
     }
   };
 
-  const userInitials = user?.email ? getInitials(user.email) : 'U';
-  const userEmail = user?.email || 'User';
-
   return (
-    <header className="h-16 bg-[#0d1422] border-b border-[#1a2540] px-4 md:px-8 flex items-center justify-between sticky top-0 z-40">
-      {/* Left side: Menu button + Page Title */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={onMenuClick}
-          className="md:hidden p-2 hover:bg-[#1a2540] rounded-lg transition-colors text-[#7a88a8] hover:text-white"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-        <h1 className="text-lg font-semibold text-white">{pageTitle}</h1>
+    <header className="h-14 bg-[#0a0f1a] border-b border-[#1a2540] px-3 md:px-6 flex items-center gap-3 sticky top-0 z-40">
+      {/* Mobile menu */}
+      <button
+        onClick={onMenuClick}
+        className="md:hidden p-2 -ml-1 rounded-md text-[#7a88a8] hover:text-white hover:bg-[#11192a]"
+        aria-label="Open menu"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm min-w-0">
+        {workspace && (
+          <>
+            <span className="text-[#5a6580] truncate">{workspace}</span>
+            <span className="text-[#3a4868]">/</span>
+          </>
+        )}
+        <span className="text-white font-medium truncate">{page}</span>
       </div>
 
-      {/* Right side: Search + Notifications + User Menu */}
-      <div className="flex items-center gap-4">
-        {/* Search Bar - Hidden on mobile */}
-        <div className="hidden md:flex items-center gap-2 bg-[#1a2540] rounded-lg px-3 py-2 flex-1 max-w-xs ml-8">
-          <input
-            type="text"
-            placeholder="Search..."
-            className="bg-transparent outline-none text-sm text-white placeholder-[#7a88a8] w-full"
-          />
-        </div>
+      <div className="flex-1" />
 
-        {/* Notification Bell */}
-        <button className="p-2 hover:bg-[#1a2540] rounded-lg transition-colors text-[#7a88a8] hover:text-white relative">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-[#e74c3c] rounded-full"></span>
-        </button>
+      {/* Product switcher */}
+      <ProductSwitcher />
 
-        {/* User Dropdown Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 p-1 hover:bg-[#1a2540] rounded-lg transition-colors focus:outline-none">
-              <Avatar className="h-8 w-8">
-                <AvatarImage
-                  src={
-                    user?.user_metadata?.avatar_url ||
-                    `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`
-                  }
-                  alt={user?.email || 'User'}
-                />
-                <AvatarFallback className="bg-[#e74c3c]/20 text-[#e74c3c] text-xs font-bold">
-                  {userInitials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="hidden md:block text-left">
-                <p className="text-xs text-[#7a88a8]">Welcome back</p>
-                <p className="text-sm font-medium text-white truncate max-w-[150px]">
-                  {user?.user_metadata?.full_name ||
-                    user?.email?.split('@')[0] ||
-                    'User'}
-                </p>
-              </div>
-            </button>
-          </DropdownMenuTrigger>
+      {/* Search (placeholder) */}
+      <div className="hidden md:flex items-center gap-2 bg-[#11192a] border border-[#1a2540] rounded-md px-3 py-1.5 w-56">
+        <Search className="w-3.5 h-3.5 text-[#5a6580] flex-shrink-0" />
+        <input
+          type="text"
+          placeholder="Search clients, briefs…"
+          className="bg-transparent outline-none text-xs text-white placeholder-[#5a6580] w-full"
+        />
+        <kbd className="text-[10px] text-[#5a6580] bg-[#0a0f1a] px-1.5 py-0.5 rounded border border-[#1a2540]">⌘K</kbd>
+      </div>
 
-          <DropdownMenuContent align="end" className="w-56 bg-[#0d1422] border-[#1a2540]">
-            {/* User Info */}
-            <div className="px-4 py-3">
-              <p className="text-xs text-[#7a88a8] uppercase tracking-wide">
-                Account
-              </p>
-              <p className="text-sm font-medium text-white mt-1">{userEmail}</p>
-            </div>
-
-            <DropdownMenuSeparator className="bg-[#1a2540]" />
-
-            {/* Settings Link */}
-            <DropdownMenuItem className="cursor-pointer text-[#7a88a8] hover:text-white hover:bg-[#1a2540] focus:bg-[#1a2540] focus:text-white">
-              Settings
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator className="bg-[#1a2540]" />
-
-            {/* Sign Out */}
-            <DropdownMenuItem
-              onClick={handleSignOut}
-              className="cursor-pointer text-[#e74c3c] hover:text-[#ff6b5b] hover:bg-[#1a2540]/50 focus:bg-[#1a2540]/50 focus:text-[#ff6b5b]"
+      {/* User menu */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex items-center gap-2 p-1 rounded-md hover:bg-[#11192a] transition-colors focus:outline-none">
+            <Avatar className="h-7 w-7">
+              <AvatarImage
+                src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
+                alt={user?.email || 'User'}
+              />
+              <AvatarFallback className="bg-[#e74c3c]/15 text-[#e74c3c] text-[11px] font-semibold">
+                {userInitials}
+              </AvatarFallback>
+            </Avatar>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56 bg-[#0d1422] border-[#1a2540]">
+          <div className="px-3 py-2.5">
+            <p className="text-[10px] text-[#5a6580] uppercase tracking-wider">Signed in as</p>
+            <p className="text-sm text-white mt-0.5 truncate">{user?.email ?? 'User'}</p>
+          </div>
+          <DropdownMenuSeparator className="bg-[#1a2540]" />
+          <DropdownMenuItem asChild>
+            <Link
+              href="/dashboard/settings"
+              className="cursor-pointer text-[#9aa6c0] hover:text-white hover:bg-[#11192a] focus:bg-[#11192a] focus:text-white"
             >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+              Settings
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link
+              href="/dashboard/upgrade"
+              className="cursor-pointer text-[#9aa6c0] hover:text-white hover:bg-[#11192a] focus:bg-[#11192a] focus:text-white"
+            >
+              Plans &amp; upgrade
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="bg-[#1a2540]" />
+          <DropdownMenuItem
+            onClick={handleSignOut}
+            className="cursor-pointer text-[#e74c3c] hover:text-[#ff6b5b] hover:bg-[#11192a] focus:bg-[#11192a] focus:text-[#ff6b5b]"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </header>
+  );
+}
+
+function ProductSwitcher() {
+  return (
+    <div className="flex items-center bg-[#11192a] border border-[#1a2540] rounded-md p-0.5">
+      <span
+        className="text-[11px] font-semibold text-white px-2 py-1 rounded"
+        style={{ background: ACCENT }}
+      >
+        ClientPulse
+      </span>
+      <a
+        href="https://reforge.helloaurora.ai"
+        target="_blank"
+        rel="noreferrer"
+        className="text-[11px] text-[#5a6580] hover:text-[#9aa6c0] px-2 py-1 inline-flex items-center gap-1"
+        title="Switch to ReForge — opens in new tab"
+      >
+        ReForge
+        <span className="text-[8px] uppercase tracking-wider text-[#3a4868]">↗</span>
+      </a>
+    </div>
   );
 }
