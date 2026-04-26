@@ -88,7 +88,7 @@ export default function Header({ user, onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="h-14 bg-[#0a0f1a] border-b border-[#1a2540] px-3 md:px-6 flex items-center gap-3 sticky top-0 z-40">
+    <header className="h-14 bg-[#0a0f1a]/90 backdrop-blur-sm border-b border-[#141e33] px-3 md:px-6 flex items-center gap-3 sticky top-0 z-40">
       {/* Mobile menu */}
       <button
         onClick={onMenuClick}
@@ -178,22 +178,29 @@ export default function Header({ user, onMenuClick }: HeaderProps) {
 
 function ProductSwitcher() {
   return (
-    <div className="flex items-center bg-[#11192a] border border-[#1a2540] rounded-md p-0.5">
+    <div className="flex items-center bg-[#0c1220] border border-[#141e33] rounded-md p-0.5 gap-0.5">
       <span
-        className="text-[11px] font-semibold text-white px-2 py-1 rounded"
-        style={{ background: ACCENT }}
+        className="text-[11px] font-semibold text-white px-2.5 py-1 rounded inline-flex items-center gap-1.5 shadow-[0_0_18px_-4px_rgba(56,232,200,0.45)]"
+        style={{
+          background: 'linear-gradient(135deg, #38e8c8 0%, #4cc9f0 100%)',
+          color: '#0a1f1a',
+        }}
       >
+        <span
+          aria-hidden="true"
+          className="w-1.5 h-1.5 rounded-full bg-[#0a1f1a]/70"
+        />
         ClientPulse
       </span>
       <a
         href="https://reforge.helloaurora.ai"
         target="_blank"
         rel="noreferrer"
-        className="text-[11px] text-[#5a6580] hover:text-[#9aa6c0] px-2 py-1 inline-flex items-center gap-1"
+        className="text-[11px] font-playfair text-[#a0adc4] hover:text-[#f0c84c] px-2.5 py-1 inline-flex items-center gap-1 transition-colors"
         title="Switch to ReForge — opens in new tab"
       >
         ReForge
-        <span className="text-[8px] uppercase tracking-wider text-[#3a4868]">↗</span>
+        <span className="text-[8px] uppercase tracking-wider opacity-70">↗</span>
       </a>
     </div>
   );
