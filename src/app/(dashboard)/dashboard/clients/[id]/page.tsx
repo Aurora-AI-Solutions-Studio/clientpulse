@@ -249,27 +249,164 @@ function TabStrip({ current, onChange }: { current: Tab; onChange: (t: Tab) => v
 // Signals tab — placeholder MVP, fed by RF→CP signal pipeline (step 4)
 // -----------------------------
 
-function SignalsTab({ clientId: _clientId }: { clientId: string }) {
-  return (
-    <Card>
-      <CardContent className="p-8">
-        <div className="flex items-start gap-3">
-          <Activity className="w-5 h-5 text-[#7a88a8] mt-0.5" />
-          <div>
-            <h3 className="text-base font-semibold text-white mb-1">Signals timeline</h3>
-            <p className="text-sm text-[#9aa6c0] max-w-2xl">
-              Once integrations are connected, every meeting, email, payment, and (post-launch) ReForge
-              publishing event for this client will land here as a single time-ordered timeline. For now,
-              connect Gmail / Calendar / Zoom / Stripe in{' '}
-              <Link href="/dashboard/settings" className="text-[#e74c3c] hover:underline">
-                Settings
-              </Link>{' '}
-              to start collecting.
-            </p>
+interface SignalRow {
+  signal_type:
+    | 'content_velocity'
+    | 'approval_latency'
+    | 'pause_resume'
+    | 'voice_freshness'
+    | 'ingestion_rate';
+  period: string;
+  value: number;
+  metadata: Record<string, unknown> | null;
+  emitted_at: string;
+}
+
+interface SignalsResponse {
+  latest: Partial<Record<SignalRow['signal_type'], SignalRow>>;
+  timeline: SignalRow[];
+}
+
+const SIGNAL_LABEL: Record<SignalRow['signal_type'], string> = {
+  content_velocity: 'Content velocity',
+  approval_latency: 'Approval latency',
+  pause_resume: 'Pause / resume',
+  voice_freshness: 'Voice freshness',
+  ingestion_rate: 'Ingestion rate',
+};
+
+function formatSignalValue(s: SignalRow): string {
+  switch (s.signal_type) {
+    case 'content_velocity':
+      return `${s.value} pieces / wk`;
+    case 'approval_latency':
+      return `${Math.round(s.value / 1000 / 60 / 60)} h avg`;
+    case 'pause_resume':
+      return s.value >= 0.5 ? 'Paused' : 'Active';
+    case 'voice_freshness':
+      return `${Math.round(s.value)} d since update`;
+    case 'ingestion_rate':
+      return `${s.value} jobs / 30d`;
+  }
+}
+
+function SignalsTab({ clientId }: { clientId: string }) {
+  const [data, setData] = useState<SignalsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch(`/api/clients/${clientId}/signals`, { cache: 'no-store' })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(String(r.status));
+        return (await r.json()) as SignalsResponse;
+      })
+      .then((d) => { if (!cancelled) setData(d); })
+      .catch((e) => { if (!cancelled) setError(String(e)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [clientId]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-sm text-[#9aa6c0]">Loading signals…</CardContent>
+      </Card>
+    );
+  }
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-sm text-[#e74c3c]">Couldn’t load signals: {error}</CardContent>
+      </Card>
+    );
+  }
+
+  const latestEntries = data ? Object.entries(data.latest) as Array<[SignalRow['signal_type'], SignalRow]> : [];
+  const hasAny = latestEntries.length > 0;
+
+  if (!hasAny) {
+    return (
+      <Card>
+        <CardContent className="p-8">
+          <div className="flex items-start gap-3">
+            <Activity className="w-5 h-5 text-[#7a88a8] mt-0.5" />
+            <div>
+              <h3 className="text-base font-semibold text-white mb-1">No signals yet</h3>
+              <p className="text-sm text-[#9aa6c0] max-w-2xl">
+                Aurora Suite signals from ReForge land here once your agency starts publishing
+                content for this client. For non-Suite signals (meetings, email, payments),
+                connect Gmail / Calendar / Zoom / Stripe in{' '}
+                <Link href="/dashboard/settings" className="text-[#e74c3c] hover:underline">
+                  Settings
+                </Link>.
+              </p>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Headline cards — latest value per signal type */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {latestEntries.map(([type, sig]) => {
+          const meta = (sig.metadata ?? {}) as { delta?: number; prev_week?: number };
+          const delta = typeof meta.delta === 'number' ? meta.delta : null;
+          return (
+            <Card key={type}>
+              <CardContent className="p-4">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-[#5a6580] font-medium">
+                  {SIGNAL_LABEL[type]}
+                </div>
+                <div className="mt-1.5 text-xl font-semibold text-white">
+                  {formatSignalValue(sig)}
+                </div>
+                <div className="mt-1 text-[11px] text-[#7a88a8]">
+                  {sig.period}
+                  {delta !== null && (
+                    <span
+                      className={
+                        'ml-2 inline-flex items-center ' +
+                        (delta > 0 ? 'text-[#38e8c8]' : delta < 0 ? 'text-[#e87fa5]' : 'text-[#7a88a8]')
+                      }
+                    >
+                      {delta > 0 ? '▲' : delta < 0 ? '▼' : '–'} {Math.abs(delta)}
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Timeline — reverse-chronological raw rows */}
+      <Card>
+        <CardContent className="p-5">
+          <div className="text-sm font-semibold text-white mb-3">Timeline</div>
+          <ul className="space-y-2">
+            {data?.timeline.map((s, i) => (
+              <li
+                key={`${s.signal_type}-${s.period}-${i}`}
+                className="flex items-center justify-between text-sm py-2 border-b border-white/5 last:border-b-0"
+              >
+                <div className="flex items-center gap-3">
+                  <Activity className="w-3.5 h-3.5 text-[#5a6580]" />
+                  <span className="text-[#c8d0e0]">{SIGNAL_LABEL[s.signal_type]}</span>
+                  <span className="text-[11px] text-[#5a6580]">{s.period}</span>
+                </div>
+                <span className="text-[#9aa6c0]">{formatSignalValue(s)}</span>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
