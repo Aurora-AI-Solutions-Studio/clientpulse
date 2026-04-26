@@ -1,31 +1,26 @@
 'use client';
 
+// Unified Suite Shell — CP sidebar.
+//
+// 5 workspaces (Connect / Discover / Decide / Act / Learn), same shape and
+// position as the RF sidebar will use after step 3. The product switcher
+// in the header lets the user flip between CP and RF; the workspace
+// grammar stays identical, only the inner items change per product.
+//
+// Visual refresh vs the old sidebar: single accent (CP red) for the
+// active item only — no per-group colors, no expanded/collapsed group
+// state, less border noise. Health / Predictions / Alerts are no longer
+// standalone destinations — they're tabs inside the per-client page.
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  LayoutDashboard,
-  Users,
-  Video,
-  Mail,
-  Activity,
-  Settings,
-  Bell,
-  ShieldCheck,
-  TrendingDown,
-  TrendingUp,
-  MessageSquare,
-  Brain,
-  FileText,
-  Hash,
-  Mic,
-  Link2,
-  Eye,
-  Zap,
-  BarChart3,
-  ChevronDown,
-} from 'lucide-react';
+import { Settings as SettingsIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { useState } from 'react';
+import { isItemActive, WORKSPACES, type Workspace } from '@/components/dashboard/sidebar-config';
+
+// Re-export for any consumer that was already importing WORKSPACES from
+// the component file (kept thin since the data lives in sidebar-config).
+export { WORKSPACES } from '@/components/dashboard/sidebar-config';
 
 interface User {
   id: string;
@@ -41,235 +36,129 @@ interface SidebarProps {
   tierLabel?: string | null;
 }
 
-interface NavGroup {
-  label: string;
-  icon: React.ElementType;
-  description: string;
-  color: string;
-  items: {
-    label: string;
-    icon: React.ElementType;
-    href: string;
-  }[];
-}
+const ACCENT = '#e74c3c';
 
-const workflowGroups: NavGroup[] = [
-  {
-    label: 'Connect',
-    icon: Link2,
-    description: 'Data sources',
-    color: '#4cc9f0',
-    items: [
-      { label: 'Integrations', icon: Link2, href: '/dashboard/settings' },
-      { label: 'Slack', icon: Hash, href: '/dashboard/integrations/slack' },
-      { label: 'Transcription', icon: Mic, href: '/dashboard/integrations/whisper' },
-    ],
-  },
-  {
-    label: 'Monitor',
-    icon: Eye,
-    description: 'Health & alerts',
-    color: '#38e8c8',
-    items: [
-      { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
-      { label: 'Clients', icon: Users, href: '/dashboard/clients' },
-      { label: 'Health Scores', icon: Activity, href: '/dashboard/health' },
-      { label: 'Monday Brief', icon: Mail, href: '/dashboard/brief' },
-      { label: 'Alerts', icon: Bell, href: '/dashboard/alerts' },
-      { label: 'Predictions', icon: TrendingDown, href: '/dashboard/predictions' },
-    ],
-  },
-  {
-    label: 'Act',
-    icon: Zap,
-    description: 'Take action',
-    color: '#e74c3c',
-    items: [
-      { label: 'Proposals', icon: Zap, href: '/dashboard/proposals' },
-      { label: 'Approvals', icon: ShieldCheck, href: '/dashboard/approvals' },
-      { label: 'Check-ins', icon: MessageSquare, href: '/dashboard/check-ins' },
-      { label: 'Upsell', icon: TrendingUp, href: '/dashboard/upsell' },
-      { label: 'Meetings', icon: Video, href: '/dashboard/meetings' },
-    ],
-  },
-  {
-    label: 'Review',
-    icon: BarChart3,
-    description: 'Trends & insights',
-    color: '#b388eb',
-    items: [
-      { label: 'Reports', icon: FileText, href: '/dashboard/reports' },
-      { label: 'Outcomes', icon: FileText, href: '/dashboard/outcomes' },
-      { label: 'Learning', icon: Brain, href: '/dashboard/learning' },
-    ],
-  },
-];
+const TIER_COLOR: Record<string, string> = {
+  Free: 'bg-[#1a2540] text-[#7a88a8]',
+  Solo: 'bg-blue-500/10 text-blue-400',
+  Pro: 'bg-purple-500/10 text-purple-400',
+  Agency: 'bg-[#e74c3c]/10 text-[#e74c3c]',
+};
 
 export default function Sidebar({ tierLabel }: SidebarProps) {
-  const pathname = usePathname();
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    Connect: true,
-    Monitor: true,
-    Act: true,
-    Review: true,
-  });
-
-  const getSubscriptionTier = () => {
-    return tierLabel ?? 'Free';
-  };
-
-  const isActive = (href: string) => {
-    if (href === '/dashboard') return pathname === '/dashboard';
-    return pathname === href || pathname.startsWith(href + '/');
-  };
-
-  const isGroupActive = (group: NavGroup) => {
-    return group.items.some((item) => isActive(item.href));
-  };
-
-  const toggleGroup = (label: string) => {
-    setExpandedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
-  };
-
-  const subscriptionTier = getSubscriptionTier();
-  const tierColor = {
-    Free: 'bg-[#1a2540] text-[#7a88a8]',
-    Solo: 'bg-blue-500/10 text-blue-400',
-    Pro: 'bg-purple-500/10 text-purple-400',
-    Agency: 'bg-[#e74c3c]/10 text-[#e74c3c]',
-  } as Record<string, string>;
+  const pathname = usePathname() ?? '';
+  const tier = tierLabel ?? 'Free';
+  const settingsActive = isItemActive(pathname, '/dashboard/settings') && !isItemActive(pathname, '/dashboard/integrations');
 
   return (
     <div className="flex flex-col h-full bg-[#0a0f1a] border-r border-[#1a2540]">
-      {/* Logo Section */}
-      <div className="p-6 border-b border-[#1a2540]">
+      {/* Logo */}
+      <div className="px-6 pt-6 pb-5">
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 text-xl font-bold text-white hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2.5 text-lg font-semibold text-white hover:opacity-90 transition-opacity"
         >
-          <div className="w-8 h-8 rounded bg-gradient-to-br from-[#e74c3c] to-[#c0392b] flex items-center justify-center">
-            <span className="text-white text-sm">CP</span>
+          <div className="w-8 h-8 rounded-md bg-[#e74c3c] flex items-center justify-center">
+            <span className="text-white text-xs font-bold tracking-wide">CP</span>
           </div>
-          <span className="text-[#e74c3c]">ClientPulse</span>
+          <span>ClientPulse</span>
         </Link>
+        <div className="mt-1 ml-[42px] text-[10px] text-[#5a6580] uppercase tracking-[0.12em]">
+          Aurora Suite
+        </div>
       </div>
 
-      {/* Workflow Navigation */}
-      <nav className="flex-1 px-4 py-5 space-y-1 overflow-y-auto">
-        {workflowGroups.map((group) => {
-          const GroupIcon = group.icon;
-          const expanded = expandedGroups[group.label];
-          const groupActive = isGroupActive(group);
-
-          return (
-            <div key={group.label} className="mb-1">
-              {/* Group Header */}
-              <button
-                onClick={() => toggleGroup(group.label)}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all group"
-                style={{
-                  background: groupActive ? `${group.color}08` : 'transparent',
-                }}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className="w-7 h-7 rounded-md flex items-center justify-center"
-                    style={{ background: `${group.color}15` }}
-                  >
-                    <GroupIcon className="w-4 h-4" style={{ color: group.color }} />
-                  </div>
-                  <div className="text-left">
-                    <span
-                      className="text-sm font-semibold block leading-tight"
-                      style={{ color: groupActive ? group.color : '#c8d0e0' }}
-                    >
-                      {group.label}
-                    </span>
-                    <span className="text-[10px] text-[#5a6580] leading-tight">
-                      {group.description}
-                    </span>
-                  </div>
-                </div>
-                <ChevronDown
-                  className={`w-4 h-4 text-[#5a6580] transition-transform duration-200 ${
-                    expanded ? 'rotate-0' : '-rotate-90'
-                  }`}
-                />
-              </button>
-
-              {/* Group Items */}
-              {expanded && (
-                <div className="ml-[18px] pl-[14px] border-l border-[#1a2540] mt-1 space-y-0.5">
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const active = isActive(item.href);
-
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-md transition-all text-[13px] ${
-                          active
-                            ? 'text-white font-medium'
-                            : 'text-[#7a88a8] hover:bg-[#0f1420] hover:text-[#c8d0e0]'
-                        }`}
-                        style={active ? { background: `${group.color}12`, color: group.color } : {}}
-                      >
-                        <Icon className="w-4 h-4 flex-shrink-0" />
-                        <span>{item.label}</span>
-                        {item.label === 'Alerts' && (
-                          <div className="w-1.5 h-1.5 bg-[#e74c3c] rounded-full ml-auto" />
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      {/* Workspaces */}
+      <nav className="flex-1 px-3 pb-4 overflow-y-auto">
+        {WORKSPACES.map((ws) => (
+          <WorkspaceBlock key={ws.id} workspace={ws} pathname={pathname} />
+        ))}
 
         {/* Settings (standalone) */}
-        <div className="pt-3 mt-3 border-t border-[#1a2540]">
+        <div className="mt-3 pt-3 border-t border-[#1a2540]">
           <Link
             href="/dashboard/settings"
-            className={`flex items-center gap-2.5 px-3 py-2 rounded-md transition-all text-[13px] ${
-              isActive('/dashboard/settings')
-                ? 'text-[#7a88a8] bg-[#0f1420]'
-                : 'text-[#5a6580] hover:bg-[#0f1420] hover:text-[#7a88a8]'
+            className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] transition-colors ${
+              settingsActive
+                ? 'text-white bg-[#11192a]'
+                : 'text-[#7a88a8] hover:text-white hover:bg-[#0f1420]'
             }`}
           >
-            <Settings className="w-4 h-4 flex-shrink-0" />
-            <span>Settings</span>
+            <SettingsIcon className="w-4 h-4" />
+            Settings
           </Link>
         </div>
       </nav>
 
-      {/* Footer Section */}
+      {/* Plan footer */}
       <div className="border-t border-[#1a2540] p-4 space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs text-[#7a88a8] uppercase tracking-wider">
-            Plan
-          </span>
-          <Badge className={`${tierColor[subscriptionTier as keyof typeof tierColor]}`}>
-            {subscriptionTier}
-          </Badge>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-[#5a6580] uppercase tracking-[0.12em]">Plan</span>
+          <Badge className={TIER_COLOR[tier] ?? TIER_COLOR.Free}>{tier}</Badge>
         </div>
-
         <Link
           href="/dashboard/upgrade"
-          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
-            isActive('/dashboard/upgrade')
-              ? 'bg-[#38e8c8]/10 text-[#38e8c8] border border-[#38e8c8]/30'
-              : 'bg-[#0f1420] text-[#7a88a8] border border-[#1a2540] hover:text-white hover:border-[#38e8c8]/30'
-          }`}
+          className="block text-center text-xs text-[#9aa6c0] hover:text-white px-3 py-2 rounded-md bg-[#0f1420] border border-[#1a2540] hover:border-[#e74c3c]/40 transition-colors"
         >
-          View plans & upgrade
+          View plans &amp; upgrade
         </Link>
+        <div className="text-center text-[10px] text-[#5a6580] tracking-wider">by Aurora</div>
+      </div>
+    </div>
+  );
+}
 
-        <div className="text-xs text-[#7a88a8] text-center pt-2 border-t border-[#1a2540]">
-          by Aurora
-        </div>
+function WorkspaceBlock({
+  workspace,
+  pathname,
+}: {
+  workspace: Workspace;
+  pathname: string;
+}) {
+  return (
+    <div className="mt-4 first:mt-0">
+      <div className="flex items-center gap-2 px-3 mb-1.5">
+        <workspace.icon className="w-3.5 h-3.5 text-[#5a6580]" />
+        <span className="text-[10px] font-semibold text-[#5a6580] uppercase tracking-[0.12em]">
+          {workspace.label}
+        </span>
+      </div>
+      <div className="space-y-0.5">
+        {workspace.items.map((item) => {
+          const active = isItemActive(pathname, item.href);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`group flex items-center gap-2.5 pl-3 pr-2 py-2 rounded-md text-[13px] transition-colors relative ${
+                active
+                  ? 'text-white bg-[#11192a]'
+                  : 'text-[#9aa6c0] hover:text-white hover:bg-[#0f1420]'
+              }`}
+            >
+              {active && (
+                <span
+                  aria-hidden="true"
+                  className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full"
+                  style={{ background: ACCENT }}
+                />
+              )}
+              <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-[#e74c3c]' : 'text-[#5a6580] group-hover:text-[#9aa6c0]'}`} />
+              <span className="flex-1 truncate">{item.label}</span>
+              {item.badge === 'new' && (
+                <span className="text-[9px] uppercase tracking-wide text-[#38e8c8] bg-[#38e8c8]/10 px-1.5 py-0.5 rounded">
+                  New
+                </span>
+              )}
+              {item.badge === 'soon' && (
+                <span className="text-[9px] uppercase tracking-wide text-[#5a6580] bg-[#1a2540] px-1.5 py-0.5 rounded">
+                  Soon
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

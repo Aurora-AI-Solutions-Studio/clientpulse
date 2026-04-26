@@ -1,61 +1,82 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
+
 import { NextRequest, NextResponse } from 'next/server';
-import { Client, ClientUpdateInput } from '@/types/client';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
+import { Client, ClientUpdateInput, HealthScore } from '@/types/client';
+
+interface HealthScoreRow {
+  overall_score: number;
+  financial_score: number | null;
+  relationship_score: number | null;
+  delivery_score: number | null;
+  engagement_score: number | null;
+  computed_at: string;
+  override_score: number | null;
+  override_reason: string | null;
+  overridden_by: string | null;
+  overridden_at: string | null;
+}
+
+function mapHealthScore(row: HealthScoreRow | null): HealthScore | undefined {
+  if (!row) return undefined;
+  const overall = row.override_score ?? row.overall_score ?? 0;
+  return {
+    overall,
+    breakdown: {
+      financial: row.financial_score ?? 0,
+      relationship: row.relationship_score ?? 0,
+      delivery: row.delivery_score ?? 0,
+      engagement: row.engagement_score ?? 0,
+    },
+    lastUpdated: row.overridden_at ?? row.computed_at,
+    status: overall >= 70 ? 'healthy' : overall >= 40 ? 'at-risk' : 'critical',
+  };
+}
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient: supabase } = auth.ctx;
 
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
-
-    // Fetch the specific client and verify ownership
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select('*')
       .eq('id', id)
-      .eq('agency_id', profile.agency_id)
-      .single();
+      .eq('agency_id', agencyId)
+      .maybeSingle();
 
-    if (clientError || !client) {
+    if (clientError) {
+      console.error('[clients/[id] GET] client query failed', clientError);
+      return NextResponse.json({ error: 'Failed to fetch client' }, { status: 500 });
+    }
+    if (!client) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
-    // Map to Client type
-    const mappedClient: Client = {
+    // Latest health score (single row).
+    const { data: healthRow } = await supabase
+      .from('client_health_scores')
+      .select(
+        'overall_score, financial_score, relationship_score, delivery_score, engagement_score, computed_at, override_score, override_reason, overridden_by, overridden_at',
+      )
+      .eq('client_id', id)
+      .order('computed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const mapped: Client = {
       id: client.id,
       name: client.name,
       company: client.company_name,
       contactEmail: client.contact_email,
       monthlyRetainer: client.monthly_retainer,
       serviceType: client.service_type,
-      healthScore: undefined,
+      healthScore: mapHealthScore(healthRow as HealthScoreRow | null),
       status: client.status,
       lastMeetingDate: undefined,
       notes: client.notes,
@@ -64,66 +85,35 @@ export async function GET(
       agencyId: client.agency_id,
     };
 
-    return NextResponse.json(mappedClient);
-  } catch (error) {
-    console.error('Error fetching client:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json(mapped);
+  } catch (err) {
+    console.error('[clients/[id] GET] error', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient: supabase } = auth.ctx;
 
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
-
-    // Verify client ownership
-    const { data: existingClient, error: checkError } = await supabase
+    const { data: existing, error: checkError } = await supabase
       .from('clients')
       .select('id')
       .eq('id', id)
-      .eq('agency_id', profile.agency_id)
-      .single();
+      .eq('agency_id', agencyId)
+      .maybeSingle();
 
-    if (checkError || !existingClient) {
-      return NextResponse.json(
-        { error: 'Client not found or unauthorized' },
-        { status: 404 }
-      );
+    if (checkError || !existing) {
+      return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
     const body: ClientUpdateInput = await request.json();
-
-    // Build update object with snake_case keys
     const updateData: Record<string, string | number | boolean | null> = {};
     if (body.name !== undefined) updateData.name = body.name;
     if (body.company !== undefined) updateData.company_name = body.company;
@@ -133,8 +123,7 @@ export async function PUT(
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.status !== undefined) updateData.status = body.status;
 
-    // Update the client
-    const { data: updatedClient, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await supabase
       .from('clients')
       .update(updateData)
       .eq('id', id)
@@ -142,91 +131,53 @@ export async function PUT(
       .single();
 
     if (updateError) {
-      return NextResponse.json(
-        { error: 'Failed to update client' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to update client' }, { status: 500 });
     }
 
-    // Map to Client type
-    const mappedClient: Client = {
-      id: updatedClient.id,
-      name: updatedClient.name,
-      company: updatedClient.company_name,
-      contactEmail: updatedClient.contact_email,
-      monthlyRetainer: updatedClient.monthly_retainer,
-      serviceType: updatedClient.service_type,
+    const mapped: Client = {
+      id: updated.id,
+      name: updated.name,
+      company: updated.company_name,
+      contactEmail: updated.contact_email,
+      monthlyRetainer: updated.monthly_retainer,
+      serviceType: updated.service_type,
       healthScore: undefined,
-      status: updatedClient.status,
+      status: updated.status,
       lastMeetingDate: undefined,
-      notes: updatedClient.notes,
-      createdAt: updatedClient.created_at,
-      updatedAt: updatedClient.updated_at,
-      agencyId: updatedClient.agency_id,
+      notes: updated.notes,
+      createdAt: updated.created_at,
+      updatedAt: updated.updated_at,
+      agencyId: updated.agency_id,
     };
-
-    return NextResponse.json(mappedClient);
-  } catch (error) {
-    console.error('Error updating client:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json(mapped);
+  } catch (err) {
+    console.error('[clients/[id] PUT] error', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient: supabase } = auth.ctx;
 
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
-
-    // Verify client ownership and delete
     const { error: deleteError } = await supabase
       .from('clients')
       .delete()
       .eq('id', id)
-      .eq('agency_id', profile.agency_id);
+      .eq('agency_id', agencyId);
 
     if (deleteError) {
-      return NextResponse.json(
-        { error: 'Failed to delete client' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 });
     }
-
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting client:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error('[clients/[id] DELETE] error', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
