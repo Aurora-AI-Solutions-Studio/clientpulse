@@ -51,6 +51,14 @@ const TIER_STYLE: Record<
     className: 'text-white border-0',
     gradient: 'linear-gradient(135deg, #b388eb 0%, #e87fa5 50%, #e74c3c 100%)',
   },
+  // Suite — the cross-product bundle. Full Aurora gradient (all 5
+  // stops) so the badge visually echoes the suite framing in the
+  // sidebar workspaces.
+  Suite: {
+    className: 'text-white border-0',
+    gradient:
+      'linear-gradient(135deg, #4cc9f0 0%, #38e8c8 25%, #b388eb 50%, #e87fa5 75%, #f0c84c 100%)',
+  },
 };
 
 export default function Sidebar({ tierLabel }: SidebarProps) {

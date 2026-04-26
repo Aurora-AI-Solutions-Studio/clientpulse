@@ -97,6 +97,12 @@ export async function GET(_request: NextRequest) {
     }
 
     const tier = resolveTier({ subscription_plan: profile.subscription_plan });
+    const suiteAccess = Boolean((profile as { has_suite_access?: boolean }).has_suite_access);
+    // Suite buyers see "Suite" instead of their underlying CP tier in
+    // the sidebar plan badge — surfaces the cross-product entitlement
+    // they actually paid for instead of the per-product tier they
+    // happened to slot into.
+    const tierLabel = suiteAccess ? 'Suite' : tierDisplayName(tier);
     return NextResponse.json({
       userId: user.id,
       email: profile.email ?? user.email ?? null,
@@ -107,12 +113,8 @@ export async function GET(_request: NextRequest) {
       stripeCustomerId: profile.stripe_customer_id ?? null,
       onboardingCompletedAt: profile.onboarding_completed_at ?? null,
       tier,
-      tierLabel: tierDisplayName(tier),
-      // Aurora Suite access — read directly from the dedicated
-      // profiles.has_suite_access column. Set true only for buyers of
-      // the Aurora Suite bundle ($999/mo). Agency-tier-only customers
-      // do NOT get cross-product access.
-      suiteAccess: Boolean((profile as { has_suite_access?: boolean }).has_suite_access),
+      tierLabel,
+      suiteAccess,
     });
   } catch (error) {
     console.error('[/api/me GET]', error);
