@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import Sidebar from '@/components/dashboard/sidebar';
 import Header from '@/components/dashboard/header';
 import MobileSidebar from '@/components/dashboard/mobile-sidebar';
+import WorkflowStrip from '@/components/dashboard/workflow-strip';
 import type { CPTier } from '@/lib/tiers';
 
 interface User {
@@ -130,7 +131,12 @@ export default function DashboardLayout({
         <Header user={user} onMenuClick={() => setMobileMenuOpen(true)} />
 
         <main className="flex-1 overflow-auto">
-          <div className="p-4 md:p-8 max-w-[1400px] mx-auto w-full">
+          <div className="p-4 md:p-8 max-w-[1400px] mx-auto w-full space-y-4">
+            {/* Agency-workflow strip — visible spine of the suite. Surfaces
+                Connect → Discover → Decide → Act → Learn with the current
+                step lit. Hidden on the onboarding wizard so it doesn't
+                compete with the wizard's own progress. */}
+            {!pathname?.startsWith('/dashboard/onboarding') && <WorkflowStrip />}
             {children}
           </div>
         </main>
