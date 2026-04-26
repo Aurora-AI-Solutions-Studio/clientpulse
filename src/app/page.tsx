@@ -34,54 +34,20 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    // Hero CTA → real signup. The page banner still says "Private
+    // launch Summer 2026" but the auth flow is live (demo + Suite
+    // buyers need it tonight), so the hero CTA routes directly to
+    // /auth/signup with the email pre-filled. Waitlist API kept for
+    // other surfaces but not used here.
     e.preventDefault();
     const form = e.currentTarget;
     const input = form.querySelector('input') as HTMLInputElement;
-    const btn = form.querySelector('button') as HTMLButtonElement;
     const email = input.value.trim();
-
     if (!email) return;
-
-    btn.disabled = true;
-    btn.textContent = 'Submitting...';
-
-    // Extract UTM params from URL
-    const params = new URLSearchParams(window.location.search);
-
-    try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          source: 'landing_page',
-          utm_source: params.get('utm_source'),
-          utm_medium: params.get('utm_medium'),
-          utm_campaign: params.get('utm_campaign'),
-        }),
-      });
-
-      if (res.ok) {
-        input.value = '';
-        btn.textContent = '\u2713 You\'re on the list!';
-        btn.style.background = 'var(--teal)';
-      } else {
-        const data = await res.json();
-        btn.textContent = data.error || 'Something went wrong';
-        btn.style.background = 'var(--pulse-red)';
-      }
-    } catch {
-      btn.textContent = 'Network error — try again';
-      btn.style.background = 'var(--pulse-red)';
-    }
-
-    btn.disabled = false;
-    setTimeout(() => {
-      btn.textContent = 'Get Started';
-      btn.style.background = 'var(--teal)';
-    }, 3000);
+    window.location.href = `/auth/signup?email=${encodeURIComponent(email)}`;
   };
+
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -276,9 +242,20 @@ export default function Home() {
               </button>
             </li>
             <li>
-              <button
-                onClick={() => scrollToSection('waitlist')}
-                className="py-[10px] px-6 rounded-lg text-sm font-semibold transition-all cursor-pointer border-none"
+              <a
+                href="/auth/login"
+                className="bg-transparent border-none text-sm font-medium tracking-wide transition-colors cursor-pointer no-underline"
+                style={{ color: 'var(--color-muted)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-muted)')}
+              >
+                Sign in
+              </a>
+            </li>
+            <li>
+              <a
+                href="/auth/signup"
+                className="py-[10px] px-6 rounded-lg text-sm font-semibold transition-all cursor-pointer border-none no-underline inline-block"
                 style={{ background: 'var(--teal)', color: 'var(--deep)' }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = '#50f0d4';
@@ -292,7 +269,7 @@ export default function Home() {
                 }}
               >
                 Get Started
-              </button>
+              </a>
             </li>
           </ul>
 
