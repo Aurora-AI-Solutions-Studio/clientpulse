@@ -36,6 +36,11 @@ const TIER_STYLE: Record<string, { className: string; gradient?: string }> = {
     className: 'text-white border-0',
     gradient: 'linear-gradient(135deg, #b388eb 0%, #e87fa5 50%, #e74c3c 100%)',
   },
+  Suite: {
+    className: 'text-white border-0',
+    gradient:
+      'linear-gradient(135deg, #4cc9f0 0%, #38e8c8 25%, #b388eb 50%, #e87fa5 75%, #f0c84c 100%)',
+  },
 };
 
 export default function MobileSidebar({
