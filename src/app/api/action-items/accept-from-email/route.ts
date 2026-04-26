@@ -67,9 +67,9 @@ export async function GET(request: NextRequest) {
     return redirectStatus(appUrl, 'bad-signature');
   }
 
-  // Idempotent insert. If we've already accepted this exact magic link,
-  // the unique index on source_email_token_hash trips — look up the prior
-  // row and redirect as success.
+  // Atomic idempotent insert. The hash is part of the INSERT payload, so
+  // a second click hits the unique index on source_email_token_hash and
+  // surfaces 23505 — caught below and turned into "already accepted".
   try {
     const inserted = await createActionItem({
       supabase,
@@ -78,14 +78,9 @@ export async function GET(request: NextRequest) {
         clientId: action.clientId,
         title: action.title,
         description: action.rationale,
+        sourceEmailTokenHash: tokenHash,
       },
     });
-    // Stamp the email-source hash so a re-click is a no-op.
-    await supabase
-      .from('action_items')
-      .update({ source_email_token_hash: tokenHash })
-      .eq('id', inserted.id);
-
     return redirectAccepted(appUrl, inserted.id, action.title, 'created');
   } catch (err) {
     if (err instanceof ActionItemOwnershipError) {

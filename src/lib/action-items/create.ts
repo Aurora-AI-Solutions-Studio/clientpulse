@@ -31,6 +31,14 @@ export interface CreateActionItemInput {
   dueDate?: string;
   meetingId?: string;
   assignedTo?: string;
+  /**
+   * Idempotency key for "Accept from email" magic links. When set, persists
+   * to action_items.source_email_token_hash, which has a partial UNIQUE
+   * index — a duplicate insert (same hash) surfaces the underlying
+   * Postgres 23505 error to the caller, which can then redirect the user
+   * to "already accepted" instead of silently creating a duplicate row.
+   */
+  sourceEmailTokenHash?: string;
 }
 
 export interface CreateActionItemArgs {
@@ -61,8 +69,15 @@ export async function createActionItem(
   args: CreateActionItemArgs
 ): Promise<ActionItemRow> {
   const { supabase, agencyId, input } = args;
-  const { clientId, title, description, dueDate, meetingId, assignedTo } =
-    input;
+  const {
+    clientId,
+    title,
+    description,
+    dueDate,
+    meetingId,
+    assignedTo,
+    sourceEmailTokenHash,
+  } = input;
 
   if (typeof clientId !== 'string' || !clientId) {
     throw new ActionItemValidationError('client_id is required');
@@ -115,6 +130,7 @@ export async function createActionItem(
     meeting_id: meetingId ?? null,
     assigned_to: assignedTo ?? null,
     status: 'open' as const,
+    source_email_token_hash: sourceEmailTokenHash ?? null,
   };
 
   const { data: inserted, error: insertErr } = await supabase
@@ -126,7 +142,16 @@ export async function createActionItem(
     .single();
 
   if (insertErr || !inserted) {
-    throw new Error(insertErr?.message ?? 'Failed to create action item');
+    // Preserve Postgres error code (e.g. 23505 unique_violation) so callers
+    // — like the magic-link Accept route — can branch on it.
+    const err = new Error(insertErr?.message ?? 'Failed to create action item');
+    if (insertErr) {
+      Object.assign(err, {
+        code: (insertErr as { code?: string }).code,
+        details: (insertErr as { details?: string }).details,
+      });
+    }
+    throw err;
   }
 
   return inserted as ActionItemRow;

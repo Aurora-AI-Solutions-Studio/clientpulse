@@ -163,6 +163,7 @@ describe('createActionItem — insert', () => {
       meeting_id: null,
       assigned_to: null,
       status: 'open',
+      source_email_token_hash: null,
     });
     expect(row.status).toBe('open');
     expect(row.id).toBe('abc');
@@ -207,6 +208,7 @@ describe('createActionItem — insert', () => {
       meeting_id: MEETING,
       assigned_to: USER,
       status: 'open',
+      source_email_token_hash: null,
     });
   });
 

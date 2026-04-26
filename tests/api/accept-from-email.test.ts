@@ -67,9 +67,8 @@ interface FakeBriefRow {
 interface FakeOpts {
   brief?: FakeBriefRow | null;
   briefError?: { message: string } | null;
-  /** When set, the action_items.update step records the call here. */
-  updateRecorder?: { id?: string; hash?: string };
-  /** When set, action_items lookup by hash returns this row. */
+  /** When set, action_items lookup by hash returns this row (for the
+   *  already-accepted lookup after a UNIQUE-violation INSERT). */
   existingByHash?: { id: string } | null;
 }
 
@@ -91,16 +90,10 @@ function fakeSupabase(opts: FakeOpts): SupabaseClient {
         } as unknown as ReturnType<SupabaseClient['from']>;
       }
       if (table === 'action_items') {
+        // Only the post-UNIQUE-violation lookup-by-hash path uses the
+        // service client directly now; the INSERT goes through the
+        // mocked createActionItem.
         return {
-          update: vi.fn((vals: { source_email_token_hash?: string }) => ({
-            eq: vi.fn(async (_col: string, id: string) => {
-              if (opts.updateRecorder) {
-                opts.updateRecorder.id = id;
-                opts.updateRecorder.hash = vals.source_email_token_hash;
-              }
-              return { data: null, error: null };
-            }),
-          })),
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
               maybeSingle: vi.fn().mockResolvedValue({
@@ -206,12 +199,10 @@ describe('GET /api/action-items/accept-from-email', () => {
     expect(res.headers.get('location')).toContain('reason=bad-signature');
   });
 
-  it('happy path: creates action item, stamps source hash, redirects ok=created', async () => {
-    const updateRecorder: { id?: string; hash?: string } = {};
+  it('happy path: creates action item with hash in initial insert, redirects ok=created', async () => {
     mockCreateServiceClient.mockReturnValue(
       fakeSupabase({
         brief: { id: BRIEF, agency_id: AGENCY, content: briefContent },
-        updateRecorder,
       }),
     );
     const created: ActionItemRow = {
@@ -234,17 +225,20 @@ describe('GET /api/action-items/accept-from-email', () => {
     expect(loc).toContain('id=ai-1');
     expect(loc).toContain('variant=created');
     expect(loc).toContain('title=');
-    expect(updateRecorder.id).toBe('ai-1');
-    expect(updateRecorder.hash).toBeTruthy();
+
+    // The hash MUST be passed to createActionItem so the UNIQUE index
+    // catches duplicate magic-link clicks at insert time (not after).
+    expect(mockCreateActionItem).toHaveBeenCalledTimes(1);
+    const callArg = mockCreateActionItem.mock.calls[0][0];
+    expect(callArg.input.sourceEmailTokenHash).toBeTruthy();
+    expect(typeof callArg.input.sourceEmailTokenHash).toBe('string');
   });
 
-  it('already-accepted (UNIQUE violation) redirects ok=already-accepted', async () => {
-    const updateRecorder: { id?: string; hash?: string } = {};
+  it('already-accepted (UNIQUE violation at INSERT) redirects ok=already-accepted', async () => {
     mockCreateServiceClient.mockReturnValue(
       fakeSupabase({
         brief: { id: BRIEF, agency_id: AGENCY, content: briefContent },
         existingByHash: { id: 'ai-existing' },
-        updateRecorder,
       }),
     );
     const dupErr = Object.assign(new Error('duplicate key value violates unique constraint'), {
