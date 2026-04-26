@@ -4,8 +4,9 @@ export const maxDuration = 300;
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { MondayBriefAgent, renderBriefEmailHtml } from '@/lib/agents/monday-brief-agent';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
+import { generateAndSendBrief } from '@/lib/brief/send-brief';
+import { resolveAppUrl } from '@/lib/url';
 
 /**
  * POST /api/cron/monday-brief
@@ -14,7 +15,8 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
  * Authentication: `Authorization: Bearer ${MONDAY_BRIEF_CRON_SECRET}`.
  *
  * Iterates every agency, generates the Monday Brief, persists it, and
- * emails the owner via Resend. RLS is bypassed via the service-role client.
+ * emails the owner via the shared send pipeline. RLS is bypassed via the
+ * service-role client.
  */
 export async function POST(request: NextRequest) {
   // §12.2 Rate limit: 5/min per IP — expensive AI endpoint.
@@ -35,14 +37,20 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
 
-  // Pull every agency with an owner
   const { data: agencies, error: agenciesError } = await supabase
     .from('agencies')
-    .select('id, name, owner_id');
+    .select('id, name, owner_id, brand_logo_url, brand_color');
 
   if (agenciesError) {
     console.error('[cron/monday-brief] agencies query failed', agenciesError);
     return NextResponse.json({ error: 'Failed to load agencies' }, { status: 500 });
+  }
+
+  const appUrl = resolveAppUrl(request);
+  const emailTokenSecret = process.env.EMAIL_TOKEN_SECRET;
+  if (!emailTokenSecret) {
+    console.error('[cron/monday-brief] EMAIL_TOKEN_SECRET not configured');
+    return NextResponse.json({ error: 'Email signing key missing' }, { status: 500 });
   }
 
   const results: Array<{
@@ -59,71 +67,53 @@ export async function POST(request: NextRequest) {
 
   for (const agency of agencies ?? []) {
     try {
-      // Look up owner email
       const { data: ownerProfile } = await supabase
         .from('profiles')
-        .select('email, full_name')
+        .select('email')
         .eq('id', agency.owner_id)
         .single();
 
-      // Generate brief
-      const agent = new MondayBriefAgent(supabase);
-      const content = await agent.generate(agency.id);
-
-      // Persist
-      const { data: saved_row, error: insertError } = await supabase
-        .from('monday_briefs')
-        .insert({
-          agency_id: agency.id,
-          content,
-          email_sent: false,
-        })
-        .select('id')
-        .single();
-
-      if (insertError || !saved_row) {
-        throw new Error(`insert failed: ${insertError?.message ?? 'unknown'}`);
-      }
-
-      // Send via Resend if we have an owner email
-      const ownerEmail = ownerProfile?.email as string | undefined;
-      if (ownerEmail) {
-        const emailed = await sendBriefEmail({
-          to: ownerEmail,
-          subject: `ClientPulse Monday Brief — Week of ${content.weekOf}`,
-          html: renderBriefEmailHtml(content, agency.name ?? undefined),
-        });
-
-        if (emailed) {
-          await supabase
-            .from('monday_briefs')
-            .update({ email_sent: true, sent_at: new Date().toISOString() })
-            .eq('id', saved_row.id);
-
-          sent += 1;
-          results.push({
-            agency_id: agency.id,
-            agency_name: agency.name,
-            status: 'sent',
-            brief_id: saved_row.id,
-          });
-          continue;
-        }
-      }
-
-      saved += 1;
-      results.push({
-        agency_id: agency.id,
-        agency_name: agency.name,
-        status: 'saved_no_email',
-        brief_id: saved_row.id,
+      const result = await generateAndSendBrief({
+        supabase,
+        agency: {
+          id: agency.id as string,
+          name: (agency.name as string | null) ?? null,
+          brandLogoUrl: (agency.brand_logo_url as string | null) ?? null,
+          brandColor: (agency.brand_color as string | null) ?? null,
+        },
+        to: (ownerProfile?.email as string | null) ?? null,
+        send: true,
+        appUrl,
+        emailTokenSecret,
       });
+
+      if (result.emailStatus === 'sent') {
+        sent += 1;
+        results.push({
+          agency_id: agency.id as string,
+          agency_name: (agency.name as string | null) ?? null,
+          status: 'sent',
+          brief_id: result.briefId,
+        });
+      } else {
+        saved += 1;
+        results.push({
+          agency_id: agency.id as string,
+          agency_name: (agency.name as string | null) ?? null,
+          status: 'saved_no_email',
+          brief_id: result.briefId,
+          error:
+            result.emailStatus === 'failed'
+              ? result.emailError
+              : result.emailStatus,
+        });
+      }
     } catch (err) {
       failed += 1;
       console.error('[cron/monday-brief] agency failed', agency.id, err);
       results.push({
-        agency_id: agency.id,
-        agency_name: agency.name,
+        agency_id: agency.id as string,
+        agency_name: (agency.name as string | null) ?? null,
         status: 'failed',
         error: err instanceof Error ? err.message : String(err),
       });
@@ -139,44 +129,4 @@ export async function POST(request: NextRequest) {
     failed,
     results,
   });
-}
-
-// -----------------------------
-// Email delivery (Resend)
-// -----------------------------
-async function sendBriefEmail(params: {
-  to: string;
-  subject: string;
-  html: string;
-}): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.warn('[cron/monday-brief] RESEND_API_KEY not configured — skipping email');
-    return false;
-  }
-  const from = process.env.RESEND_FROM_EMAIL || 'ClientPulse <brief@helloaurora.ai>';
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from,
-        to: params.to,
-        subject: params.subject,
-        html: params.html,
-      }),
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      console.error('[cron/monday-brief] Resend send failed', res.status, text);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error('[cron/monday-brief] Resend send error', err);
-    return false;
-  }
 }

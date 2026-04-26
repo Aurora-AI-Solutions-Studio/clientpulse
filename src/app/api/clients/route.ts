@@ -1,8 +1,11 @@
 export const dynamic = 'force-dynamic';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { Client, ClientCreateInput, HealthScore } from '@/types/client';
 import { enforceClientLimit, TierLimitError } from '@/lib/tiers';
 import { getAuthedContext } from '@/lib/auth/get-authed-context';
+import { maybeClaimFirstBriefSend } from '@/lib/brief/first-brief-trigger';
+import { generateAndSendBrief } from '@/lib/brief/send-brief';
+import { resolveAppUrl } from '@/lib/url';
 
 // Generate mock health score for demonstration
 function generateMockHealthScore(): HealthScore {
@@ -147,6 +150,42 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to create client' },
         { status: 500 }
       );
+    }
+
+    // First-Brief auto-send: when this insert pushes the agency to 3 clients
+    // for the first time, fire a real Monday Brief in the background so the
+    // new agency sees actionable output before they've waited a week. Atomic
+    // claim via maybeClaimFirstBriefSend ensures exactly-once.
+    const claim = await maybeClaimFirstBriefSend(supabase, agencyId);
+    if (claim.shouldFire && claim.ownerEmail) {
+      const appUrl = resolveAppUrl(request);
+      const emailTokenSecret = process.env.EMAIL_TOKEN_SECRET;
+      if (emailTokenSecret) {
+        const { data: agencyForBrand } = await supabase
+          .from('agencies')
+          .select('brand_logo_url, brand_color')
+          .eq('id', agencyId)
+          .maybeSingle();
+        after(async () => {
+          try {
+            await generateAndSendBrief({
+              supabase,
+              agency: {
+                id: agencyId,
+                name: claim.agencyName,
+                brandLogoUrl: (agencyForBrand?.brand_logo_url as string | null) ?? null,
+                brandColor: (agencyForBrand?.brand_color as string | null) ?? null,
+              },
+              to: claim.ownerEmail,
+              send: true,
+              appUrl,
+              emailTokenSecret,
+            });
+          } catch (err) {
+            console.error('[clients POST] first-brief auto-send failed', err);
+          }
+        });
+      }
     }
 
     // Map to Client type

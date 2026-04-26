@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SupabaseClient } from '@supabase/supabase-js';
 import {
   MondayBriefAgent,
-  renderBriefEmailHtml,
   MondayBriefContent,
   MondayBriefClientEntry,
 } from '../../src/lib/agents/monday-brief-agent';
+import { renderBriefEmailHtml } from '../../src/lib/agents/brief-email';
 
 // Mock factory for chainable Supabase query builder
 function createMockSupabase(data: {
@@ -886,31 +886,30 @@ describe('MondayBriefAgent', () => {
     };
 
     it('should return HTML string', () => {
-      const html = renderBriefEmailHtml(mockBrief);
-
+      const html = renderBriefEmailHtml({ brief: mockBrief });
       expect(typeof html).toBe('string');
       expect(html).toContain('<!doctype html>');
       expect(html).toContain('</html>');
     });
 
-    it('should contain key brief data in output', () => {
-      const html = renderBriefEmailHtml(mockBrief);
-
-      expect(html).toContain(mockBrief.narrative.headline);
+    it('should contain hero line + week reference + snapshot numbers', () => {
+      const html = renderBriefEmailHtml({ brief: mockBrief });
+      expect(html).toContain('Week of 2026-04-07');
       expect(html).toContain(mockBrief.snapshot.totalClients.toString());
       expect(html).toContain(mockBrief.snapshot.averageScore.toString());
     });
 
-    it('should include agency name when provided', () => {
-      const html = renderBriefEmailHtml(mockBrief, 'Acme Agency');
-
+    it('should include agency name in branded header when provided', () => {
+      const html = renderBriefEmailHtml({
+        brief: mockBrief,
+        agency: { name: 'Acme Agency' },
+      });
       expect(html).toContain('Acme Agency');
     });
 
-    it('should render needsAttention table when present', () => {
-      const html = renderBriefEmailHtml(mockBrief);
-
-      expect(html).toContain('Needs attention');
+    it('should render needs-eyes lane when present', () => {
+      const html = renderBriefEmailHtml({ brief: mockBrief });
+      expect(html).toContain('Needs your eyes');
       expect(html).toContain('AtRiskCorp');
     });
 
@@ -927,41 +926,23 @@ describe('MondayBriefAgent', () => {
           },
         ],
       };
-
-      const html = renderBriefEmailHtml(briefWithSpecialChars);
-
-      // HTML should contain escaped ampersand for "Company & Co."
+      const html = renderBriefEmailHtml({ brief: briefWithSpecialChars });
       expect(html).toContain('&amp;');
     });
 
-    it('should include recommended actions section', () => {
-      const html = renderBriefEmailHtml(mockBrief);
-
-      expect(html).toContain('3 Actions for Your Approval');
+    it('should include actions block with proposal title', () => {
+      const html = renderBriefEmailHtml({ brief: mockBrief });
+      expect(html).toContain('Do this week');
       expect(html).toContain('Review concerns');
     });
 
-    it('should include action items list when present', () => {
-      const html = renderBriefEmailHtml(mockBrief);
-
-      expect(html).toContain('Action items due this week');
-      expect(html).toContain('Follow up');
-    });
-
-    it('should render snapshot statistics table', () => {
-      const html = renderBriefEmailHtml(mockBrief);
-
+    it('should render snapshot strip with all five labels', () => {
+      const html = renderBriefEmailHtml({ brief: mockBrief });
       expect(html).toContain('Clients');
       expect(html).toContain('Avg health');
       expect(html).toContain('Healthy');
       expect(html).toContain('At-risk');
       expect(html).toContain('Critical');
-    });
-
-    it('should include week reference in header', () => {
-      const html = renderBriefEmailHtml(mockBrief);
-
-      expect(html).toContain('Week of 2026-04-07');
     });
   });
 });
