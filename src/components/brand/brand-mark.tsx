@@ -1,12 +1,12 @@
 // Aurora Suite brand marks — single source for the CP and RF wordmarks
 // + the "by Aurora" gradient.
 //
-// CP: teal rounded-square app icon with a "monitor screen" frame
-//     containing an EKG path + a small heart accent. Wordmark = "Client"
-//     in white + "Pulse" in the Aurora gradient (teal→blue→purple→pink).
-// RF: dark charcoal rounded-square with a gold "fast-forward / forge"
-//     glyph + serif "ReForge" wordmark.
-// AuroraWordmark: standalone gradient "by Aurora" for footers / dividers.
+// The SVGs below are LIFTED VERBATIM from the canonical landing-page
+// implementations:
+//   - ClientPulse: clientpulse/src/app/page.tsx Icon.pulse  (40x40 viewBox)
+//   - ReForge:    reforge/app/page.tsx          ReForge nav (72x72 viewBox)
+// Do not improvise — if the marks change on the landing page, update them
+// here too so dashboard chrome stays in lockstep with the public brand.
 
 import Link from 'next/link';
 
@@ -36,18 +36,7 @@ export function ClientPulseMark({
   const px = ICON_PX[size];
   const inner = (
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
-      <span
-        className="relative inline-flex items-center justify-center rounded-[10px] shadow-[0_4px_22px_-4px_rgba(56,232,200,0.45)] ring-1 ring-[#2bc0a3]/40"
-        style={{
-          width: px,
-          height: px,
-          background:
-            'linear-gradient(135deg, #5cf3d8 0%, #3ddec3 45%, #28b89c 100%)',
-        }}
-        aria-hidden="true"
-      >
-        <PulseMonitorGlyph size={Math.round(px * 0.74)} />
-      </span>
+      <ClientPulseLogoSvg size={px} />
       {showWordmark && (
         <span className={`font-semibold tracking-[-0.01em] ${TEXT_CLASS[size]}`}>
           <span className="text-white">Client</span>
@@ -83,17 +72,7 @@ export function ReForgeMark({
   const px = ICON_PX[size];
   const inner = (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <span
-        className="relative inline-flex items-center justify-center rounded-[8px] shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)] ring-1 ring-white/5"
-        style={{
-          width: px,
-          height: px,
-          background: 'linear-gradient(135deg, #1a1f2e 0%, #0d1220 100%)',
-        }}
-        aria-hidden="true"
-      >
-        <ForgeGlyph size={Math.round(px * 0.62)} />
-      </span>
+      <ReForgeLogoSvg size={px} />
       {showWordmark && (
         <span
           className={`font-playfair font-bold tracking-[-0.01em] text-white ${TEXT_CLASS[size]}`}
@@ -133,93 +112,110 @@ export function AuroraWordmark({ className = '' }: { className?: string }) {
 }
 
 // -----------------------------
-// SVG glyphs
+// Canonical SVGs (verbatim from landing pages)
 // -----------------------------
 
-/**
- * CP mark inner glyph — a small head + shoulders silhouette with an EKG
- * line drawn THROUGH it. Reads as "monitoring this person's pulse",
- * matching the brand reference (not a generic monitor screen).
- */
-function PulseMonitorGlyph({ size }: { size: number }) {
+/** ClientPulse — verbatim from clientpulse/src/app/page.tsx Icon.pulse. */
+function ClientPulseLogoSvg({ size }: { size: number }) {
+  // ID is locally-scoped to avoid collisions when multiple instances render
+  // on the same page (e.g. sidebar + product switcher both visible).
+  const gradId = `cpLogoGrad_${size}`;
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 24 24"
+      viewBox="0 0 40 40"
       fill="none"
       aria-hidden="true"
+      style={{ display: 'block' }}
     >
-      {/* Head — small filled dot top-center */}
-      <circle cx="12" cy="6" r="1.7" fill="#0a3a32" />
-      {/* Shoulders / upper-body arc */}
-      <path
-        d="M5.5 13.5c0-3.5 2.9-5.5 6.5-5.5s6.5 2 6.5 5.5"
-        stroke="#0a3a32"
-        strokeWidth="1.7"
-        strokeLinecap="round"
+      <rect width="40" height="40" rx="10" fill={`url(#${gradId})`} />
+      <circle
+        cx="20"
+        cy="20"
+        r="13"
+        stroke="#06090f"
+        strokeWidth="2"
+        opacity="0.3"
         fill="none"
       />
-      {/* EKG line through the silhouette */}
-      <path
-        d="M2.5 14.5h4l1.4-3.4 2.5 6.4 1.6-3.5 1.2 1.5h8.3"
-        stroke="#0a3a32"
-        strokeWidth="1.8"
+      <circle cx="20" cy="20" r="7" fill="#06090f" opacity="0.15" />
+      <polyline
+        points="7,20 13,20 16,12 20,28 24,12 27,20 33,20"
+        stroke="#06090f"
+        strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
       />
+      <circle cx="20" cy="7" r="2.5" fill="#06090f" />
+      <circle cx="33" cy="20" r="2" fill="#06090f" opacity="0.6" />
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="40" y2="40">
+          <stop offset="0%" stopColor="#38e8c8" />
+          <stop offset="100%" stopColor="#4cc9f0" />
+        </linearGradient>
+      </defs>
     </svg>
   );
 }
 
-/**
- * RF mark glyph — gold left-pointing arrowhead with motion-trail
- * chevrons extending right. Reads as "moving fast, leaving trails",
- * matching the brand reference (not a row of identical chevrons).
- */
-function ForgeGlyph({ size }: { size: number }) {
+/** ReForge — verbatim from reforge/app/page.tsx nav header. */
+function ReForgeLogoSvg({ size }: { size: number }) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 24 24"
+      viewBox="0 0 72 72"
       fill="none"
       aria-hidden="true"
+      style={{ display: 'block' }}
     >
-      {/* Solid arrowhead pointing left */}
-      <path
-        d="M3 12l8-6v12z"
-        fill="#f0c84c"
+      <line x1="8" y1="36" x2="24" y2="36" stroke="#f0c84c" strokeWidth="2.5" strokeLinecap="round" />
+      <polyline
+        points="20,32 24,36 20,40"
         stroke="#f0c84c"
-        strokeWidth="0.6"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Motion trail — three diverging strokes leaving right, fading */}
       <path
-        d="M12 7l4 5-4 5"
+        d="M28 36 L36 22 L44 36 L36 50 Z"
+        fill="none"
+        stroke="#f0c84c"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      <path d="M32 36 L36 28 L40 36 L36 44 Z" fill="#f0c84c" opacity="0.15" />
+      <line x1="44" y1="28" x2="62" y2="16" stroke="#f0c84c" strokeWidth="2" strokeLinecap="round" />
+      <line
+        x1="44"
+        y1="32"
+        x2="64"
+        y2="28"
         stroke="#f0c84c"
         strokeWidth="2"
         strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.95"
+        opacity="0.85"
       />
-      <path
-        d="M16 7l3 5-3 5"
+      <line x1="44" y1="36" x2="64" y2="36" stroke="#f0c84c" strokeWidth="2.5" strokeLinecap="round" />
+      <line
+        x1="44"
+        y1="40"
+        x2="64"
+        y2="44"
         stroke="#f0c84c"
-        strokeWidth="1.7"
+        strokeWidth="2"
         strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.7"
+        opacity="0.85"
       />
-      <path
-        d="M19.5 7l2 5-2 5"
-        stroke="#f0c84c"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.45"
-      />
+      <line x1="44" y1="44" x2="62" y2="56" stroke="#f0c84c" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="62" cy="16" r="2" fill="#f0c84c" opacity="0.8" />
+      <circle cx="64" cy="28" r="2" fill="#f0c84c" opacity="0.6" />
+      <circle cx="64" cy="36" r="2.5" fill="#f0c84c" />
+      <circle cx="64" cy="44" r="2" fill="#f0c84c" opacity="0.6" />
+      <circle cx="62" cy="56" r="2" fill="#f0c84c" opacity="0.8" />
     </svg>
   );
 }
