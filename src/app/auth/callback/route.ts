@@ -11,6 +11,12 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const error = searchParams.get('error');
+  // Support a `next=` param so other auth flows (e.g. Aurora Suite SSO
+  // handoff) can route the user back to a specific destination after
+  // the PKCE exchange. Falls back to /dashboard. Only same-origin
+  // relative paths are honored to prevent open-redirect abuse.
+  const rawNext = searchParams.get('next');
+  const next = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/dashboard';
 
   if (error) {
     return NextResponse.redirect(new URL(`/auth/login?error=${encodeURIComponent(error)}`, request.url));
@@ -50,7 +56,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL(next, request.url));
   } catch {
     return NextResponse.redirect(new URL('/auth/login?error=callback_error', request.url));
   }

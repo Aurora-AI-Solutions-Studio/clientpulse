@@ -108,6 +108,10 @@ export async function GET(_request: NextRequest) {
       onboardingCompletedAt: profile.onboarding_completed_at ?? null,
       tier,
       tierLabel: tierDisplayName(tier),
+      // Aurora Suite access — proxy via tier === 'agency' until a
+      // dedicated has_suite_access flag lands. Header reads this to
+      // decide whether to show the cross-product switcher.
+      suiteAccess: tier === 'agency',
     });
   } catch (error) {
     console.error('[/api/me GET]', error);

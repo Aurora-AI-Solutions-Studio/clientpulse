@@ -39,6 +39,10 @@ interface User {
 interface HeaderProps {
   user: User;
   onMenuClick: () => void;
+  /** Show the cross-product switcher only when the user has Suite
+   *  access. The cross-link itself goes through /api/auth/handoff/issue
+   *  which re-checks server-side as a backstop. */
+  suiteAccess?: boolean;
 }
 
 interface CrumbInfo {
@@ -64,7 +68,7 @@ function buildBreadcrumb(pathname: string): CrumbInfo {
   return { workspace: null, page: 'Dashboard' };
 }
 
-export default function Header({ user, onMenuClick }: HeaderProps) {
+export default function Header({ user, onMenuClick, suiteAccess = false }: HeaderProps) {
   const pathname = usePathname() ?? '';
   const router = useRouter();
   const { workspace, page } = buildBreadcrumb(pathname);
@@ -110,8 +114,9 @@ export default function Header({ user, onMenuClick }: HeaderProps) {
 
       <div className="flex-1" />
 
-      {/* Product switcher */}
-      <ProductSwitcher />
+      {/* Product switcher — Suite-only. Hidden for non-Suite users so
+          the dashboard chrome doesn't advertise a feature they can't use. */}
+      {suiteAccess && <ProductSwitcher />}
 
       {/* Search (placeholder) */}
       <div className="hidden md:flex items-center gap-2 bg-[#11192a] border border-[#1a2540] rounded-md px-3 py-1.5 w-56">
@@ -190,16 +195,15 @@ function ProductSwitcher() {
       >
         <ClientPulseMark size="sm" />
       </div>
-      {/* Inactive: ReForge — full mark, hover lifts to gold */}
+      {/* Inactive: ReForge — clicking starts an SSO handoff (server-side
+          tier check + signed token + magic-link session bootstrap) so
+          the user lands authed in RF without re-logging-in. */}
       <a
-        href="https://reforge.helloaurora.ai"
-        target="_blank"
-        rel="noreferrer"
+        href="/api/auth/handoff/issue?to=rf"
         className="px-2 py-1 rounded-md inline-flex items-center gap-1 opacity-75 hover:opacity-100 hover:bg-white/[0.03] transition-all"
-        title="Switch to ReForge — opens in new tab"
+        title="Switch to ReForge"
       >
         <ReForgeMark size="sm" />
-        <span className="text-[9px] uppercase tracking-wider text-[#5a6580] ml-0.5">↗</span>
       </a>
     </div>
   );
