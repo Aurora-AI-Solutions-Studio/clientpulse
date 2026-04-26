@@ -3,8 +3,9 @@
 // short-lived token bound to their email and redirect them to RF's
 // /auth/handoff verifier. RF mirrors this for the CP→RF direction.
 //
-// Server-side tier check is the security backstop — even if the UI
-// somehow surfaces the link to a non-Suite user, this route refuses.
+// The Suite gate keys off `profiles.has_suite_access` — a real flag
+// flipped only for buyers of the Aurora Suite bundle ($999/mo Stripe
+// SKU). Agency-tier-only customers do NOT get cross-product access.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -31,24 +32,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard?error=no_email', origin));
   }
 
-  // Suite gate — proxy via subscription_plan === 'agency' until a
-  // dedicated has_suite_access flag lands. See handoff.ts threat model.
-  //
-  // IMPORTANT: read the profile via service-role, NOT the auth-bound
-  // SSR client. CP has a documented RLS context drift where the
-  // auth-client `.from('profiles').eq('id', user.id)` can return null
-  // even when the row exists (Apr 25 incident — `/api/me` 404'd silently
-  // for the same reason; fix was to switch to service-role after
-  // auth.getUser() verifies the session). The .eq('id', user.id)
-  // filter scopes the service-role read to the authed user's row.
+  // Suite gate — read via service-role to dodge the documented CP
+  // auth-client RLS context drift (Apr 25). The .eq('id', user.id)
+  // filter scopes the read to the authed user's row.
   const profileService = createServiceClient();
   const { data: profile } = await profileService
     .from('profiles')
-    .select('subscription_plan')
+    .select('has_suite_access')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (profile?.subscription_plan !== 'agency') {
+  if (!profile?.has_suite_access) {
+    // No Suite access. Bounce to upgrade with a hint — UI also hides
+    // the switcher for non-Suite users; this is the security backstop.
     return NextResponse.redirect(new URL('/dashboard/upgrade?reason=suite', origin));
   }
 

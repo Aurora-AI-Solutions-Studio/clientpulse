@@ -33,7 +33,7 @@ export async function GET(_request: NextRequest) {
     let { data: profile } = await profileService
       .from('profiles')
       .select(
-        'agency_id, subscription_plan, subscription_status, stripe_customer_id, onboarding_completed_at, full_name, email'
+        'agency_id, subscription_plan, subscription_status, stripe_customer_id, onboarding_completed_at, full_name, email, has_suite_access'
       )
       .eq('id', user.id)
       .maybeSingle();
@@ -49,7 +49,7 @@ export async function GET(_request: NextRequest) {
       const { data: healed } = await profileService
         .from('profiles')
         .select(
-          'agency_id, subscription_plan, subscription_status, stripe_customer_id, onboarding_completed_at, full_name, email'
+          'agency_id, subscription_plan, subscription_status, stripe_customer_id, onboarding_completed_at, full_name, email, has_suite_access'
         )
         .eq('id', user.id)
         .maybeSingle();
@@ -108,10 +108,11 @@ export async function GET(_request: NextRequest) {
       onboardingCompletedAt: profile.onboarding_completed_at ?? null,
       tier,
       tierLabel: tierDisplayName(tier),
-      // Aurora Suite access — proxy via tier === 'agency' until a
-      // dedicated has_suite_access flag lands. Header reads this to
-      // decide whether to show the cross-product switcher.
-      suiteAccess: tier === 'agency',
+      // Aurora Suite access — read directly from the dedicated
+      // profiles.has_suite_access column. Set true only for buyers of
+      // the Aurora Suite bundle ($999/mo). Agency-tier-only customers
+      // do NOT get cross-product access.
+      suiteAccess: Boolean((profile as { has_suite_access?: boolean }).has_suite_access),
     });
   } catch (error) {
     console.error('[/api/me GET]', error);
