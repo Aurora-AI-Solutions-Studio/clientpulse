@@ -40,8 +40,6 @@ interface HeaderProps {
   onMenuClick: () => void;
 }
 
-const ACCENT = '#e74c3c';
-
 interface CrumbInfo {
   workspace: string | null;
   page: string;
