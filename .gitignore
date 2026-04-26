@@ -34,3 +34,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+# Claude Code session locks (per-machine, not for source control)
+.claude/scheduled_tasks.lock
