@@ -22,6 +22,10 @@ interface MeSummary {
   tier: CPTier;
   tierLabel: string;
   onboardingCompletedAt: string | null;
+  /** True when the user is on a plan that includes Aurora Suite access
+   *  (currently a proxy via tier === 'agency'; will switch to a real
+   *  has_suite_access flag when that lands). */
+  suiteAccess?: boolean;
 }
 
 export default function DashboardLayout({
@@ -128,7 +132,11 @@ export default function DashboardLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col md:ml-[280px] relative z-10">
-        <Header user={user} onMenuClick={() => setMobileMenuOpen(true)} />
+        <Header
+          user={user}
+          onMenuClick={() => setMobileMenuOpen(true)}
+          suiteAccess={me?.suiteAccess ?? me?.tier === 'agency'}
+        />
 
         <main className="flex-1 overflow-auto">
           <div className="p-4 md:p-8 max-w-[1400px] mx-auto w-full space-y-4">
