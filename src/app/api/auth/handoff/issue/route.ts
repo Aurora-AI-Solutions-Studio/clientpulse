@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { signHandoff } from '@/lib/suite/handoff';
 
 const RF_BASE = process.env.NEXT_PUBLIC_RF_BASE_URL ?? 'https://reforge.helloaurora.ai';
@@ -32,11 +33,20 @@ export async function GET(req: NextRequest) {
 
   // Suite gate — proxy via subscription_plan === 'agency' until a
   // dedicated has_suite_access flag lands. See handoff.ts threat model.
-  const { data: profile } = await supabase
+  //
+  // IMPORTANT: read the profile via service-role, NOT the auth-bound
+  // SSR client. CP has a documented RLS context drift where the
+  // auth-client `.from('profiles').eq('id', user.id)` can return null
+  // even when the row exists (Apr 25 incident — `/api/me` 404'd silently
+  // for the same reason; fix was to switch to service-role after
+  // auth.getUser() verifies the session). The .eq('id', user.id)
+  // filter scopes the service-role read to the authed user's row.
+  const profileService = createServiceClient();
+  const { data: profile } = await profileService
     .from('profiles')
     .select('subscription_plan')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (profile?.subscription_plan !== 'agency') {
     return NextResponse.redirect(new URL('/dashboard/upgrade?reason=suite', origin));
