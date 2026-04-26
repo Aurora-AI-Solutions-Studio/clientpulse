@@ -126,8 +126,10 @@ export default function ClientsPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-playfair font-bold text-white">Clients</h1>
-          <p className="text-sm text-[#a0adc4] mt-1">
+          <h1 className="text-3xl md:text-4xl font-playfair font-bold text-white tracking-tight">
+            Clients
+          </h1>
+          <p className="text-base text-[#c8d0e0] mt-2 max-w-2xl">
             Your portfolio. Click any client to see signals, actions, health, and alerts.
           </p>
         </div>

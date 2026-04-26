@@ -1,11 +1,10 @@
 'use client';
 
-// Mobile mirror of the unified-suite Sidebar — same visual language.
+// Mobile mirror of the unified-suite Sidebar — same per-workspace accents.
 
-import { X } from 'lucide-react';
+import { X, Settings as SettingsIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Settings as SettingsIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ClientPulseMark, AuroraWordmark } from '@/components/brand/brand-mark';
 import { isItemActive, WORKSPACES } from '@/components/dashboard/sidebar-config';
@@ -57,7 +56,6 @@ export default function MobileSidebar({
         aria-hidden="true"
       />
       <div className="md:hidden fixed left-0 top-0 bottom-0 w-[280px] bg-[#0a0f1a] z-50 flex flex-col">
-        {/* Header */}
         <div className="px-5 pt-5 pb-4 flex items-center justify-between">
           <ClientPulseMark href="/dashboard" size="md" />
           <button
@@ -69,25 +67,31 @@ export default function MobileSidebar({
           </button>
         </div>
 
-        {/* Workspaces */}
         <nav className="flex-1 px-3 pb-4 overflow-y-auto">
-          {WORKSPACES.map((ws) => {
+          {WORKSPACES.map((ws, idx) => {
             const groupActive = ws.items.some((i) => isItemActive(pathname, i.href));
             return (
-              <div key={ws.id} className="mt-5 first:mt-0">
-                <div className="flex items-center gap-2 px-3 mb-1.5">
+              <div key={ws.id} className={idx === 0 ? '' : 'mt-5'}>
+                <div className="flex items-center gap-2 px-3 mb-2">
                   <ws.icon
-                    className={`w-3.5 h-3.5 transition-colors ${
-                      groupActive ? 'text-[#38e8c8]' : 'text-[#5a6580]'
-                    }`}
+                    className="w-3.5 h-3.5 transition-colors"
+                    style={{ color: groupActive ? ws.accent : '#5a6580' }}
                   />
                   <span
-                    className={`text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors ${
-                      groupActive ? 'text-[#38e8c8]' : 'text-[#5a6580]'
-                    }`}
+                    className="text-[11px] font-semibold uppercase tracking-[0.16em] transition-colors"
+                    style={{ color: groupActive ? ws.accent : '#7a88a8' }}
                   >
                     {ws.label}
                   </span>
+                  {groupActive && (
+                    <span
+                      aria-hidden="true"
+                      className="flex-1 h-px ml-1 opacity-30"
+                      style={{
+                        background: `linear-gradient(90deg, ${ws.accent} 0%, transparent 100%)`,
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="space-y-0.5">
                   {ws.items.map((item) => {
@@ -100,26 +104,30 @@ export default function MobileSidebar({
                         onClick={onClose}
                         className={`group relative flex items-center gap-2.5 pl-3.5 pr-2 py-2 rounded-md text-[13px] transition-all ${
                           active
-                            ? 'text-white bg-[#11192a] shadow-[inset_0_0_0_1px_rgba(56,232,200,0.18),0_0_22px_-6px_rgba(56,232,200,0.35)]'
-                            : 'text-[#a0adc4] hover:text-white hover:bg-[#0f1420]'
+                            ? 'text-white bg-[#11192a]'
+                            : 'text-[#c8d0e0] hover:text-white hover:bg-[#0f1420]'
                         }`}
+                        style={
+                          active
+                            ? {
+                                boxShadow: `inset 0 0 0 1px ${ws.glow.replace('0.35', '0.18')}, 0 0 22px -6px ${ws.glow}`,
+                              }
+                            : undefined
+                        }
                       >
                         {active && (
                           <span
                             aria-hidden="true"
                             className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full"
                             style={{
-                              background:
-                                'linear-gradient(180deg, #38e8c8 0%, #4cc9f0 50%, #b388eb 100%)',
+                              background: `linear-gradient(180deg, ${ws.accent} 0%, ${ws.accent}80 100%)`,
+                              boxShadow: `0 0 8px ${ws.glow}`,
                             }}
                           />
                         )}
                         <Icon
-                          className={`w-4 h-4 flex-shrink-0 transition-colors ${
-                            active
-                              ? 'text-[#38e8c8]'
-                              : 'text-[#5a6580]'
-                          }`}
+                          className="w-4 h-4 flex-shrink-0 transition-colors"
+                          style={active ? { color: ws.accent } : undefined}
                         />
                         <span className="flex-1 truncate">{item.label}</span>
                       </Link>
@@ -137,7 +145,7 @@ export default function MobileSidebar({
               className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] transition-colors ${
                 isItemActive(pathname, '/dashboard/settings')
                   ? 'text-white bg-[#11192a]'
-                  : 'text-[#7a88a8] hover:text-white hover:bg-[#0f1420]'
+                  : 'text-[#9aa6c0] hover:text-white hover:bg-[#0f1420]'
               }`}
             >
               <SettingsIcon className="w-4 h-4" />
@@ -146,10 +154,11 @@ export default function MobileSidebar({
           </div>
         </nav>
 
-        {/* Footer */}
         <div className="border-t border-[#141e33] p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] text-[#5a6580] uppercase tracking-[0.14em]">Plan</span>
+            <span className="text-[10px] text-[#5a6580] uppercase tracking-[0.16em] font-medium">
+              Plan
+            </span>
             <Badge
               className={`px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${tierStyle.className}`}
               style={tierStyle.gradient ? { background: tierStyle.gradient } : undefined}
@@ -160,11 +169,11 @@ export default function MobileSidebar({
           <Link
             href="/dashboard/upgrade"
             onClick={onClose}
-            className="block text-center text-xs text-[#a0adc4] hover:text-white px-3 py-2 rounded-md bg-[#0f1420] border border-[#1a2540] hover:border-[#38e8c8]/40 transition-colors"
+            className="block text-center text-xs text-[#c8d0e0] hover:text-white px-3 py-2 rounded-md bg-[#0f1420] border border-[#1a2540] hover:border-[#38e8c8]/40 transition-colors"
           >
             View plans &amp; upgrade
           </Link>
-          <div className="text-center text-[10px] tracking-[0.14em]">
+          <div className="text-center text-[10px] tracking-[0.16em]">
             <AuroraWordmark className="text-[10px]" />
           </div>
         </div>
