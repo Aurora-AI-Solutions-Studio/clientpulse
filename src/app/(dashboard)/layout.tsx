@@ -7,6 +7,7 @@ import Sidebar from '@/components/dashboard/sidebar';
 import Header from '@/components/dashboard/header';
 import MobileSidebar from '@/components/dashboard/mobile-sidebar';
 import WorkflowStrip from '@/components/dashboard/workflow-strip';
+import DemoBanner from '@/components/dashboard/demo-banner';
 import type { CPTier } from '@/lib/tiers';
 
 interface User {
@@ -132,6 +133,7 @@ export default function DashboardLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col md:ml-[280px] relative z-10">
+        <DemoBanner />
         <Header
           user={user}
           onMenuClick={() => setMobileMenuOpen(true)}

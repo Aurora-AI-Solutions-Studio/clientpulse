@@ -1114,43 +1114,82 @@ export default function Home() {
             ))}
           </div>
 
-          {/* ─── Agency Suite cross-link (CP + ReForge bundle teaser) ─── */}
-          <div className="reveal mt-14 max-w-[820px] mx-auto p-[28px_32px] max-md:p-[24px] rounded-[16px] flex items-center justify-between gap-6 max-md:flex-col max-md:items-start"
+          {/* ─── Agency Suite — full-feature card mirroring RF's SuiteCard ─── */}
+          {/* Same density/structure as the ReForge landing's Suite card so the
+              two products feel like one Suite story. CTA lands directly in
+              ReForge's /auth/signup?plan=suite (Suite is a ReForge SKU and
+              the signup UX is on that side). */}
+          <div className="reveal mt-14 max-w-[1140px] mx-auto relative overflow-hidden rounded-2xl p-8 max-md:p-6"
             style={{
-              background: 'linear-gradient(135deg, rgba(56, 232, 200, 0.05), var(--color-surface-light))',
-              border: '1px solid var(--border-subtle)',
+              background: 'linear-gradient(135deg, rgba(56, 232, 200, 0.06), rgba(56, 232, 200, 0.02) 60%), var(--polar)',
+              border: '1px solid rgba(56, 232, 200, 0.25)',
             }}
           >
-            <div className="flex-1">
-              <div className="text-xs font-semibold uppercase tracking-[0.15em] mb-2" style={{ color: 'var(--teal)' }}>
-                Agency Suite
+            <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full px-3 py-1 text-[11px] font-semibold" style={{ background: 'var(--teal)', color: 'var(--deep)' }}>
+                    Agency Suite
+                  </span>
+                  <span className="rounded-full px-3 py-1 text-[11px] font-semibold" style={{ background: 'rgba(56, 232, 200, 0.15)', color: 'var(--teal)', border: '1px solid rgba(56, 232, 200, 0.3)' }}>
+                    Early Adopter · 30% off 1st year
+                  </span>
+                </div>
+                <h3 className="mt-3 font-playfair text-[22px] font-bold leading-[1.3]" style={{ color: 'var(--text-primary)' }}>
+                  ClientPulse Agency + ReForge Agency, talking to each other.
+                </h3>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                  Most agencies use a content tool <em>and</em> a client-health tool.
+                  Ours talk to each other. Yours don&apos;t. Content velocity becomes a
+                  leading churn indicator — a 30-day head start on every risk.
+                </p>
+                <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {[
+                    'Everything in both Agency plans',
+                    'RF → CP content-velocity pipeline',
+                    'Content velocity as a leading churn indicator',
+                    'A 30-day head start on every churn risk',
+                    '20 EA slots · 30% off first year',
+                  ].map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      <span className="mt-0.5 flex-shrink-0" style={{ color: 'var(--teal)' }}>{'✓'}</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <h3 className="font-playfair text-[22px] font-bold leading-[1.3] mb-2" style={{ color: 'var(--text-primary)' }}>
-                Bundle ClientPulse with ReForge — content velocity meets client retention
-              </h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                Agencies running both get a bundled price and a built-in upsell loop: ReForge publishing signals feed ClientPulse health scores. See the Suite pricing on the ReForge site.
-              </p>
+
+              <div className="flex flex-col items-start md:items-end">
+                <p>
+                  <span className="font-playfair text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                    ${isAnnual ? 832 : 999}
+                  </span>
+                  <span className="text-sm" style={{ color: 'var(--text-muted)' }}>/mo</span>
+                </p>
+                {isAnnual && (
+                  <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Billed $9,984 · <span style={{ color: 'var(--teal)' }}>2 months free</span>
+                  </p>
+                )}
+                <a
+                  href="https://reforge.helloaurora.ai/auth/signup?plan=suite"
+                  className="mt-4 block rounded-xl px-6 py-3 text-center text-sm font-semibold transition-all"
+                  style={{ background: 'var(--teal)', color: 'var(--deep)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#50f0d4';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(56, 232, 200, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--teal)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  Get Agency Suite
+                </a>
+              </div>
             </div>
-            <a
-              href="https://reforge.helloaurora.ai/#pricing"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 py-[12px] px-[22px] rounded-[10px] text-sm font-semibold whitespace-nowrap transition-all"
-              style={{
-                background: 'var(--color-surface-light)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-teal)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--color-surface-hover)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-surface-light)';
-              }}
-            >
-              Explore Agency Suite →
-            </a>
           </div>
         </div>
       </section>
