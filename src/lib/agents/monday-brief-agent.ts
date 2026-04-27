@@ -57,6 +57,22 @@ export interface MondayBriefRecommendedAction {
   rationale: string;
   urgency: 'high' | 'medium' | 'low';
   engagementContext?: string; // e.g. "No meetings in 23 days, email volume down 40%"
+  /** Slice 2C-1: when set, this action was driven by a fresh RF signal
+   *  (pause or 60% velocity drop) and the Brief headline can lead with
+   *  it directly. Distinguishes signal-driven re-engagement from the
+   *  engagement-metrics heuristic that already ships under the same type. */
+  signalReason?: 'paused' | 'velocity_drop';
+}
+
+/**
+ * Slice 2C-1 — RF→CP signals snapshot per client. Latest value per
+ * signal_type within the lookback window plus the previous-period
+ * content_velocity needed to detect a w/w drop.
+ */
+interface ClientSignalsSnapshot {
+  pauseResume?: number;
+  contentVelocityCurrent?: number;
+  contentVelocityPrev?: number;
 }
 
 export interface MondayBriefEngagementInsight {
@@ -295,12 +311,66 @@ export class MondayBriefAgent {
     // Sort: lowest engagement first
     engagementInsights.sort((a, b) => a.overallEngagement - b.overallEngagement);
 
+    // 10b. Slice 2C-1 — RF→CP signals snapshot.
+    // Two queries: latest 50 signal rows for the agency (latest value per
+    // signal_type wins), plus a separate scan of content_velocity ordered
+    // by emitted_at desc that lets us pull current + previous period for
+    // every client in one pass. Both are agency-scoped via the existing
+    // RLS-aware path (the supabase client passed to the agent).
+    const signalsByClient = new Map<string, ClientSignalsSnapshot>();
+    if (clientIds.length > 0) {
+      const { data: latestSignals } = await this.supabase
+        .from('client_signals')
+        .select('client_id, signal_type, value, emitted_at')
+        .in('client_id', clientIds)
+        .order('emitted_at', { ascending: false })
+        .limit(200);
+      const seenLatest = new Set<string>();
+      for (const row of (latestSignals ?? []) as Array<{
+        client_id: string;
+        signal_type: string;
+        value: number;
+      }>) {
+        const k = `${row.client_id}:${row.signal_type}`;
+        if (seenLatest.has(k)) continue;
+        seenLatest.add(k);
+        const snap = signalsByClient.get(row.client_id) ?? {};
+        if (row.signal_type === 'pause_resume') snap.pauseResume = row.value;
+        else if (row.signal_type === 'content_velocity')
+          snap.contentVelocityCurrent = row.value;
+        signalsByClient.set(row.client_id, snap);
+      }
+
+      const { data: velocityRows } = await this.supabase
+        .from('client_signals')
+        .select('client_id, value, emitted_at')
+        .in('client_id', clientIds)
+        .eq('signal_type', 'content_velocity')
+        .order('emitted_at', { ascending: false })
+        .limit(200);
+      const velocityCounts = new Map<string, number>();
+      for (const row of (velocityRows ?? []) as Array<{
+        client_id: string;
+        value: number;
+      }>) {
+        const seen = velocityCounts.get(row.client_id) ?? 0;
+        if (seen === 1) {
+          // The latest is already on the snapshot; this is the prior period.
+          const snap = signalsByClient.get(row.client_id) ?? {};
+          snap.contentVelocityPrev = row.value;
+          signalsByClient.set(row.client_id, snap);
+        }
+        velocityCounts.set(row.client_id, seen + 1);
+      }
+    }
+
     // 11. Recommended Actions (3 actions for your approval)
     const recommendedActions = this.generateRecommendedActions(
       entries,
       engagementByClient,
       clientById,
-      topActionItems
+      topActionItems,
+      signalsByClient
     );
 
     // 12. Narrative
@@ -357,13 +427,95 @@ export class MondayBriefAgent {
     entries: MondayBriefClientEntry[],
     engagementByClient: Map<string, Record<string, unknown>>,
     _clientById: Map<string, { name: string; company: string }>,
-    _actionItems: MondayBriefActionItem[]
+    _actionItems: MondayBriefActionItem[],
+    signalsByClient: Map<string, ClientSignalsSnapshot> = new Map()
   ): MondayBriefRecommendedAction[] {
     const actions: MondayBriefRecommendedAction[] = [];
     let actionId = 0;
 
+    // Slice 2C-1 — Priority 0: signal-driven re-engagement.
+    // RF marked the client as paused, or velocity collapsed >=60% w/w.
+    // Outranks the critical-clients priority because signals are
+    // freshness-grounded (RF emits weekly) and the matching action_item
+    // already exists on the dashboard from the APE auto-trigger.
+    interface SignalHit {
+      entry: MondayBriefClientEntry;
+      reason: 'paused' | 'velocity_drop';
+      severity: number;
+      dropPct?: number;
+      prev?: number;
+      curr?: number;
+    }
+    const VELOCITY_DROP_THRESHOLD = 0.6;
+    const signalDrivenSorted: SignalHit[] = entries
+      .map((entry): SignalHit | null => {
+        const snap = signalsByClient.get(entry.clientId);
+        if (!snap) return null;
+        if (snap.pauseResume === 1) {
+          return { entry, reason: 'paused', severity: 0 };
+        }
+        if (
+          typeof snap.contentVelocityCurrent === 'number' &&
+          typeof snap.contentVelocityPrev === 'number' &&
+          snap.contentVelocityPrev > 0
+        ) {
+          const dropPct =
+            (snap.contentVelocityPrev - snap.contentVelocityCurrent) /
+            snap.contentVelocityPrev;
+          if (dropPct >= VELOCITY_DROP_THRESHOLD) {
+            return {
+              entry,
+              reason: 'velocity_drop',
+              severity: 1,
+              dropPct,
+              prev: snap.contentVelocityPrev,
+              curr: snap.contentVelocityCurrent,
+            };
+          }
+        }
+        return null;
+      })
+      .filter((x): x is SignalHit => x !== null)
+      .sort((a, b) => a.severity - b.severity);
+
+    const topHit: SignalHit | undefined = signalDrivenSorted[0];
+    if (topHit) {
+      const label = topHit.entry.companyName || topHit.entry.clientName;
+      if (topHit.reason === 'paused') {
+        actions.push({
+          id: `ra-${++actionId}`,
+          type: 're-engagement',
+          clientId: topHit.entry.clientId,
+          clientName: topHit.entry.clientName,
+          companyName: topHit.entry.companyName,
+          title: `Re-engage ${label} — publishing has paused`,
+          rationale: `RF reports zero new pieces in the latest period. Reach out today before the relationship goes fully cold.`,
+          urgency: 'high',
+          signalReason: 'paused',
+        });
+      } else {
+        const dropDisplay = Math.round((topHit.dropPct ?? 0) * 100);
+        actions.push({
+          id: `ra-${++actionId}`,
+          type: 're-engagement',
+          clientId: topHit.entry.clientId,
+          clientName: topHit.entry.clientName,
+          companyName: topHit.entry.companyName,
+          title: `Re-engage ${label} — output dropped ${dropDisplay}% week-over-week`,
+          rationale: `Publishing rate fell from ${topHit.prev} to ${topHit.curr} pieces. Reach out before momentum collapses.`,
+          urgency: 'high',
+          signalReason: 'velocity_drop',
+        });
+      }
+    }
+
     // Priority 1: Critical clients → escalation or check-in
-    const criticals = entries.filter((e) => e.status === 'critical').sort((a, b) => a.overallScore - b.overallScore);
+    // Dedupe — if Priority 0 already covered the worst critical client
+    // (Cypress in the demo), don't double-up on the same client.
+    const alreadyTargeted = new Set(actions.map((a) => a.clientId));
+    const criticals = entries
+      .filter((e) => e.status === 'critical' && !alreadyTargeted.has(e.clientId))
+      .sort((a, b) => a.overallScore - b.overallScore);
     for (const client of criticals.slice(0, 1)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const eng = engagementByClient.get(client.clientId) as any;
@@ -388,8 +540,10 @@ export class MondayBriefAgent {
     }
 
     // Priority 2: Clients with declining engagement → re-engagement
+    const targetedAfterCritical = new Set(actions.map((a) => a.clientId));
     const decliningEngagement = entries
       .filter((e) => {
+        if (targetedAfterCritical.has(e.clientId)) return false;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const eng = engagementByClient.get(e.clientId) as any;
         if (!eng) return false;
@@ -503,12 +657,21 @@ export class MondayBriefAgent {
     // Sprint 8A: the brief is a decision surface — lead with state +
     // a proposal count when available. Critical state still takes
     // headline precedence over proposal-count-only framing.
+    // Slice 2C-1: signal-driven re-engagement outranks even critical
+    // because the signal is freshness-grounded and the action is one
+    // click away on the dashboard already.
     const proposalTail =
       ctx.recommendedActionsCount > 0
         ? ` · ${ctx.recommendedActionsCount} proposal${ctx.recommendedActionsCount > 1 ? 's' : ''} ready`
         : '';
-    const headline =
-      ctx.critical > 0
+    const signalAction = ctx.topRecommendedAction?.signalReason
+      ? ctx.topRecommendedAction
+      : undefined;
+    const headline = signalAction
+      ? signalAction.signalReason === 'paused'
+        ? `${signalAction.companyName || signalAction.clientName} paused publishing — re-engage today${proposalTail}`
+        : `${signalAction.companyName || signalAction.clientName} velocity dropped sharply — re-engage today${proposalTail}`
+      : ctx.critical > 0
         ? `${ctx.critical} client${ctx.critical > 1 ? 's' : ''} in critical — act today${proposalTail}`
         : ctx.atRisk > 0
           ? `${ctx.atRisk} at-risk client${ctx.atRisk > 1 ? 's' : ''} this week${proposalTail}`

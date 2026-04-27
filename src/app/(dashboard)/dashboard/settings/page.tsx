@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Check, AlertCircle, RefreshCw, Calendar, Mail, Unlink, ExternalLink, Clock, Video } from 'lucide-react';
+import { Check, AlertCircle, RefreshCw, Calendar, Mail, Unlink, ExternalLink, Clock, Video, Sparkles, Lock } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -44,6 +44,14 @@ interface MeSummary {
   stripeCustomerId: string | null;
   tier: 'free' | 'solo' | 'pro' | 'agency';
   tierLabel: string;
+  suiteAccess?: boolean;
+}
+
+interface SuiteStatus {
+  enabled: boolean;
+  signalsLast7d: number;
+  lastSignalAt: string | null;
+  mappedClientCount: number;
 }
 
 const TIER_DESCRIPTION: Record<MeSummary['tier'], string> = {
@@ -62,6 +70,7 @@ export default function SettingsPage() {
   const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [me, setMe] = useState<MeSummary | null>(null);
+  const [suiteStatus, setSuiteStatus] = useState<SuiteStatus | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
 
   const fetchConnections = useCallback(async () => {
@@ -100,6 +109,14 @@ export default function SettingsPage() {
       try {
         const res = await fetch('/api/me', { cache: 'no-store' });
         if (res.ok) setMe(await res.json());
+      } catch {
+        // best-effort
+      }
+    })();
+    void (async () => {
+      try {
+        const res = await fetch('/api/integrations/suite-status', { cache: 'no-store' });
+        if (res.ok) setSuiteStatus(await res.json());
       } catch {
         // best-effort
       }
@@ -536,6 +553,83 @@ export default function SettingsPage() {
           <p className="text-xs text-[#7a88a8] px-1">
             ClientPulse only reads metadata (dates, attendees, subjects, participants). Email bodies, calendar descriptions, and recording audio are never stored.
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Aurora Suite — RF→CP signal pipeline (Slice 2C-2) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-[#e74c3c]" />
+            Aurora Suite
+          </CardTitle>
+          <CardDescription>
+            Cross-product signal pipeline. ReForge emits content velocity, pause/resume, voice freshness, approval latency, and ingestion rate per client; ClientPulse rolls them into health scoring and the Action Proposal Engine.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {suiteStatus?.enabled ? (
+            <div className="rounded-lg border border-[#38e8c8]/30 bg-gradient-to-br from-[#1a2540]/60 via-[#1a2540]/40 to-[#38e8c8]/5 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#38e8c8]/10 flex items-center justify-center">
+                    <Check className="w-5 h-5 text-[#38e8c8]" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">ReForge → ClientPulse</p>
+                    <p className="text-xs text-[#38e8c8]">Connected · {suiteStatus.signalsLast7d} signal{suiteStatus.signalsLast7d === 1 ? '' : 's'} in the last 7 days</p>
+                  </div>
+                </div>
+                <span className="text-xs px-3 py-1 rounded-full bg-[#38e8c8]/10 text-[#38e8c8]">
+                  Suite
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[#1a2540]">
+                <div>
+                  <p className="text-xs text-[#7a88a8] mb-1">Mapped clients</p>
+                  <p className="text-sm font-medium text-white">{suiteStatus.mappedClientCount}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#7a88a8] mb-1">Last signal received</p>
+                  <p className="text-sm font-medium text-white">{formatSyncTime(suiteStatus.lastSignalAt ?? undefined)}</p>
+                </div>
+              </div>
+              {suiteStatus.signalsLast7d === 0 && (
+                <div className="flex items-start gap-2 mt-4 pt-4 border-t border-[#1a2540]">
+                  <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-[#7a88a8]">
+                    No signals received this week. If ReForge has active content for these clients, the next scheduled emission will arrive shortly.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-[#1a2540] bg-[#1a2540]/30 p-4 opacity-90">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#1a2540] flex items-center justify-center">
+                    <Lock className="w-5 h-5 text-[#7a88a8]" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">ReForge → ClientPulse</p>
+                    <p className="text-xs text-[#7a88a8]">
+                      Aurora Suite required. Combine ClientPulse with ReForge to get RF activity signals folded into your health scores and proposals.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-end mt-4 pt-4 border-t border-[#1a2540]">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { window.location.href = '/dashboard/upgrade'; }}
+                >
+                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                  Upgrade to Suite
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
