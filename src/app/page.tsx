@@ -254,6 +254,17 @@ export default function Home() {
             </li>
             <li>
               <a
+                href="/api/demo/signin"
+                className="bg-transparent border-none text-sm font-medium tracking-wide transition-colors cursor-pointer no-underline"
+                style={{ color: 'var(--color-muted)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-muted)')}
+              >
+                See live demo
+              </a>
+            </li>
+            <li>
+              <a
                 href="/auth/signup"
                 className="py-[10px] px-6 rounded-lg text-sm font-semibold transition-all cursor-pointer border-none no-underline inline-block"
                 style={{ background: 'var(--teal)', color: 'var(--deep)' }}
