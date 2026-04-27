@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -11,7 +11,19 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AuthFooter } from '@/components/ui/auth-footer';
 
+// Next 15 requires every component that calls useSearchParams() to be
+// wrapped in a Suspense boundary at build time, otherwise prerender
+// bails on the page. Split the component: the page is a server-safe
+// shell that mounts the form inside <Suspense>; the form uses the hook.
 export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
   const router = useRouter();
   const search = useSearchParams();
   const supabase = createClient();
