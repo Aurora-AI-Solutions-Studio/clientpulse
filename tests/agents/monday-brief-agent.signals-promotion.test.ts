@@ -142,6 +142,28 @@ describe('MondayBriefAgent — signal-driven promotion (slice 2C-1)', () => {
     }
   });
 
+  it('tolerates object-shaped client_health_scores.signals (demo-seed legacy)', async () => {
+    // The demo seed historically wrote `{ demo: true, scenario: '...' }`
+    // into the JSONB column instead of the expected array. Generating
+    // a brief against this shape used to crash with "signals is not
+    // iterable"; it must now resolve cleanly.
+    const supabase = fakeSupabase({
+      clients: [northwind],
+      healthScores: [
+        {
+          client_id: 'c-northwind',
+          overall_score: 86,
+          signals: { demo: true, scenario: 'Healthy fintech' },
+        },
+      ],
+      clientSignals: [],
+    });
+    const agent = new MondayBriefAgent(supabase);
+    const brief = await agent.generate('agency-1');
+    expect(brief.snapshot.totalClients).toBe(1);
+    expect(brief.needsAttention[0]?.topSignal).toBeUndefined();
+  });
+
   it('does not double-up when the paused client is also critical', async () => {
     const supabase = fakeSupabase({
       clients: [cypress],

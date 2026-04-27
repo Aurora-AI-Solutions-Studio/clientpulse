@@ -171,8 +171,16 @@ export class MondayBriefAgent {
       const previous = previousByClient.get(r.client_id as string);
       const delta = previous !== undefined ? overall - previous : undefined;
 
-      // Extract top signal (highest severity)
-      const signals = (r.signals as Array<{ severity?: string; message?: string }>) ?? [];
+      // Extract top signal (highest severity). The demo seed (and any
+      // legacy row) may have stamped `signals` as an object instead of
+      // an array — guard with Array.isArray so a non-array shape just
+      // produces no topSignal instead of a runtime crash.
+      const rawSignals = r.signals;
+      const signals: Array<{ severity?: string; message?: string }> = Array.isArray(
+        rawSignals
+      )
+        ? (rawSignals as Array<{ severity?: string; message?: string }>)
+        : [];
       const severityRank: Record<string, number> = { high: 3, medium: 2, low: 1, positive: 0 };
       const sorted = [...signals].sort(
         (a, b) => (severityRank[b.severity ?? ''] ?? -1) - (severityRank[a.severity ?? ''] ?? -1)
