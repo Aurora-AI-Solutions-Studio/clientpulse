@@ -1,9 +1,11 @@
-// One-off verification script for Slice 2B.
+// One-off verification script for the RF→CP signal pipeline (slices
+// 2B + 2C-1) against prod.
 //
 // Runs the deployed refreshClientHealth() against prod for the demo
-// workspace's "Cypress Logistics" client. Cypress has pause_resume=1
-// in client_signals, so the new signals factor should pin its
-// signals_score to ~5/100 and pull the overall score down.
+// workspace's "Cypress Logistics" client and exercises the APE
+// auto-trigger path. After the slice 2C-1 ship, also generates a
+// Monday Brief and confirms Cypress is promoted to the headline
+// because of its pause_resume signal.
 //
 // Run with: npx tsx scripts/verify-slice-2b.ts
 
@@ -13,6 +15,7 @@ import { config } from 'dotenv';
 import path from 'node:path';
 import { refreshClientHealth } from '../src/lib/health/refresh';
 import { maybeCreateSignalTriggeredActionItem } from '../src/lib/signals/ingest-trigger';
+import { MondayBriefAgent } from '../src/lib/agents/monday-brief-agent';
 
 // Project root .env.local takes precedence over any inherited shell env.
 config({ path: path.resolve(__dirname, '..', '.env.local'), override: true });
@@ -97,6 +100,16 @@ async function main() {
     .order('created_at', { ascending: false })
     .limit(5);
   console.log('SIGNAL-LINKED ACTION ITEMS:', items);
+
+  // ─── 2C-1: Brief promotion ─────────────────────────────────────
+  // Generate a Brief for the demo agency and confirm Cypress is the
+  // top recommended action with signalReason='paused', plus the
+  // headline mentions Cypress + 'paused'.
+  const agencyId = cypress.agency_id as string;
+  const briefAgent = new MondayBriefAgent(supabase);
+  const brief = await briefAgent.generate(agencyId);
+  console.log('BRIEF HEADLINE:', brief.narrative.headline);
+  console.log('BRIEF TOP ACTION:', brief.recommendedActions[0]);
 }
 
 main().catch((err) => {
