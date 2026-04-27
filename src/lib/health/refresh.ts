@@ -14,6 +14,7 @@ import {
   HealthScoringAgent,
   type HealthScoreInput,
   type HealthScoreResult,
+  type SignalsInput,
 } from '@/lib/agents/health-scoring-agent';
 
 export interface RefreshClientHealthArgs {
@@ -120,6 +121,33 @@ export async function refreshClientHealth({
     .maybeSingle();
   const engagement = (engagementData ?? null) as EngagementRow | null;
 
+  // ─── 4b. RF→CP signals (Slice 2B) ────────────────────────────────
+  // Pull the most-recent value per signal_type and shape it into the
+  // SignalsInput envelope the scoring agent consumes. Empty result =
+  // signalsInput stays undefined and the agent reverts to 4-dim.
+  const { data: signalRows } = await supabase
+    .from('client_signals')
+    .select('signal_type, value, emitted_at')
+    .eq('client_id', clientId)
+    .order('emitted_at', { ascending: false })
+    .limit(50);
+  const latestBySignalType = new Map<string, number>();
+  for (const row of (signalRows ?? []) as Array<{ signal_type: string; value: number }>) {
+    if (!latestBySignalType.has(row.signal_type)) {
+      latestBySignalType.set(row.signal_type, row.value);
+    }
+  }
+  let signalsInput: SignalsInput | undefined;
+  if (latestBySignalType.size > 0) {
+    signalsInput = {
+      contentVelocity: latestBySignalType.get('content_velocity'),
+      pauseResume: latestBySignalType.get('pause_resume'),
+      voiceFreshnessDays: latestBySignalType.get('voice_freshness'),
+      approvalLatencyMs: latestBySignalType.get('approval_latency'),
+      ingestionRate: latestBySignalType.get('ingestion_rate'),
+    };
+  }
+
   const finalTrend = engagement?.meeting_frequency_trend ?? meetingFrequencyTrend;
   const finalLastDaysAgo =
     engagement?.last_meeting_days_ago ?? lastMeetingDaysAgo;
@@ -133,6 +161,7 @@ export async function refreshClientHealth({
     meetingFrequencyTrend: finalTrend,
     lastMeetingDaysAgo: finalLastDaysAgo,
     engagementScoreOverride: engagement?.overall_engagement_score ?? undefined,
+    signalsInput,
   };
   const healthScore = scoringAgent.computeHealthScore(scoreInput);
 
@@ -146,17 +175,24 @@ export async function refreshClientHealth({
     recorded_at: nowIso,
   });
 
-  const subScoreEntries = [
+  const subScoreEntries: Array<{ score: number; score_type: string }> = [
     { score: healthScore.breakdown.financial, score_type: 'financial' },
     { score: healthScore.breakdown.relationship, score_type: 'relationship' },
     { score: healthScore.breakdown.delivery, score_type: 'delivery' },
     { score: healthScore.breakdown.engagement, score_type: 'engagement' },
-  ].map((entry) => ({
+  ];
+  if (typeof healthScore.breakdown.signals === 'number') {
+    subScoreEntries.push({
+      score: healthScore.breakdown.signals,
+      score_type: 'signals',
+    });
+  }
+  const historyRows = subScoreEntries.map((entry) => ({
     client_id: clientId,
     ...entry,
     recorded_at: nowIso,
   }));
-  await supabase.from('health_score_history').insert(subScoreEntries);
+  await supabase.from('health_score_history').insert(historyRows);
 
   await supabase.from('client_health_scores').upsert(
     {
@@ -166,6 +202,7 @@ export async function refreshClientHealth({
       relationship_score: healthScore.breakdown.relationship,
       delivery_score: healthScore.breakdown.delivery,
       engagement_score: healthScore.breakdown.engagement,
+      signals_score: healthScore.breakdown.signals ?? null,
       status: healthScore.status,
       signals: healthScore.signals,
       explanation: healthScore.explanation,

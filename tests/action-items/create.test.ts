@@ -164,6 +164,7 @@ describe('createActionItem — insert', () => {
       assigned_to: null,
       status: 'open',
       source_email_token_hash: null,
+      source_signal_id: null,
     });
     expect(row.status).toBe('open');
     expect(row.id).toBe('abc');
@@ -209,7 +210,53 @@ describe('createActionItem — insert', () => {
       assigned_to: USER,
       status: 'open',
       source_email_token_hash: null,
+      source_signal_id: null,
     });
+  });
+
+  it('rejects malformed source_signal_id', async () => {
+    const sb = fakeSupabase({});
+    await expect(
+      createActionItem({
+        supabase: sb,
+        agencyId: AGENCY,
+        input: { clientId: CLIENT, title: 'x', sourceSignalId: 'not-uuid' },
+      })
+    ).rejects.toBeInstanceOf(ActionItemValidationError);
+  });
+
+  it('persists source_signal_id when provided', async () => {
+    const onInsert = vi.fn();
+    const SIGNAL = '00000000-0000-0000-0000-000000000eee';
+    const sb = fakeSupabase({
+      clientRow: { id: CLIENT },
+      insertRow: {
+        id: 'sig-item',
+        client_id: CLIENT,
+        meeting_id: null,
+        title: 'Re-engage',
+        description: null,
+        status: 'open',
+        due_date: null,
+        assigned_to: null,
+        created_at: '2026-04-27T00:00:00Z',
+      },
+      onInsert,
+    });
+
+    await createActionItem({
+      supabase: sb,
+      agencyId: AGENCY,
+      input: {
+        clientId: CLIENT,
+        title: 'Re-engage',
+        sourceSignalId: SIGNAL,
+      },
+    });
+
+    expect(onInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ source_signal_id: SIGNAL })
+    );
   });
 
   it('surfaces insert error from supabase', async () => {
