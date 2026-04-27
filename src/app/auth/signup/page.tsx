@@ -141,6 +141,19 @@ function SignupForm() {
           </CardHeader>
 
           <CardContent className="space-y-6">
+            {!confirmEmailFor && (() => {
+              const plan = search.get('plan');
+              const planLabel = plan === 'solo' ? 'Solo'
+                : plan === 'pro' ? 'Pro'
+                : plan === 'agency' ? 'Agency'
+                : null;
+              return planLabel ? (
+                <div className="rounded-lg border border-[#38e8c8]/40 bg-gradient-to-r from-[#38e8c8]/10 to-transparent p-3 text-sm">
+                  <p className="text-[#38e8c8] font-semibold">Signing up for the {planLabel} plan</p>
+                  <p className="text-[#7a88a8] mt-0.5 text-xs">Create your account, then confirm your plan on the next step.</p>
+                </div>
+              ) : null;
+            })()}
             {confirmEmailFor && (
               <Link
                 href="/auth/login"
