@@ -194,22 +194,33 @@ export async function refreshClientHealth({
   }));
   await supabase.from('health_score_history').insert(historyRows);
 
-  await supabase.from('client_health_scores').upsert(
-    {
-      client_id: clientId,
-      overall_score: healthScore.overall,
-      financial_score: healthScore.breakdown.financial,
-      relationship_score: healthScore.breakdown.relationship,
-      delivery_score: healthScore.breakdown.delivery,
-      engagement_score: healthScore.breakdown.engagement,
-      signals_score: healthScore.breakdown.signals ?? null,
-      status: healthScore.status,
-      signals: healthScore.signals,
-      explanation: healthScore.explanation,
-      computed_at: nowIso,
-    },
-    { onConflict: 'client_id' }
-  );
+  // Surface upsert errors — supabase-js returns {data,error} and does
+  // not throw, so silently dropped writes (e.g. unknown column) used to
+  // leave the snapshot row frozen on whatever the seed wrote. Slice 2B
+  // verification caught this; raising here makes future drifts loud.
+  const { error: snapshotErr } = await supabase
+    .from('client_health_scores')
+    .upsert(
+      {
+        client_id: clientId,
+        overall_score: healthScore.overall,
+        financial_score: healthScore.breakdown.financial,
+        relationship_score: healthScore.breakdown.relationship,
+        delivery_score: healthScore.breakdown.delivery,
+        engagement_score: healthScore.breakdown.engagement,
+        signals_score: healthScore.breakdown.signals ?? null,
+        status: healthScore.status,
+        signals: healthScore.signals,
+        explanation: healthScore.explanation,
+        computed_at: nowIso,
+      },
+      { onConflict: 'client_id' }
+    );
+  if (snapshotErr) {
+    throw new Error(
+      `client_health_scores upsert failed: ${snapshotErr.message}`
+    );
+  }
 
   return healthScore;
 }
