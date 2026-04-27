@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect } from 'react';
 import { STRIPE_PLANS, getAnnualMonthly } from '@/lib/stripe-config';
 import { SubscriptionPlan } from '@/types/stripe';
 
@@ -33,21 +33,6 @@ export default function Home() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    // Hero CTA → real signup. The page banner still says "Private
-    // launch Summer 2026" but the auth flow is live (demo + Suite
-    // buyers need it tonight), so the hero CTA routes directly to
-    // /auth/signup with the email pre-filled. Waitlist API kept for
-    // other surfaces but not used here.
-    e.preventDefault();
-    const form = e.currentTarget;
-    const input = form.querySelector('input') as HTMLInputElement;
-    const email = input.value.trim();
-    if (!email) return;
-    window.location.href = `/auth/signup?email=${encodeURIComponent(email)}`;
-  };
-
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -264,9 +249,9 @@ export default function Home() {
               </a>
             </li>
             <li>
-              <a
-                href="/auth/signup"
-                className="py-[10px] px-6 rounded-lg text-sm font-semibold transition-all cursor-pointer border-none no-underline inline-block"
+              <button
+                onClick={() => scrollToSection('pricing')}
+                className="py-[10px] px-6 rounded-lg text-sm font-semibold transition-all cursor-pointer border-none inline-block"
                 style={{ background: 'var(--teal)', color: 'var(--deep)' }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = '#50f0d4';
@@ -280,7 +265,7 @@ export default function Home() {
                 }}
               >
                 Get Started
-              </a>
+              </button>
             </li>
           </ul>
 
@@ -350,27 +335,10 @@ export default function Home() {
             ClientPulse combines your Stripe data, meeting recordings, email patterns, and calendar signals into one Client Health Score per account. Get a Monday Brief with exactly who needs attention and what to do about it.
           </p>
 
-          <form
-            className="flex gap-3 max-w-[460px] mx-auto mb-5"
-            onSubmit={handleSubmit}
-          >
-            <input
-              type="email"
-              placeholder="Enter your work email"
-              required
-              className="flex-1 py-[14px] px-5 rounded-[10px] text-[15px] outline-none transition-colors"
-              style={{
-                background: 'var(--color-surface-light)',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-primary)',
-                fontFamily: 'var(--font-outfit)',
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--teal)')}
-              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
-            />
+          <div className="flex justify-center gap-3 mb-5">
             <button
-              type="submit"
-              className="py-[14px] px-7 rounded-[10px] text-[15px] font-semibold cursor-pointer whitespace-nowrap transition-all border-none"
+              onClick={() => scrollToSection('pricing')}
+              className="py-[14px] px-8 rounded-[10px] text-[15px] font-semibold cursor-pointer whitespace-nowrap transition-all border-none"
               style={{
                 background: 'var(--teal)',
                 color: 'var(--deep)',
@@ -389,10 +357,24 @@ export default function Home() {
             >
               Get Started
             </button>
-          </form>
+            <a
+              href="/api/demo/signin"
+              className="py-[14px] px-8 rounded-[10px] text-[15px] font-semibold whitespace-nowrap transition-all no-underline inline-flex items-center"
+              style={{
+                background: 'transparent',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-subtle)',
+                fontFamily: 'var(--font-outfit)',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-teal)')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
+            >
+              See live demo
+            </a>
+          </div>
 
           <p className="text-[13px]" style={{ color: 'var(--text-dim)' }}>
-            <strong style={{ color: 'var(--teal)', fontWeight: 600 }}>30% off your first year</strong> for founding members + shape the roadmap
+            <strong style={{ color: 'var(--teal)', fontWeight: 600 }}>30% off Agency &amp; Suite</strong> &middot; early adopter pricing
           </p>
         </div>
       </section>
@@ -1019,7 +1001,7 @@ export default function Home() {
               },
               {
                 tier: 'Pro',
-                featured: true,
+                featured: false,
                 desc: "For growing agencies that can't afford to lose a single client.",
                 workflows: {
                   'CONNECT': ['Stripe financial sync', 'Calendar & email sentiment sync'],
@@ -1031,7 +1013,7 @@ export default function Home() {
               },
               {
                 tier: 'Agency',
-                featured: false,
+                featured: true,
                 desc: 'For established agencies that treat client retention as a competitive advantage.',
                 workflows: {
                   'CONNECT': ['Stripe financial sync', 'Calendar & email sentiment sync', 'Multi-data connectors'],
@@ -1151,7 +1133,7 @@ export default function Home() {
               </p>
             </div>
             <a
-              href="https://reforge.helloaurora.ai/pricing"
+              href="https://reforge.helloaurora.ai/#pricing"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 py-[12px] px-[22px] rounded-[10px] text-sm font-semibold whitespace-nowrap transition-all"
@@ -1303,27 +1285,13 @@ export default function Home() {
           </h2>
 
           <p className="reveal text-[17px] font-light leading-[1.7] max-w-[520px] mx-auto mb-10" style={{ color: 'var(--text-secondary)' }}>
-            Join the founding member waitlist. Get 30% off your first year, direct input on the roadmap, and priority onboarding when we launch in June.
+            Pick a plan and start tracking client health in minutes. Agency &amp; Suite tiers come with 30% off year one for early adopters.
           </p>
 
-          <form className="reveal flex gap-3 max-w-[460px] mx-auto mb-5 max-sm:flex-col" onSubmit={handleSubmit}>
-            <input
-              type="email"
-              placeholder="Enter your work email"
-              required
-              className="flex-1 py-[14px] px-5 rounded-[10px] text-[15px] outline-none transition-colors"
-              style={{
-                background: 'var(--color-surface-light)',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-primary)',
-                fontFamily: 'var(--font-outfit)',
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--teal)')}
-              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
-            />
+          <div className="reveal flex justify-center mb-5">
             <button
-              type="submit"
-              className="py-[14px] px-7 rounded-[10px] text-[15px] font-semibold cursor-pointer whitespace-nowrap transition-all border-none"
+              onClick={() => scrollToSection('pricing')}
+              className="py-[14px] px-8 rounded-[10px] text-[15px] font-semibold cursor-pointer whitespace-nowrap transition-all border-none"
               style={{
                 background: 'var(--teal)',
                 color: 'var(--deep)',
@@ -1342,7 +1310,7 @@ export default function Home() {
             >
               Get Started
             </button>
-          </form>
+          </div>
 
           <p className="reveal text-[13px]" style={{ color: 'var(--text-dim)' }}>
             Private launch · Summer 2026 · Built for agencies managing 5–50 clients
