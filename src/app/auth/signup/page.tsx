@@ -78,11 +78,16 @@ function SignupForm() {
       }
 
       // Two cases:
-      //   1) project has email confirmation OFF → session present → redirect.
+      //   1) project has email confirmation OFF → session present → push
+      //      to /dashboard/upgrade because we don't ship a Free tier —
+      //      every new account must pick a plan to get past the empty
+      //      dashboard. The ?plan= query is propagated from the landing
+      //      pricing CTA so the upgrade page can pre-select.
       //   2) project requires email confirmation → user object but no
       //      session → show "Check your email" message.
       if (data?.session) {
-        router.push('/dashboard');
+        const plan = search.get('plan');
+        router.push(`/dashboard/upgrade${plan ? `?plan=${plan}` : ''}`);
         return;
       }
       setConfirmEmailFor(email);
