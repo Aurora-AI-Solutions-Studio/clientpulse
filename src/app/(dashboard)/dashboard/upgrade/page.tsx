@@ -11,7 +11,7 @@
  *   - Agency Suite cross-link to ReForge pricing
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Check, Loader2, ExternalLink, Crown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -109,7 +109,25 @@ function isValidTier(v: string | null): v is Tier {
   return v === 'solo' || v === 'pro' || v === 'agency';
 }
 
+// Next 15 requires every component that calls useSearchParams() to be
+// wrapped in <Suspense> at build time, otherwise the static prerender
+// bails. Defensive wrap mirrors the RF-side fix and the earlier
+// /auth/signup Suspense hotfix.
 export default function UpgradePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-[#7a88a8]" />
+        </div>
+      }
+    >
+      <UpgradePageInner />
+    </Suspense>
+  );
+}
+
+function UpgradePageInner() {
   const search = useSearchParams();
   // ?plan= came from the landing pricing CTA → signup → here. Validated
   // against the actual tier set so a hand-crafted ?plan=suite or
