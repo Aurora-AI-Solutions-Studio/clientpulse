@@ -11,7 +11,8 @@
  *   - Agency Suite cross-link to ReForge pricing
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Check, Loader2, ExternalLink, Crown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { STRIPE_PLANS, getAnnualMonthly, BillingInterval } from '@/lib/stripe-config';
@@ -104,13 +105,31 @@ function resolveCurrentTier(subscriptionPlan: string | null | undefined): string
   return 'free';
 }
 
+function isValidTier(v: string | null): v is Tier {
+  return v === 'solo' || v === 'pro' || v === 'agency';
+}
+
 export default function UpgradePage() {
+  const search = useSearchParams();
+  // ?plan= came from the landing pricing CTA → signup → here. Validated
+  // against the actual tier set so a hand-crafted ?plan=suite or
+  // ?plan=anything-else is treated as "no pre-selection". Display only —
+  // the user's actual tier is set by the Stripe webhook after payment,
+  // never by this query param.
+  const planFromUrl: Tier | null = isValidTier(search.get('plan'))
+    ? (search.get('plan') as Tier)
+    : null;
   const [loadingPlan, setLoadingPlan] = useState<Tier | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [billingInterval, setBillingInterval] = useState<BillingInterval>('month');
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>(
+    search.get('interval') === 'year' ? 'year' : 'month'
+  );
   const [currentTier, setCurrentTier] = useState<string>('free');
   const [loading, setLoading] = useState(true);
+  const cardRefs = useRef<Record<Tier, HTMLDivElement | null>>({
+    solo: null, pro: null, agency: null,
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -130,6 +149,14 @@ export default function UpgradePage() {
     };
     load();
   }, []);
+
+  // After data loads + cards mount, scroll the picked tier into view.
+  useEffect(() => {
+    if (!loading && planFromUrl) {
+      const el = cardRefs.current[planFromUrl];
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [loading, planFromUrl]);
 
   async function handleUpgrade(tier: Tier) {
     setLoadingPlan(tier);
@@ -188,8 +215,51 @@ export default function UpgradePage() {
       ? 'Free'
       : (STRIPE_PLANS[currentTier as Tier]?.name ?? currentTier);
 
+  // Pre-select banner: shows the tier the user came from (landing
+  // pricing CTA → signup → here) with a one-click "Continue to
+  // checkout" affordance so the user doesn't accidentally pick a
+  // different tier than they intended.
+  const PreSelectBanner = () => {
+    if (!planFromUrl) return null;
+    if (planFromUrl === currentTier) return null; // already on it
+    const plan = STRIPE_PLANS[planFromUrl];
+    return (
+      <div
+        className="flex flex-wrap items-center justify-between gap-4 rounded-xl p-5"
+        style={{
+          background:
+            'linear-gradient(135deg, rgba(56,232,200,0.08), rgba(56,232,200,0.02))',
+          border: '1px solid rgba(56,232,200,0.3)',
+        }}
+      >
+        <div>
+          <p className="font-semibold text-white">
+            You picked the {plan.name} plan
+          </p>
+          <p className="mt-1 text-sm text-[#7a88a8]">
+            Confirm below to continue to Stripe checkout. You can switch
+            tiers from this page if you change your mind.
+          </p>
+        </div>
+        <button
+          onClick={() => handleUpgrade(planFromUrl)}
+          disabled={loadingPlan === planFromUrl}
+          className="rounded-lg px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50"
+          style={{ background: '#38e8c8', color: '#06090f' }}
+        >
+          {loadingPlan === planFromUrl ? (
+            <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+          ) : (
+            `Continue with ${plan.name}`
+          )}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="mx-auto max-w-6xl space-y-8 py-4">
+      <PreSelectBanner />
       {/* ─── Current subscription banner ─── */}
       {isSubscribed && (
         <div
@@ -304,25 +374,44 @@ export default function UpgradePage() {
           const isUpgrade = (TIER_RANK[tier] ?? 99) > (TIER_RANK[currentTier] ?? 0);
           const isPopular = tier === FEATURED_TIER;
 
+          const isPickedFromUrl = tier === planFromUrl && tier !== currentTier;
+
           return (
             <div
               key={tier}
+              ref={(el) => { cardRefs.current[tier] = el; }}
               className="relative rounded-2xl p-6"
               style={{
-                background: isCurrent || isPopular ? '#141e33' : '#0c1220',
-                border: isCurrent
-                  ? '1px solid #38e8c8'
-                  : isPopular
-                    ? '1px solid rgba(56,232,200,0.4)'
-                    : '1px solid rgba(232,236,245,0.06)',
-                boxShadow: isCurrent
-                  ? '0 0 40px rgba(56,232,200,0.12)'
-                  : isPopular
-                    ? '0 0 40px rgba(56,232,200,0.08)'
-                    : 'none',
+                background:
+                  isPickedFromUrl
+                    ? 'linear-gradient(135deg, rgba(56,232,200,0.12), #141e33)'
+                    : isCurrent || isPopular ? '#141e33' : '#0c1220',
+                border: isPickedFromUrl
+                  ? '2px solid #38e8c8'
+                  : isCurrent
+                    ? '1px solid #38e8c8'
+                    : isPopular
+                      ? '1px solid rgba(56,232,200,0.4)'
+                      : '1px solid rgba(232,236,245,0.06)',
+                boxShadow:
+                  isPickedFromUrl
+                    ? '0 0 60px rgba(56,232,200,0.25)'
+                    : isCurrent
+                      ? '0 0 40px rgba(56,232,200,0.12)'
+                      : isPopular
+                        ? '0 0 40px rgba(56,232,200,0.08)'
+                        : 'none',
               }}
             >
-              {isCurrent && (
+              {isPickedFromUrl && (
+                <span
+                  className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-0.5 text-xs font-semibold"
+                  style={{ background: '#38e8c8', color: '#06090f' }}
+                >
+                  You picked this
+                </span>
+              )}
+              {!isPickedFromUrl && isCurrent && (
                 <span
                   className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-0.5 text-xs font-semibold"
                   style={{ background: '#38e8c8', color: '#06090f' }}
@@ -330,7 +419,7 @@ export default function UpgradePage() {
                   Current Plan
                 </span>
               )}
-              {!isCurrent && isPopular && (
+              {!isPickedFromUrl && !isCurrent && isPopular && (
                 <span
                   className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-0.5 text-xs font-semibold"
                   style={{ background: '#38e8c8', color: '#06090f' }}
