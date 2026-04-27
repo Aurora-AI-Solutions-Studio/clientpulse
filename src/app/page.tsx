@@ -1096,7 +1096,9 @@ export default function Home() {
                 </ul>
 
                 <button
-                  onClick={() => scrollToSection('waitlist')}
+                  onClick={() => {
+                    window.location.href = `/auth/signup?plan=${plan.tier.toLowerCase()}`;
+                  }}
                   className="block w-full py-[14px] text-center rounded-[10px] text-[15px] font-semibold cursor-pointer transition-all border-none"
                   style={
                     plan.featured
