@@ -42,7 +42,10 @@ export default function DemoBanner() {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      window.location.href = '/auth/signup';
+      // Land on landing-page #pricing so the user picks a tier first;
+      // matches the regular Get Started funnel (5a). The picked tier
+      // then flows landing → /auth/signup?plan=X → /dashboard/upgrade?plan=X.
+      window.location.href = '/#pricing';
     } catch {
       setSigningOut(false);
     }
