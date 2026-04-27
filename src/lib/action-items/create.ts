@@ -39,6 +39,13 @@ export interface CreateActionItemInput {
    * to "already accepted" instead of silently creating a duplicate row.
    */
   sourceEmailTokenHash?: string;
+  /**
+   * Idempotency link for APE-auto-created items. References the
+   * client_signals row that triggered creation. Backed by a partial
+   * UNIQUE index — a re-emit of the same signal cannot create a
+   * duplicate item; callers should treat 23505 as "already proposed".
+   */
+  sourceSignalId?: string;
 }
 
 export interface CreateActionItemArgs {
@@ -77,6 +84,7 @@ export async function createActionItem(
     meetingId,
     assignedTo,
     sourceEmailTokenHash,
+    sourceSignalId,
   } = input;
 
   if (typeof clientId !== 'string' || !clientId) {
@@ -106,6 +114,12 @@ export async function createActionItem(
   ) {
     throw new ActionItemValidationError('assigned_to must be a UUID');
   }
+  if (
+    sourceSignalId !== undefined &&
+    (typeof sourceSignalId !== 'string' || !UUID_RE.test(sourceSignalId))
+  ) {
+    throw new ActionItemValidationError('source_signal_id must be a UUID');
+  }
 
   // Ownership check — the service client bypasses RLS, so we enforce
   // agency scope in application code. Same pattern as the MCP tool
@@ -131,6 +145,7 @@ export async function createActionItem(
     assigned_to: assignedTo ?? null,
     status: 'open' as const,
     source_email_token_hash: sourceEmailTokenHash ?? null,
+    source_signal_id: sourceSignalId ?? null,
   };
 
   const { data: inserted, error: insertErr } = await supabase

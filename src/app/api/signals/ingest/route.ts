@@ -14,6 +14,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySignal } from '@/lib/signals/hmac';
 import { createServiceClient } from '@/lib/supabase/service';
+import { maybeCreateSignalTriggeredActionItem } from '@/lib/signals/ingest-trigger';
+import type { SignalType } from '@/lib/signals/triggers';
 
 interface IngestBody {
   token?: string;
@@ -115,5 +117,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'upsert_failed', detail: String(upsertErr) }, { status: 500 });
   }
 
-  return NextResponse.json({ accepted: true, client_id: cpClientId });
+  // APE auto-trigger — create a re-engagement action_item when a pause
+  // or velocity drop arrives. Best-effort: any failure is logged but
+  // never propagated to RF (the ingest must not 5xx, otherwise RF's
+  // outbox retry loop will hammer the route forever).
+  const triggerResult = await maybeCreateSignalTriggeredActionItem({
+    supabase,
+    agencyId,
+    clientId: cpClientId,
+    signalType: payload.signal_type as SignalType,
+    period: payload.period,
+    value: payload.value,
+  });
+  if (triggerResult.outcome === 'error') {
+    console.warn(
+      '[signals/ingest] APE auto-trigger failed:',
+      triggerResult.message,
+    );
+  }
+
+  return NextResponse.json({
+    accepted: true,
+    client_id: cpClientId,
+    trigger: triggerResult,
+  });
 }
