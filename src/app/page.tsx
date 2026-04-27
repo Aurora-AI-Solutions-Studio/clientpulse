@@ -480,82 +480,117 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ═══ THE WORKFLOW ═══ */}
-      <section id="how-it-works" className="py-[120px] max-md:py-[80px]" style={{ background: 'var(--polar)' }}>
-        <div className="max-w-[1140px] mx-auto px-6">
+      {/* ═══ THE WORKFLOW (canonical 5-step rail) ═══ */}
+      <section id="how-it-works" className="py-[120px] max-md:py-[80px] relative overflow-hidden" style={{ background: 'var(--polar)' }}>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{ width: '1100px', height: '1100px', background: 'radial-gradient(ellipse, rgba(56,232,200,0.05) 0%, transparent 60%)' }}
+        />
+        <div className="max-w-[1140px] mx-auto px-6 relative">
           <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4 text-center" style={{ color: 'var(--teal)' }}>
             The Workflow
           </div>
           <h2
-            className="reveal font-playfair font-bold leading-[1.2] mb-5 text-center"
-            style={{ fontSize: 'clamp(28px, 3.5vw, 42px)', letterSpacing: '-0.01em' }}
+            className="reveal font-playfair font-semibold leading-[1.2] mb-5 text-center"
+            style={{ fontSize: 'clamp(28px, 3.5vw, 42px)', letterSpacing: '-0.02em' }}
           >
-            Four workspaces. One morning routine.
+            One workflow. <span style={{ color: 'var(--teal)' }}>Two products.</span>
           </h2>
-          <p className="reveal text-[17px] max-w-[640px] font-light leading-[1.7] text-center mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            ClientPulse turns scattered signals into a daily operating rhythm. Open it Monday morning, and in 5 minutes you know exactly where every client stands.
+          <p className="reveal text-[17px] max-w-[680px] font-light leading-[1.7] text-center mx-auto" style={{ color: 'var(--text-secondary)' }}>
+            Same five steps across content (ReForge) and clients (ClientPulse). Bring your tools in once, see where you stand, get the next move ranked, ship it, and let every outcome sharpen the next decision.
           </p>
 
-          {/* Workflow Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-16 relative">
-            {/* Connectors between cards */}
-            <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--border-subtle)] to-transparent pointer-events-none" style={{ width: '100%' }} />
-
-            {[
-              {
-                step: 'Connect',
-                icon: Icon.link2(28, '#4cc9f0'),
-                color: '#4cc9f0',
-                title: 'Plug in your tools. Once.',
-                desc: "Connect your agency's Stripe account and you're live — partial Health Scores start building immediately from financial signals alone. Add Google Calendar, Gmail, and Zoom when you're ready, and the score gets smarter with every new data source.",
-              },
-              {
-                step: 'Monitor',
-                icon: Icon.eye(28, '#38e8c8'),
-                color: '#38e8c8',
-                title: 'See your entire portfolio in one view.',
-                desc: 'Health Scores (0-100) across four signal categories. Every Monday, receive a brief that tells you exactly which clients are healthy, which are at risk, and which need immediate action.',
-              },
-              {
-                step: 'Act',
-                icon: Icon.zap(28, '#e74c3c'),
-                color: '#e74c3c',
-                title: "Don't just know the problem. Solve it.",
-                desc: "When a client is at risk, ClientPulse prepares action plans. Draft check-in emails, QBR suggestions, upsell talking points — everything ready for your review and send.",
-              },
-              {
-                step: 'Review',
-                icon: Icon.barChart3(28, '#b388eb'),
-                color: '#b388eb',
-                title: 'Track what\'s working. Prove your value.',
-                desc: 'Monitor historical trends, track prediction accuracy, and generate portfolio health reports. Understand which clients are growing, shrinking, and why — and prove the impact of retention.',
-              },
-            ].map((card, i) => (
+          {/* Workflow rail — 5 nodes connected by a hairline with a slow left-to-right pulse */}
+          <div className="relative mt-16">
+            <div
+              aria-hidden="true"
+              className="absolute hidden md:block"
+              style={{
+                top: '38px',
+                left: '6%',
+                right: '6%',
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent 0%, var(--hairline-strong) 8%, var(--hairline-strong) 92%, transparent 100%)',
+                overflow: 'hidden',
+              }}
+            >
               <div
-                key={i}
-                className="reveal p-8 rounded-2xl relative transition-all hover:-translate-y-[2px]"
                 style={{
-                  background: 'var(--twilight)',
-                  border: '1px solid var(--border-subtle)',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-10%',
+                  height: '100%',
+                  width: '22%',
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(56,232,200,0.6) 50%, transparent 100%)',
+                  animation: 'wfPulse 6s ease-in-out infinite',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = card.color)}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
-              >
-                <div className="flex items-center gap-3 mb-5">
+              />
+            </div>
+            <div className="grid gap-10 md:grid-cols-5 md:gap-6">
+              {[
+                { num: '01', title: 'Connect', cue: 'wire it up', desc: 'Bring your tools, voices, and clients in once.', cp: 'Stripe, calendar, email, transcripts' },
+                { num: '02', title: 'Discover', cue: 'look around', desc: "See where you stand — what's working, what's quiet, what's at risk.", cp: 'Clients overview — health, signals, risk' },
+                { num: '03', title: 'Decide', cue: 'pick the play', desc: 'Get the next-best move ranked, with the why behind it.', cp: 'Monday Brief — ranked re-engage / upsell / save plays' },
+                { num: '04', title: 'Act', cue: 'execute', desc: 'Ship it — content, proposals, check-ins — without leaving the suite.', cp: 'Proposals, check-ins, follow-ups' },
+                { num: '05', title: 'Learn', cue: 'compound', desc: 'Every outcome trains the next decision. The more you use it, the sharper it gets.', cp: 'Outcome feedback sharpens future Briefs' },
+              ].map((node) => (
+                <div key={node.num} className="reveal flex flex-col items-center text-center gap-3 px-2">
                   <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ background: `${card.color}15` }}
+                    className="flex items-center justify-center transition-all duration-300"
+                    style={{
+                      width: '76px',
+                      height: '76px',
+                      borderRadius: '50%',
+                      background: 'var(--deep)',
+                      border: '1px solid var(--hairline-strong)',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.9rem',
+                      fontWeight: 500,
+                      color: 'var(--color-muted)',
+                      letterSpacing: '0.5px',
+                    }}
                   >
-                    {card.icon}
+                    {node.num}
                   </div>
-                  <div className="text-[12px] font-bold uppercase tracking-wider" style={{ color: card.color }}>
-                    {card.step}
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '1.05rem', letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
+                    {node.title}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', fontWeight: 400, color: 'var(--teal)', textTransform: 'lowercase', letterSpacing: '0.3px', opacity: 0.85 }}>
+                    {node.cue}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.82rem', color: 'var(--color-muted)', fontWeight: 300, lineHeight: 1.55, maxWidth: '180px' }}>
+                    {node.desc}
                   </div>
                 </div>
-                <h3 className="text-base font-semibold mb-3">{card.title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: 'var(--color-muted)' }}>{card.desc}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+
+          {/* CP-specific translation — what each step looks like in the ClientPulse product */}
+          <div className="reveal mx-auto mt-20 max-w-3xl rounded-2xl p-7" style={{ background: 'var(--deep)', border: '1px solid var(--hairline)', borderTop: '2px solid var(--teal)' }}>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--teal)', letterSpacing: '0.15em', fontFamily: 'var(--font-mono)' }}>
+              In ClientPulse, that means
+            </p>
+            <p className="text-sm mb-5" style={{ color: 'var(--color-muted)', fontWeight: 300 }}>
+              The same five steps, applied to client retention.
+            </p>
+            <dl className="grid gap-2" style={{ gridTemplateColumns: 'max-content 1fr', columnGap: '1rem' }}>
+              {[
+                { num: '01', title: 'Connect', cp: 'Stripe, calendar, email, transcripts' },
+                { num: '02', title: 'Discover', cp: 'Clients overview — health, signals, risk' },
+                { num: '03', title: 'Decide', cp: 'Monday Brief — ranked re-engage / upsell / save plays' },
+                { num: '04', title: 'Act', cp: 'Proposals, check-ins, follow-ups' },
+                { num: '05', title: 'Learn', cp: 'Outcome feedback sharpens future Briefs' },
+              ].map((row) => (
+                <div key={row.num} className="contents">
+                  <dt style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', paddingTop: '0.1rem' }}>
+                    {row.num} {row.title}
+                  </dt>
+                  <dd style={{ fontSize: '0.92rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>{row.cp}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </div>
       </section>
