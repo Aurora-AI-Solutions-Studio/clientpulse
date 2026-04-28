@@ -217,7 +217,7 @@ function PageHeader({
   return (
     <div className="flex items-start justify-between flex-wrap gap-4">
       <div>
-        <h2 className="text-3xl font-bold text-white font-playfair mb-1">Monday Brief</h2>
+        <h2 className="text-3xl text-white mb-1">Monday Brief</h2>
         <p className="text-sm text-[#7a88a8]">
           {weekOf ? `Week of ${weekOf} · delivered every Monday 8am` : 'Your weekly client health summary'}
         </p>

@@ -96,7 +96,7 @@ export default function OnboardingPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-white font-playfair mb-2">
+        <h1 className="text-3xl text-white mb-2">
           Welcome to ClientPulse
         </h1>
         <p className="text-[#7a88a8]">

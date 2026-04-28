@@ -363,7 +363,7 @@ export default function ClientTimelinePage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white font-playfair mb-2">
+        <h1 className="text-3xl text-white mb-2">
           Client Timeline — {client.name}
         </h1>
         <p className="text-[#7a88a8]">

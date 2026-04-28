@@ -95,7 +95,7 @@ export default function LearningPage() {
       {/* Page Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-white font-playfair mb-2">
+          <h2 className="text-3xl text-white mb-2">
             Learning Dashboard
           </h2>
           <p className="text-[#7a88a8]">

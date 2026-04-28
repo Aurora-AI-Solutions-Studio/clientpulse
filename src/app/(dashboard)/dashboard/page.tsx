@@ -34,8 +34,8 @@ function StatCard({
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-[#7a88a8] text-sm font-medium mb-1">{label}</p>
-            <p className="text-2xl font-bold text-white">{value}</p>
+            <p className="text-[#7a88a8] text-xs font-medium uppercase tracking-[0.12em] mb-2">{label}</p>
+            <p className="text-3xl font-stat text-white">{value}</p>
             {subtext && (
               <p className="text-xs text-[#7a88a8] mt-2">{subtext}</p>
             )}
@@ -77,7 +77,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Welcome Section */}
       <div>
-        <h2 className="text-3xl font-bold text-white font-playfair mb-2">
+        <h2 className="text-3xl text-white mb-2">
           Welcome back
         </h2>
         <p className="text-[#7a88a8]">
@@ -148,15 +148,15 @@ export default function DashboardPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-[#1a2540]/30 rounded-lg">
               <span className="text-sm text-[#7a88a8]">Healthy</span>
-              <span className="text-lg font-bold text-green-400">10</span>
+              <span className="text-lg font-stat text-green-400">10</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-[#1a2540]/30 rounded-lg">
               <span className="text-sm text-[#7a88a8]">At Risk</span>
-              <span className="text-lg font-bold text-[#e74c3c]">2</span>
+              <span className="text-lg font-stat text-[#e74c3c]">2</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-[#1a2540]/30 rounded-lg">
               <span className="text-sm text-[#7a88a8]">Churned</span>
-              <span className="text-lg font-bold text-[#7a88a8]">0</span>
+              <span className="text-lg font-stat text-[#7a88a8]">0</span>
             </div>
             <div className="pt-3 border-t border-[#1a2540]">
               <p className="text-xs text-[#7a88a8] text-center">

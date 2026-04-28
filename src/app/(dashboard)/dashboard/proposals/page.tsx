@@ -94,7 +94,7 @@ export default function ProposalsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-white font-playfair mb-2 flex items-center gap-2">
+        <h2 className="text-3xl text-white mb-2 flex items-center gap-2">
           <Zap className="w-6 h-6 text-[#f0c84c]" />
           Action proposals
         </h2>

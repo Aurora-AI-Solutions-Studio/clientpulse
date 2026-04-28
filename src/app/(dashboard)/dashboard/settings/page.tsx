@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { Check, AlertCircle, RefreshCw, Calendar, Mail, Unlink, ExternalLink, Clock, Video, Sparkles, Lock } from 'lucide-react';
 import {
   Card,
@@ -225,7 +226,7 @@ export default function SettingsPage() {
     <div className="space-y-8 max-w-3xl">
       {/* Page Header */}
       <div>
-        <h2 className="text-3xl font-bold text-white font-playfair mb-2">
+        <h2 className="text-3xl text-white mb-2">
           Settings
         </h2>
         <p className="text-[#7a88a8]">
@@ -674,21 +675,49 @@ export default function SettingsPage() {
             </Button>
           </div>
 
-          {/* Slack (Coming Soon) */}
-          <div className="flex items-center justify-between p-4 border border-[#1a2540] rounded-lg opacity-50">
+          {/* Slack — webhook-based notifications */}
+          <Link
+            href="/dashboard/integrations/slack"
+            className="flex items-center justify-between p-4 border rounded-lg transition-colors hover:bg-[#0f1828]"
+            style={{ borderColor: 'var(--hairline)' }}
+          >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#36c5f0]/10 flex items-center justify-center">
                 <span className="text-[#36c5f0] font-bold text-sm">S</span>
               </div>
               <div>
                 <p className="font-medium text-white">Slack</p>
-                <p className="text-xs text-[#7a88a8]">Coming soon</p>
+                <p className="text-xs text-[#7a88a8]">
+                  Send Brief, churn alerts, and proposals to a channel via incoming webhook
+                </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" disabled>
-              Coming Soon
+            <Button variant="outline" size="sm">
+              Configure
             </Button>
-          </div>
+          </Link>
+
+          {/* Whisper — self-hosted transcription (Pro+ tiers) */}
+          <Link
+            href="/dashboard/integrations/whisper"
+            className="flex items-center justify-between p-4 border rounded-lg transition-colors hover:bg-[#0f1828]"
+            style={{ borderColor: 'var(--hairline)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="font-medium text-white">Transcription (Whisper)</p>
+                <p className="text-xs text-[#7a88a8]">
+                  Cloud or self-hosted Whisper endpoint for meeting transcripts
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm">
+              Configure
+            </Button>
+          </Link>
 
         </CardContent>
       </Card>
