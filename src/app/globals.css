@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Outfit:wght@400;500;600;700&display=swap');
+/* Fonts loaded via next/font in layout.tsx (Space Grotesk + Inter + JetBrains Mono).
+   No @import here so we don't double-load and so prerender stays predictable. */
 
 :root {
   /* Arctic Aurora Design System */
@@ -35,9 +36,14 @@
   /* Aurora Gradient */
   --gradient-aurora: linear-gradient(135deg, #38e8c8, #4cc9f0, #7b8ff0, #b388eb, #e87fa5);
 
-  /* Fonts */
-  --font-playfair: 'Playfair Display', serif;
-  --font-outfit: 'Outfit', sans-serif;
+  /* Fonts — canonical Aurora landing stack. CSS variables fed by next/font in layout.tsx. */
+  --font-playfair: var(--font-space-grotesk), system-ui, sans-serif; /* legacy alias kept for back-compat */
+  --font-outfit: var(--font-inter), system-ui, sans-serif; /* legacy alias kept for back-compat */
+  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, 'SF Mono', Menlo, monospace;
+  --hairline: rgba(255, 255, 255, 0.08);
+  --hairline-strong: rgba(255, 255, 255, 0.12);
 
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -282,6 +288,13 @@ textarea::placeholder {
   50% {
     opacity: 0.5;
   }
+}
+
+/* Workflow rail pulse — slow left-to-right sweep across the connecting hairline. */
+@keyframes wfPulse {
+  0% { transform: translateX(0%); opacity: 0.85; }
+  70% { opacity: 0.85; }
+  100% { transform: translateX(550%); opacity: 0; }
 }
 
 @keyframes pulse-glow {
