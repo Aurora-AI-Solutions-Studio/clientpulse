@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__afdbc4cf-eb02-4634-9fef-56204bc3e379__get_runtime_logs",
+      "mcp__afdbc4cf-eb02-4634-9fef-56204bc3e379__get_deployment_build_logs",
+      "mcp__afdbc4cf-eb02-4634-9fef-56204bc3e379__list_teams",
+      "mcp__afdbc4cf-eb02-4634-9fef-56204bc3e379__list_projects",
+      "mcp__afdbc4cf-eb02-4634-9fef-56204bc3e379__get_access_to_vercel_url",
+      "mcp__f1ca2a89-8a01-4f9a-9909-2316028e6ce8__list_prices",
+      "mcp__f1ca2a89-8a01-4f9a-9909-2316028e6ce8__list_products",
+      "mcp__f1ca2a89-8a01-4f9a-9909-2316028e6ce8__stripe_api_search",
+      "mcp__f1ca2a89-8a01-4f9a-9909-2316028e6ce8__get_stripe_account_info",
+      "mcp__42f5750d-be3f-4f66-935e-982e470df282__notion-fetch",
+      "mcp__ccd_session__mark_chapter",
+      "Bash(npm test)",
+      "Bash(npm run lint)"
+    ]
+  }
+}

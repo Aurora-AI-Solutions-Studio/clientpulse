@@ -163,8 +163,11 @@ export default function Home() {
     <div className="min-h-screen font-outfit" style={{ background: 'var(--deep)', color: 'var(--text-primary)' }}>
 
       {/* ═══ NAVIGATION ═══ */}
+      {/* sticky (not fixed) so the EU notice banner above this LandingClient
+          can render in normal flow at the very top of the page. With fixed
+          the nav painted over the banner and hid it. */}
       <nav
-        className="fixed top-0 left-0 right-0 z-[100] py-4"
+        className="sticky top-0 left-0 right-0 z-[100] py-4"
         style={{
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
