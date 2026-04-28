@@ -67,7 +67,7 @@ export default function EuWaitlistPage() {
             letterSpacing: '-0.02em',
           }}
         >
-          We're not open in the EU yet.
+          We&rsquo;re not open in the EU yet.
         </h1>
 
         <p
@@ -75,7 +75,7 @@ export default function EuWaitlistPage() {
           style={{ color: 'var(--text-secondary)' }}
         >
           ClientPulse launches first in the United States, United Kingdom, Canada, Australia and New Zealand.
-          We're holding off on EU-27 access until the EU AI Act compliance work (Aug 2, 2026) is in place — we'd
+          We&rsquo;re holding off on EU-27 access until the EU AI Act compliance work (Aug 2, 2026) is in place — we&rsquo;d
           rather get it right than rush a half-compliant product into a regulated market.
         </p>
 
@@ -88,10 +88,10 @@ export default function EuWaitlistPage() {
             }}
           >
             <p style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '1.1rem' }}>
-              You're on the list.
+              You&rsquo;re on the list.
             </p>
             <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-              We'll email <strong>{email}</strong> the moment EU access opens.
+              We&rsquo;ll email <strong>{email}</strong> the moment EU access opens.
             </p>
           </div>
         ) : (
