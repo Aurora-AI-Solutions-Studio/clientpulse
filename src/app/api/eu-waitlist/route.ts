@@ -19,7 +19,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
   }
 
-  const email = typeof payload.email === 'string' ? payload.email.trim() : '';
+  // Normalize at the application boundary so the (email, product) UNIQUE
+  // constraint dedupes case-variants. Migration 20260428_eu_waitlist_unique_constraint
+  // replaced the prior LOWER(email) functional index — case-folding moves here.
+  const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
   if (!email || !EMAIL_RX.test(email) || email.length > 254) {
     return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
   }
