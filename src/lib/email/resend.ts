@@ -21,6 +21,13 @@ export interface SendEmailArgs {
   cc?: string[];
   /** Optional Resend tags (string key → string value). */
   tags?: Record<string, string>;
+  /**
+   * One-click unsubscribe URL. When provided, adds `List-Unsubscribe` and
+   * `List-Unsubscribe-Post` headers per RFC 8058 (Gmail bulk-sender policy
+   * + Apple Mail one-click button). Only set on bulk/recurring messages;
+   * leave undefined for transactional mail like password resets.
+   */
+  unsubscribeUrl?: string;
 }
 
 export type SendEmailResult =
@@ -52,6 +59,12 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
       name,
       value,
     }));
+  }
+  if (args.unsubscribeUrl) {
+    payload.headers = {
+      'List-Unsubscribe': `<${args.unsubscribeUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    };
   }
 
   try {

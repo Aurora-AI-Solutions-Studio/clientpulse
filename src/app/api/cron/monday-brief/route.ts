@@ -76,7 +76,8 @@ export async function POST(request: NextRequest) {
       | 'failed'
       | 'skipped_wrong_local_time'
       | 'skipped_already_sent_this_week'
-      | 'skipped_bad_timezone';
+      | 'skipped_bad_timezone'
+      | 'skipped_unsubscribed';
     brief_id?: string;
     error?: string;
   }> = [];
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
   let skippedWrongTime = 0;
   let skippedAlreadySent = 0;
   let skippedBadTz = 0;
+  let skippedUnsubscribed = 0;
 
   for (const agency of agencies ?? []) {
     const agencyId = agency.id as string;
@@ -95,9 +97,21 @@ export async function POST(request: NextRequest) {
     try {
       const { data: ownerProfile } = await supabase
         .from('profiles')
-        .select('email, timezone, brief_send_hour')
+        .select('email, timezone, brief_send_hour, brief_optout_at')
         .eq('id', agency.owner_id)
         .single();
+
+      // Honour one-click unsubscribe before computing the time window —
+      // cheaper to skip and surfaces the reason in the response payload.
+      if (ownerProfile?.brief_optout_at) {
+        skippedUnsubscribed += 1;
+        results.push({
+          agency_id: agencyId,
+          agency_name: agencyName,
+          status: 'skipped_unsubscribed',
+        });
+        continue;
+      }
 
       const timezone =
         (ownerProfile?.timezone as string | null) ?? DEFAULT_TIMEZONE;
@@ -167,6 +181,7 @@ export async function POST(request: NextRequest) {
           brandLogoUrl: (agency.brand_logo_url as string | null) ?? null,
           brandColor: (agency.brand_color as string | null) ?? null,
         },
+        ownerUserId: agency.owner_id as string,
         to: (ownerProfile?.email as string | null) ?? null,
         send: true,
         appUrl,
@@ -216,6 +231,7 @@ export async function POST(request: NextRequest) {
     skipped_wrong_local_time: skippedWrongTime,
     skipped_already_sent_this_week: skippedAlreadySent,
     skipped_bad_timezone: skippedBadTz,
+    skipped_unsubscribed: skippedUnsubscribed,
     results,
   });
 }

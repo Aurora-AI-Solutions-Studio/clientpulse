@@ -27,6 +27,12 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || 'https://clientpulse.helloaurora.ai'
+  ),
+  alternates: {
+    canonical: '/',
+  },
   title: 'ClientPulse — AI Client Health Intelligence for Agencies',
   description:
     'Monitor client health, identify risks, and act before churn happens. AI-powered insights for agencies to strengthen relationships and grow faster.',

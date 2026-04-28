@@ -18,6 +18,7 @@ import {
 } from '@/lib/agents/brief-email';
 import { sendEmail } from '@/lib/email/resend';
 import { signAcceptToken } from '@/lib/email/brief-token';
+import { signUnsubscribeToken } from '@/lib/email/unsubscribe-token';
 
 export interface SendBriefArgs {
   supabase: SupabaseClient;
@@ -27,6 +28,11 @@ export interface SendBriefArgs {
     brandLogoUrl?: string | null;
     brandColor?: string | null;
   };
+  /**
+   * Owner of the agency. Used to (a) deliver the email and (b) sign a
+   * per-user one-click unsubscribe link. Skip email when `email` is null.
+   */
+  ownerUserId?: string | null;
   /** Owner email to deliver to. Skip email if null. */
   to: string | null;
   /** When false, generate + persist only (no email). */
@@ -46,7 +52,7 @@ export interface SendBriefResult {
 }
 
 export async function generateAndSendBrief(args: SendBriefArgs): Promise<SendBriefResult> {
-  const { supabase, agency, to, send, appUrl, emailTokenSecret } = args;
+  const { supabase, agency, ownerUserId, to, send, appUrl, emailTokenSecret } = args;
 
   const agent = new MondayBriefAgent(supabase);
   const content = await agent.generate(agency.id);
@@ -103,12 +109,26 @@ export async function generateAndSendBrief(args: SendBriefArgs): Promise<SendBri
     modelCardUrl: `${appUrl}/model-card`,
   };
 
+  // One-click unsubscribe — required by Gmail's bulk-sender policy + Apple
+  // Mail's button. Only sign when we have an owner id (cron path); user-
+  // initiated sends through /api/monday-brief don't include the headers
+  // because they're transactional, not bulk.
+  let unsubscribeUrl: string | undefined;
+  if (ownerUserId) {
+    const token = signUnsubscribeToken(
+      { userId: ownerUserId, list: 'monday-brief', issuedAt: Date.now() },
+      emailTokenSecret,
+    );
+    unsubscribeUrl = `${appUrl}/api/unsubscribe?t=${encodeURIComponent(token)}`;
+  }
+
   const result = await sendEmail({
     to,
     subject: buildBriefSubject(renderArgs),
     html: renderBriefEmailHtml(renderArgs),
     text: renderBriefEmailText(renderArgs),
     tags: { product: 'clientpulse', kind: 'monday-brief', agency_id: agency.id },
+    unsubscribeUrl,
   });
 
   if (result.ok) {
