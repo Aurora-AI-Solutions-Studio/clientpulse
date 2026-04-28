@@ -1405,6 +1405,8 @@ export default function Home() {
               {[
                 { label: 'Aurora', href: 'https://helloaurora.ai' },
                 { label: 'ReForge', href: 'https://reforge.helloaurora.ai' },
+                { label: 'Model Card', href: '/model-card' },
+                { label: 'Content Policy', href: '/content-policy' },
                 { label: 'Impressum', href: 'https://helloaurora.ai/impressum' },
                 { label: 'Privacy', href: 'https://helloaurora.ai/privacy' },
                 { label: 'Terms', href: 'https://helloaurora.ai/terms' },
