@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
+import { BriefDeliveryCard } from '@/components/settings/brief-delivery-card';
 
 interface User {
   id: string;
@@ -296,6 +297,9 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Brief delivery (timezone + send hour) */}
+      <BriefDeliveryCard />
 
       {/* Communication Intelligence Integrations */}
       <Card>

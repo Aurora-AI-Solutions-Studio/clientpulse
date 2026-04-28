@@ -62,12 +62,25 @@ function SignupForm() {
     setLoading(true);
 
     try {
+      // Capture the browser's IANA timezone so the Monday Brief cron
+      // fires at the user's local 8 AM instead of a fixed UTC time. The
+      // handle_new_user() trigger reads `signup_timezone` from
+      // raw_user_meta_data and persists it on the new profile row;
+      // missing or malformed values fall back to the column default.
+      let signupTimezone: string | undefined;
+      try {
+        signupTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+      } catch {
+        signupTimezone = undefined;
+      }
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName,
+            ...(signupTimezone ? { signup_timezone: signupTimezone } : {}),
           },
         },
       });
