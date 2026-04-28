@@ -1,7 +1,10 @@
-// EU geoblock — country detection + path allowlist invariants.
+// EU detection — used by the non-blocking notice banner on the
+// landing page + the /api/eu-waitlist endpoint. Path allowlist
+// removed Apr 28 evening when the hard geoblock was replaced with
+// a banner per CEO call: launch globally, EU sees a notice.
 
 import { describe, it, expect } from 'vitest';
-import { isEuRequest, isEuAllowedPath, EU_COUNTRY_CODES } from '@/lib/geo/eu';
+import { isEuRequest, EU_COUNTRY_CODES } from '@/lib/geo/eu';
 
 function headersWith(country: string | null, headerName: 'x-vercel-ip-country' | 'cf-ipcountry' = 'x-vercel-ip-country'): Headers {
   const h = new Headers();
@@ -25,6 +28,12 @@ describe('EU_COUNTRY_CODES', () => {
       expect(EU_COUNTRY_CODES.has(cc)).toBe(true);
     }
   });
+
+  it('does NOT contain markets we explicitly want to launch in (UAE/SG/ID/IN/BR/etc.)', () => {
+    for (const cc of ['AE', 'SG', 'ID', 'IN', 'BR', 'JP', 'KR', 'MX', 'ZA']) {
+      expect(EU_COUNTRY_CODES.has(cc)).toBe(false);
+    }
+  });
 });
 
 describe('isEuRequest', () => {
@@ -34,12 +43,10 @@ describe('isEuRequest', () => {
     expect(isEuRequest(headersWith('IT'))).toBe(true);
   });
 
-  it('returns false for the launch-permitted countries (US/UK/CA/AU/NZ)', () => {
-    expect(isEuRequest(headersWith('US'))).toBe(false);
-    expect(isEuRequest(headersWith('GB'))).toBe(false);
-    expect(isEuRequest(headersWith('CA'))).toBe(false);
-    expect(isEuRequest(headersWith('AU'))).toBe(false);
-    expect(isEuRequest(headersWith('NZ'))).toBe(false);
+  it('returns false for the global launch markets (US/UK/CA/AU/NZ/UAE/SG/ID)', () => {
+    for (const cc of ['US', 'GB', 'CA', 'AU', 'NZ', 'AE', 'SG', 'ID']) {
+      expect(isEuRequest(headersWith(cc))).toBe(false);
+    }
   });
 
   it('returns false for non-EU European nations (CH/NO/IS)', () => {
@@ -64,30 +71,5 @@ describe('isEuRequest', () => {
 
   it('treats Vercel "XX" unknown-country sentinel as non-EU', () => {
     expect(isEuRequest(headersWith('XX'))).toBe(false);
-  });
-});
-
-describe('isEuAllowedPath', () => {
-  it('allows /eu-waitlist itself (prevents redirect loop)', () => {
-    expect(isEuAllowedPath('/eu-waitlist')).toBe(true);
-  });
-
-  it('allows the email-capture API route', () => {
-    expect(isEuAllowedPath('/api/eu-waitlist')).toBe(true);
-  });
-
-  it('allows /robots.txt + /sitemap.xml (SEO + crawler hygiene)', () => {
-    expect(isEuAllowedPath('/robots.txt')).toBe(true);
-    expect(isEuAllowedPath('/sitemap.xml')).toBe(true);
-  });
-
-  it('blocks every product surface', () => {
-    for (const path of ['/', '/dashboard', '/dashboard/clients', '/dashboard/upgrade', '/auth/login', '/auth/signup', '/api/clients', '/api/monday-brief']) {
-      expect(isEuAllowedPath(path)).toBe(false);
-    }
-  });
-
-  it('matches subpaths of allowed prefixes', () => {
-    expect(isEuAllowedPath('/eu-waitlist/anything')).toBe(true);
   });
 });
