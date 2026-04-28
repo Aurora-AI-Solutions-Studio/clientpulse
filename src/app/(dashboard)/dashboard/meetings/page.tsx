@@ -145,7 +145,7 @@ export default function MeetingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white font-playfair">{stat.value}</div>
+              <div className="text-2xl font-stat text-white">{stat.value}</div>
               <p className="text-xs text-[#7a88a8] mt-1">{stat.description}</p>
             </CardContent>
           </Card>

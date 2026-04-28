@@ -451,7 +451,7 @@ function UpgradePageInner() {
 
               <p className="mt-3">
                 <span
-                  className="text-3xl font-bold text-white"
+                  className="text-3xl text-white"
                   style={{ fontFamily: "'Playfair Display', serif" }}
                 >
                   ${displayPrice}

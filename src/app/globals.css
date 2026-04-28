@@ -86,27 +86,37 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Typography */
+/* Typography
+ *
+ * Display stack moved from Playfair (serif) to Space Grotesk (geometric
+ * sans) on 2026-04-27. Geometric sans needs tighter tracking and
+ * lighter weight than Playfair to read crisp instead of heavy — the
+ * `--font-playfair` CSS variable is preserved as an alias pointing at
+ * Space Grotesk so existing inline `font-playfair` references render
+ * with the new stack without touching every file.
+ */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-playfair), serif;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+  font-family: var(--font-playfair), 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
 h1 {
   font-size: 3.5rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 h2 {
   font-size: 2.5rem;
-  font-weight: 800;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 h3 {
   font-size: 1.875rem;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 h4 {
@@ -331,6 +341,25 @@ textarea::placeholder {
 
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Stat numerals — JetBrains Mono with tabular figures so digits in
+   * counters / scores / timestamps line up cleanly column-to-column.
+   * Usage: <p className="font-stat">{value}</p> on any number block. */
+  .font-stat {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* Hairline border token — matches the landing page's --hairline.
+   * Usage: <div className="border-hairline">…</div> instead of one-off
+   * rgba border colors. */
+  .border-hairline {
+    border-color: var(--hairline);
+  }
+  .border-hairline-strong {
+    border-color: var(--hairline-strong);
   }
 
   .animate-dot-pulse {

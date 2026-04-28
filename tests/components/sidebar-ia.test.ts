@@ -46,11 +46,12 @@ describe('Sidebar IA — unified suite shell', () => {
   });
 
   it('Connect carries the data-source items', () => {
+    // Apr 28, 2026 — Slack + Transcription consolidated into the
+    // Integrations panel (cards on /dashboard/settings) so the sidebar
+    // is not cluttered with a top-level entry per integration.
     const connect = WORKSPACES.find((w) => w.id === 'connect');
     expect(connect?.items.map((i) => i.label)).toEqual([
       'Integrations',
-      'Slack',
-      'Transcription',
     ]);
   });
 

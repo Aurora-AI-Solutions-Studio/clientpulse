@@ -12,8 +12,6 @@ import {
   Zap,
   TrendingUp,
   Users,
-  Hash,
-  Mic,
   Mail,
   ShieldCheck,
   MessageSquare,
@@ -53,8 +51,6 @@ export const WORKSPACES: Workspace[] = [
     glow: 'rgba(76,201,240,0.35)',
     items: [
       { label: 'Integrations', icon: Plug, href: '/dashboard/settings' },
-      { label: 'Slack', icon: Hash, href: '/dashboard/integrations/slack' },
-      { label: 'Transcription', icon: Mic, href: '/dashboard/integrations/whisper' },
     ],
   },
   {

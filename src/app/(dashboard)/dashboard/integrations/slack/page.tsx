@@ -151,7 +151,7 @@ export default function SlackIntegrationPage() {
     <div className="space-y-8">
       {/* Page Header */}
       <div>
-        <h2 className="text-3xl font-bold text-white font-playfair mb-2">
+        <h2 className="text-3xl text-white mb-2">
           Slack Integration
         </h2>
         <p className="text-[#7a88a8]">
