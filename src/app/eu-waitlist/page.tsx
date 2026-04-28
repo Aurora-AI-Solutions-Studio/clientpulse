@@ -133,7 +133,7 @@ export default function EuWaitlistPage() {
         )}
 
         <p className="mt-12 text-xs" style={{ color: 'var(--text-tertiary, #5b6373)' }}>
-          Aurora AI Solutions Studio (UG i.G.) · Berlin, Germany ·{' '}
+          Aurora AI Solutions Studio (UG i.G.) · Stuttgart, Germany ·{' '}
           <a href="https://helloaurora.ai" className="underline">helloaurora.ai</a>
         </p>
       </section>
