@@ -91,4 +91,53 @@ describe('HealthScoringAgent — signals dimension (slice 2B)', () => {
     expect(result.breakdown.signals!).toBeGreaterThanOrEqual(0);
     expect(result.breakdown.signals!).toBeLessThanOrEqual(100);
   });
+
+  // Slice 6 — engagement_velocity dimension.
+  it('rewards strong audience engagement (Slice 6)', () => {
+    const agent = new HealthScoringAgent();
+    const flat = agent.computeHealthScore({
+      ...baseInput,
+      signalsInput: { contentVelocity: 3, engagementVelocity: 0 },
+    });
+    const winning = agent.computeHealthScore({
+      ...baseInput,
+      signalsInput: { contentVelocity: 3, engagementVelocity: 25 },
+    });
+    expect(winning.breakdown.signals!).toBeGreaterThan(flat.breakdown.signals!);
+    expect(winning.overall).toBeGreaterThan(flat.overall);
+    const positiveSig = winning.signals.find(
+      (s) => s.type === 'signals' && s.severity === 'positive',
+    );
+    expect(positiveSig).toBeDefined();
+    expect(positiveSig?.message).toContain('Strong audience response');
+  });
+
+  it('penalises shipping with zero engagement (publishing into the void)', () => {
+    const agent = new HealthScoringAgent();
+    const baseline = agent.computeHealthScore({
+      ...baseInput,
+      signalsInput: { contentVelocity: 3 },
+    });
+    const flat = agent.computeHealthScore({
+      ...baseInput,
+      signalsInput: { contentVelocity: 3, engagementVelocity: 0 },
+    });
+    expect(flat.breakdown.signals!).toBeLessThan(baseline.breakdown.signals!);
+    const flatSig = flat.signals.find(
+      (s) => s.type === 'signals' && (s.message ?? '').includes('zero audience engagement'),
+    );
+    expect(flatSig).toBeDefined();
+  });
+
+  it('does NOT penalise zero engagement when content_velocity is also zero (already paused)', () => {
+    const agent = new HealthScoringAgent();
+    const noVelocity = agent.computeHealthScore({
+      ...baseInput,
+      signalsInput: { contentVelocity: 0, engagementVelocity: 0 },
+    });
+    const flatSig = noVelocity.signals.find(
+      (s) => s.type === 'signals' && (s.message ?? '').includes('zero audience engagement'),
+    );
+    expect(flatSig).toBeUndefined();
+  });
 });

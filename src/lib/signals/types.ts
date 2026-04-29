@@ -12,7 +12,8 @@ export type SignalType =
   | 'approval_latency'   // ms between piece-created and piece-approved
   | 'pause_resume'       // 1.0 = paused, 0.0 = active (derived from velocity gaps)
   | 'voice_freshness'    // days since voice_profile last updated
-  | 'ingestion_rate';    // ingestion_jobs count for the period
+  | 'ingestion_rate'     // ingestion_jobs count for the period
+  | 'engagement_velocity'; // engagement events on RF-published pieces per period (Slice 6)
 
 export interface SignalPayload {
   /** Bumps when wire format changes — verifier rejects unknown versions. */
@@ -34,11 +35,12 @@ export interface SignalPayload {
    *  the idempotency key on both sides. */
   period: string;
   /** Numeric value carried by the signal. Type-specific units:
-   *   content_velocity → pieces/period
-   *   approval_latency → milliseconds
-   *   pause_resume     → 0.0 | 1.0
-   *   voice_freshness  → days
-   *   ingestion_rate   → jobs/period */
+   *   content_velocity     → pieces/period
+   *   approval_latency     → milliseconds
+   *   pause_resume         → 0.0 | 1.0
+   *   voice_freshness      → days
+   *   ingestion_rate       → jobs/period
+   *   engagement_velocity  → engagement events/period */
   value: number;
   /** Free-form, signal-type-specific. Sparkline points, prev-period
    *  delta, contributing piece IDs, etc. */

@@ -24,7 +24,8 @@ export type SignalType =
   | 'approval_latency'
   | 'pause_resume'
   | 'voice_freshness'
-  | 'ingestion_rate';
+  | 'ingestion_rate'
+  | 'engagement_velocity';
 
 export interface SignalTriggerContext {
   signalType: SignalType;

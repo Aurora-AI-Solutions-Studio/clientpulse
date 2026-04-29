@@ -36,6 +36,10 @@ export interface SignalsInput {
   approvalLatencyMs?: number;
   /** Ingestion job count over the last 30 days. */
   ingestionRate?: number;
+  /** Slice 6 — engagement events count on the client's published RF
+   *  pieces in the latest period. High = audience is responding;
+   *  zero = pieces are going out but landing flat. */
+  engagementVelocity?: number;
 }
 
 /**
@@ -276,6 +280,39 @@ export class HealthScoringAgent {
         score -= 10;
       } else if (r >= 4) {
         score += 5;
+      }
+    }
+
+    // Slice 6 — engagement_velocity weighting. Asymmetric: a piece that
+    // ships and wins audience response is the strongest positive signal
+    // we have, so we reward it bigger than we penalize silence. We do
+    // NOT penalize zero engagement when content_velocity is also zero —
+    // that case is already pinned by pause_resume above.
+    if (typeof input.engagementVelocity === 'number') {
+      const e = input.engagementVelocity;
+      const publishing =
+        typeof input.contentVelocity === 'number' && input.contentVelocity > 0;
+      if (e >= 20) {
+        score += 12;
+        signals.push({
+          type: 'signals',
+          message: `Strong audience response (${e} engagements this period)`,
+          severity: 'positive',
+        });
+      } else if (e >= 5) {
+        score += 5;
+        signals.push({
+          type: 'signals',
+          message: `Healthy audience response (${e} engagements this period)`,
+          severity: 'positive',
+        });
+      } else if (e === 0 && publishing) {
+        score -= 10;
+        signals.push({
+          type: 'signals',
+          message: 'Content is shipping but getting zero audience engagement',
+          severity: 'medium',
+        });
       }
     }
 

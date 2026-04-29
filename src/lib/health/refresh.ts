@@ -145,6 +145,7 @@ export async function refreshClientHealth({
       voiceFreshnessDays: latestBySignalType.get('voice_freshness'),
       approvalLatencyMs: latestBySignalType.get('approval_latency'),
       ingestionRate: latestBySignalType.get('ingestion_rate'),
+      engagementVelocity: latestBySignalType.get('engagement_velocity'),
     };
   }
 
