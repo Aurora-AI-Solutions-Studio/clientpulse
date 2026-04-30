@@ -1,6 +1,7 @@
 // Roster RPC token sign/verify smoke. Mirrors the RF-side test by
 // design — same wire format both directions, identical guards.
 
+import crypto from 'crypto';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { signRosterToken, verifyRosterToken } from '@/lib/suite/roster';
 
@@ -61,7 +62,6 @@ describe('roster token (CP)', () => {
   });
 
   it('rejects non-roster kinds (token confusion guard)', () => {
-    const crypto = require('crypto');
     const secret = 'a'.repeat(64);
     const body = Buffer.from(
       JSON.stringify({ kind: 'handoff', agency_email: 'a@b.com', exp: Math.floor(Date.now() / 1000) + 60 }),

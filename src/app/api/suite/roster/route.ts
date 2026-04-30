@@ -104,8 +104,8 @@ export async function POST(req: NextRequest) {
   }
 
   const clientIds = (clients ?? []).map((c) => c.id as string);
-  let healthByClient = new Map<string, number>();
-  let lastSignalByClient = new Map<string, string>();
+  const healthByClient = new Map<string, number>();
+  const lastSignalByClient = new Map<string, string>();
 
   if (clientIds.length > 0) {
     const [{ data: healthRows }, { data: signalRows }] = await Promise.all([
