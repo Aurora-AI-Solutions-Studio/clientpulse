@@ -214,13 +214,20 @@ export default function SettingsPage() {
       const body = await res.json().catch(() => ({}));
       if (res.ok) {
         await fetchConnections();
-        const summary =
+        const baseSummary =
           provider === 'google_calendar'
             ? `${body.eventsFound ?? 0} calendar events synced`
             : provider === 'gmail'
             ? `${body.threadsFound ?? body.threadsProcessed ?? 0} email threads synced`
             : `${body.meetingsCreated ?? 0} Zoom meetings synced`;
-        setStatusMessage({ kind: 'ok', text: summary });
+        // When the agency has no clients yet, the sync runs but has nothing
+        // to match against — surface that explicitly so the user knows
+        // why the per-client engagement is still empty.
+        const noClientsHint =
+          body.clientsMatched === 0 && body.message
+            ? ` — ${body.message}`
+            : '';
+        setStatusMessage({ kind: 'ok', text: baseSummary + noClientsHint });
       } else {
         setStatusMessage({
           kind: 'err',

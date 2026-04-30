@@ -75,7 +75,20 @@ export async function POST(_request: NextRequest) {
       .eq('agency_id', agencyId);
 
     if (!clients || clients.length === 0) {
-      return NextResponse.json({ threadsFound: threadList.length, clientsMatched: 0 });
+      // Record sync ran (mirrors calendar/sync — see comment there).
+      await serviceClient
+        .from('integration_connections')
+        .update({
+          last_sync_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', connection.id);
+      return NextResponse.json({
+        success: true,
+        threadsFound: threadList.length,
+        clientsMatched: 0,
+        message: 'Sync ran — no clients to match against. Add a client first to surface engagement.',
+      });
     }
 
     // Fetch thread details and extract metadata
