@@ -16,6 +16,7 @@ import {
   type HealthScoreResult,
   type SignalsInput,
 } from '@/lib/agents/health-scoring-agent';
+import type { StripeInvoiceData } from '@/types/stripe';
 
 export interface RefreshClientHealthArgs {
   supabase: SupabaseClient;
@@ -56,12 +57,42 @@ export async function refreshClientHealth({
   clientId,
 }: RefreshClientHealthArgs): Promise<HealthScoreResult> {
   // ─── 1. Financial score ──────────────────────────────────────────
-  // Mock invoices until the Stripe pull-through lands — mirrors the
-  // HTTP route behaviour exactly so MCP + HTTP produce the same score.
+  // Read the cached invoices for this client out of stripe_invoices —
+  // populated by /api/integrations/stripe/sync (manual Sync Now) and
+  // the Stripe-Connect webhook handler. Empty result = client either
+  // has no Stripe history or the agency hasn't connected Stripe yet;
+  // either way the FinancialSignalAgent returns a neutral baseline.
+  const { data: invoiceRows } = await supabase
+    .from('stripe_invoices')
+    .select(
+      'stripe_invoice_id, stripe_customer_id, invoice_number, amount, currency, status, due_date, paid_date, invoice_created_at, payment_intent_status, attempted_payments, description'
+    )
+    .eq('client_id', clientId);
+
+  const invoices: StripeInvoiceData[] = (invoiceRows ?? []).map((r) => ({
+    id: r.stripe_invoice_id as string,
+    invoiceNumber: (r.invoice_number as string | null) ?? undefined,
+    customerId: r.stripe_customer_id as string,
+    amount: (r.amount as number) ?? 0,
+    currency: (r.currency as string) ?? 'usd',
+    status: r.status as StripeInvoiceData['status'],
+    dueDate: r.due_date
+      ? Math.floor(new Date(r.due_date as string).getTime() / 1000)
+      : undefined,
+    paidDate: r.paid_date
+      ? Math.floor(new Date(r.paid_date as string).getTime() / 1000)
+      : undefined,
+    createdAt: Math.floor(
+      new Date(r.invoice_created_at as string).getTime() / 1000
+    ),
+    description: (r.description as string | null) ?? undefined,
+    paymentIntentStatus: (r.payment_intent_status as string | null) ?? undefined,
+    attemptedPayments: (r.attempted_payments as number) ?? 0,
+  }));
+
   const financialAgent = new FinancialSignalAgent();
-  const mockInvoices: unknown[] = [];
   const financialHealthScore = await financialAgent.computeFinancialHealthScore(
-    mockInvoices as Parameters<typeof financialAgent.computeFinancialHealthScore>[0]
+    invoices
   );
   const financialScore = financialHealthScore.score;
 
