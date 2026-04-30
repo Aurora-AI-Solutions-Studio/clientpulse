@@ -1,12 +1,16 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCalendarCode } from '@/lib/agents/calendar-intelligence-agent';
 import { encryptToken } from '@/lib/crypto/integration-tokens';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 /**
  * GET /api/integrations/calendar/callback
- * OAuth callback handler for Google Calendar
+ * OAuth callback handler for Google Calendar.
+ *
+ * Auth + agency resolution goes through getAuthedContext + service-client
+ * upsert — see the parallel comment in zoom/callback/route.ts for the
+ * RLS-context-drift rationale.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -27,7 +31,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify state
     let stateData: { provider: string; returnTo: string };
     try {
       stateData = JSON.parse(Buffer.from(state, 'base64url').toString());
@@ -37,50 +40,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    const auth = await getAuthedContext();
+    if (!auth.ok) {
       return NextResponse.redirect(
         new URL('/auth/login?error=unauthorized', request.url)
       );
     }
+    const { userId, email, agencyId, serviceClient } = auth.ctx;
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.agency_id) {
-      return NextResponse.redirect(
-        new URL('/dashboard/settings?error=no_agency', request.url)
-      );
-    }
-
-    // Exchange code for tokens
     const clientId = process.env.GOOGLE_CLIENT_ID!;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/integrations/calendar/callback`;
 
     const tokens = await exchangeCalendarCode(code, clientId, clientSecret, redirectUri);
 
-    // Get user info from Google
     const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
     const userInfo = await userInfoRes.json();
 
-    // Upsert connection
-    const { error: upsertError } = await supabase
+    const { error: upsertError } = await serviceClient
       .from('integration_connections')
       .upsert(
         {
-          agency_id: profile.agency_id,
-          user_id: user.id,
+          agency_id: agencyId,
+          user_id: userId,
           provider: 'google_calendar',
           status: 'connected',
           access_token: encryptToken(tokens.access_token),
@@ -92,7 +76,7 @@ export async function GET(request: NextRequest) {
             'https://www.googleapis.com/auth/calendar.readonly',
             'https://www.googleapis.com/auth/calendar.events.readonly',
           ],
-          account_email: userInfo.email || user.email,
+          account_email: userInfo.email || email,
           account_name: userInfo.name || undefined,
           connected_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

@@ -1,41 +1,24 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
+/**
+ * Auth + agency resolution goes through getAuthedContext (service-client
+ * profile lookup) — see comment in /api/slack/route.ts for the
+ * RLS-context-drift rationale. This used to surface as a misleading 404
+ * "User profile not found" on every Transcription Settings page load.
+ */
 export async function GET(_request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient } = auth.ctx;
 
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
-
-    // Fetch transcription settings
-    const { data: agency, error: agencyError } = await supabase
+    const { data: agency, error: agencyError } = await serviceClient
       .from('agencies')
       .select('transcription_mode, local_whisper_endpoint')
-      .eq('id', profile.agency_id)
-      .single();
+      .eq('id', agencyId)
+      .maybeSingle();
 
     if (agencyError) {
       console.error('Error fetching agency:', agencyError);
@@ -62,39 +45,16 @@ export async function GET(_request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { userId, agencyId, serviceClient } = auth.ctx;
 
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID and check permissions
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
-
-    // Check if user is owner
-    const { data: currentMember } = await supabase
+    const { data: currentMember } = await serviceClient
       .from('agency_members')
       .select('role')
-      .eq('user_id', user.id)
-      .eq('agency_id', profile.agency_id)
-      .single();
+      .eq('user_id', userId)
+      .eq('agency_id', agencyId)
+      .maybeSingle();
 
     if (!currentMember || currentMember.role !== 'owner') {
       return NextResponse.json(
@@ -105,7 +65,6 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
 
-    // Validate transcription mode
     if (body.transcriptionMode) {
       const validModes = ['cloud', 'local', 'hybrid'];
       if (!validModes.includes(body.transcriptionMode)) {
@@ -116,7 +75,6 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // Validate local endpoint if in use
     if (body.transcriptionMode === 'local' || body.transcriptionMode === 'hybrid') {
       if (body.localWhisperEndpoint) {
         try {
@@ -130,7 +88,6 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // Build update object
     const updateData: Record<string, string | null> = {};
 
     if (body.transcriptionMode) {
@@ -147,11 +104,10 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Update settings
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await serviceClient
       .from('agencies')
       .update(updateData)
-      .eq('id', profile.agency_id)
+      .eq('id', agencyId)
       .select('transcription_mode, local_whisper_endpoint')
       .single();
 
