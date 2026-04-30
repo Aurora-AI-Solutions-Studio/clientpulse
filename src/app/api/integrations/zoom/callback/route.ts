@@ -1,12 +1,21 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeZoomCode, getZoomUserInfo } from '@/lib/agents/zoom-intelligence-agent';
 import { encryptToken } from '@/lib/crypto/integration-tokens';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 /**
  * GET /api/integrations/zoom/callback
- * OAuth callback handler for Zoom
+ * OAuth callback handler for Zoom.
+ *
+ * Auth + agency resolution goes through getAuthedContext so we don't get
+ * bitten by the auth-client RLS context drift bug (Apr 25/26 incident
+ * documented in get-authed-context.ts) — the auth client occasionally
+ * returns null on profile lookup even for valid sessions, which silently
+ * sent users to ?error=no_agency. Fix: resolve agency_id via the service
+ * client and persist the connection via the service client too. The user
+ * is still authenticated via the auth client up-front; the service-client
+ * write is constrained to (agency_id, user_id) pairs we already verified.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -27,7 +36,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify state
     let stateData: { provider: string; returnTo: string };
     try {
       stateData = JSON.parse(Buffer.from(state, 'base64url').toString());
@@ -37,47 +45,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    const auth = await getAuthedContext();
+    if (!auth.ok) {
       return NextResponse.redirect(
         new URL('/auth/login?error=unauthorized', request.url)
       );
     }
+    const { userId, email, agencyId, serviceClient } = auth.ctx;
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.agency_id) {
-      return NextResponse.redirect(
-        new URL('/dashboard/settings?error=no_agency', request.url)
-      );
-    }
-
-    // Exchange code for tokens
     const clientId = process.env.ZOOM_CLIENT_ID!;
     const clientSecret = process.env.ZOOM_CLIENT_SECRET!;
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/integrations/zoom/callback`;
 
     const tokens = await exchangeZoomCode(code, clientId, clientSecret, redirectUri);
-
-    // Get Zoom user info
     const zoomUser = await getZoomUserInfo(tokens.access_token);
 
-    // Upsert connection
-    const { error: upsertError } = await supabase
+    const { error: upsertError } = await serviceClient
       .from('integration_connections')
       .upsert(
         {
-          agency_id: profile.agency_id,
-          user_id: user.id,
+          agency_id: agencyId,
+          user_id: userId,
           provider: 'zoom',
           status: 'connected',
           access_token: encryptToken(tokens.access_token),
@@ -86,7 +74,7 @@ export async function GET(request: NextRequest) {
             Date.now() + tokens.expires_in * 1000
           ).toISOString(),
           scopes: tokens.scope ? tokens.scope.split(' ') : [],
-          account_email: zoomUser.email || user.email,
+          account_email: zoomUser.email || email,
           account_name: zoomUser.display_name || `${zoomUser.first_name} ${zoomUser.last_name}`,
           connected_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

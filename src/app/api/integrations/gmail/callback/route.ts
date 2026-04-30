@@ -1,12 +1,16 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeGmailCode } from '@/lib/agents/email-intelligence-agent';
 import { encryptToken } from '@/lib/crypto/integration-tokens';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 /**
  * GET /api/integrations/gmail/callback
- * OAuth callback handler for Gmail
+ * OAuth callback handler for Gmail.
+ *
+ * Auth + agency resolution goes through getAuthedContext + service-client
+ * upsert — see the parallel comment in zoom/callback/route.ts for the
+ * RLS-context-drift rationale.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -35,29 +39,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    const auth = await getAuthedContext();
+    if (!auth.ok) {
       return NextResponse.redirect(
         new URL('/auth/login?error=unauthorized', request.url)
       );
     }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.agency_id) {
-      return NextResponse.redirect(
-        new URL('/dashboard/settings?error=no_agency', request.url)
-      );
-    }
+    const { userId, email, agencyId, serviceClient } = auth.ctx;
 
     const clientId = process.env.GOOGLE_CLIENT_ID!;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
@@ -65,18 +53,17 @@ export async function GET(request: NextRequest) {
 
     const tokens = await exchangeGmailCode(code, clientId, clientSecret, redirectUri);
 
-    // Get user info
     const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
     const userInfo = await userInfoRes.json();
 
-    const { error: upsertError } = await supabase
+    const { error: upsertError } = await serviceClient
       .from('integration_connections')
       .upsert(
         {
-          agency_id: profile.agency_id,
-          user_id: user.id,
+          agency_id: agencyId,
+          user_id: userId,
           provider: 'gmail',
           status: 'connected',
           access_token: encryptToken(tokens.access_token),
@@ -88,7 +75,7 @@ export async function GET(request: NextRequest) {
             'https://www.googleapis.com/auth/gmail.readonly',
             'https://www.googleapis.com/auth/gmail.metadata',
           ],
-          account_email: userInfo.email || user.email,
+          account_email: userInfo.email || email,
           account_name: userInfo.name || undefined,
           connected_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

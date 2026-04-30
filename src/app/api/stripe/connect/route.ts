@@ -7,47 +7,23 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 export async function POST(_request: NextRequest) {
   try {
-    const supabase = await createClient();
+    // Auth + profile resolution via service-client to avoid RLS-context drift
+    // (see /api/slack/route.ts for the rationale).
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { userId, email, subscriptionPlan } = auth.ctx;
 
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check user's subscription level (only Agency plan can use Connect)
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('subscription_plan')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
-
-    if (profile.subscription_plan !== 'agency') {
+    if (subscriptionPlan !== 'agency') {
       return NextResponse.json(
         { error: 'Stripe Connect is only available on the Agency plan' },
         { status: 403 }
       );
     }
 
-    // Generate OAuth URL for Stripe Connect
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const clientId = process.env.STRIPE_CLIENT_ID;
 
@@ -61,7 +37,7 @@ export async function POST(_request: NextRequest) {
     // Create state parameter for security
     const state = Buffer.from(
       JSON.stringify({
-        userId: user.id,
+        userId,
         timestamp: Date.now(),
       })
     ).toString('base64');
@@ -70,7 +46,7 @@ export async function POST(_request: NextRequest) {
     const oauthUrl = new URL('https://connect.stripe.com/oauth/authorize');
     oauthUrl.searchParams.set('client_id', clientId);
     oauthUrl.searchParams.set('state', state);
-    oauthUrl.searchParams.set('stripe_user[email]', user.email || '');
+    oauthUrl.searchParams.set('stripe_user[email]', email || '');
     oauthUrl.searchParams.set('stripe_user[url]', appUrl);
     oauthUrl.searchParams.set('response_type', 'code');
     oauthUrl.searchParams.set('scope', 'read_write');
@@ -129,19 +105,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
-
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user || user.id !== stateData.userId) {
+    const auth = await getAuthedContext();
+    if (!auth.ok || auth.ctx.userId !== stateData.userId) {
       return NextResponse.redirect(
         new URL('/dashboard?connect_error=unauthorized', request.url)
       );
     }
+    const { agencyId, serviceClient } = auth.ctx;
 
     // Exchange code for connected account ID
     // This would typically call Stripe's OAuth token endpoint
@@ -187,13 +157,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Store connected account ID in Supabase
-    const { error: updateError } = await supabase
-      .from('profiles')
+    // Store connected account ID on the agency (column lives on `agencies`,
+    // not `profiles`). Service client bypasses RLS-context drift.
+    const { error: updateError } = await serviceClient
+      .from('agencies')
       .update({
-        stripe_connect_account_id: stripeUserId,
+        stripe_connected_account_id: stripeUserId,
       })
-      .eq('id', user.id);
+      .eq('id', agencyId);
 
     if (updateError) {
       console.error('Failed to store connected account:', updateError);
