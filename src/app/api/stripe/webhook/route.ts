@@ -15,6 +15,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getPlanByPriceId } from '@/lib/stripe-config';
+import { isSuiteSubscription, shouldGrantSuiteAccess } from '@/lib/stripe/suite-detect';
+import { applySuiteAccess } from '@/lib/stripe/suite-access';
+import type Stripe from 'stripe';
 
 // Store raw body for signature verification
 export const runtime = 'nodejs';
@@ -105,6 +108,26 @@ export async function POST(request: NextRequest) {
         if (updateError) {
           console.error('Failed to update user subscription:', updateError);
         }
+
+        // Suite-access flip — when the buyer's subscription is on the
+        // Suite SKU, mirror has_suite_access=true on local + sister.
+        if (session.subscription) {
+          try {
+            const sub = (await stripe.subscriptions.retrieve(
+              session.subscription as string,
+            )) as unknown as Stripe.Subscription;
+            if (isSuiteSubscription(sub) && session.customer_details?.email) {
+              await applySuiteAccess({
+                local: supabase,
+                email: session.customer_details.email,
+                localUserId: userId,
+                grant: shouldGrantSuiteAccess(sub),
+              });
+            }
+          } catch (err) {
+            console.error('[webhook] Suite-access flip on checkout threw:', err);
+          }
+        }
         break;
       }
 
@@ -118,9 +141,16 @@ export async function POST(request: NextRequest) {
         if (!items || items.length === 0) break;
 
         const priceId = items[0].price.id;
+        // Suite SKU isn't in CP's stripe-config.ts (it's an RF-issued
+        // product), so getPlanByPriceId returns null. That's fine — we
+        // skip the per-tier plan update for Suite events and only fire
+        // the has_suite_access flip below. The buyer's subscription_plan
+        // stays at whatever they had before (most often a CP tier they
+        // upgraded from).
         const plan = getPlanByPriceId(priceId);
+        const isSuite = isSuiteSubscription(subscription as unknown as Stripe.Subscription);
 
-        if (!plan) {
+        if (!plan && !isSuite) {
           console.warn('Unknown price ID:', priceId);
           break;
         }
@@ -132,24 +162,47 @@ export async function POST(request: NextRequest) {
           .eq('stripe_customer_id', customerId)
           .limit(1);
 
-        if (queryError || !profiles || profiles.length === 0) {
-          console.warn('User not found for customer:', customerId);
-          break;
+        if (queryError) {
+          console.warn('Profile lookup failed for customer:', customerId, queryError);
         }
 
-        const userId = profiles[0].id;
+        const userId = profiles && profiles.length > 0 ? profiles[0].id : null;
 
-        // Update subscription details
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            subscription_plan: plan,
-            subscription_status: status,
-          })
-          .eq('id', userId);
+        // Skip the tier write for Suite — only update for known CP plans.
+        if (plan && userId) {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              subscription_plan: plan,
+              subscription_status: status,
+            })
+            .eq('id', userId);
 
-        if (updateError) {
-          console.error('Failed to update subscription:', updateError);
+          if (updateError) {
+            console.error('Failed to update subscription:', updateError);
+          }
+        }
+
+        // Suite-access flip — fetch customer email + apply on local + sister.
+        // Runs even when the local profile lookup missed, because the sister
+        // RF profile may still exist and need the flip.
+        if (isSuite) {
+          try {
+            const customer = await stripe.customers.retrieve(customerId);
+            const email = (customer as Stripe.Customer).email ?? null;
+            if (email) {
+              await applySuiteAccess({
+                local: supabase,
+                email,
+                localUserId: userId,
+                grant: shouldGrantSuiteAccess(subscription as unknown as Stripe.Subscription),
+              });
+            } else {
+              console.warn('[webhook] Suite event but customer has no email — skipping flip:', customerId);
+            }
+          } catch (err) {
+            console.error('[webhook] Suite-access flip threw:', err);
+          }
         }
         break;
       }
@@ -157,31 +210,53 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
         const customerId = subscription.customer as string;
+        const isSuite = isSuiteSubscription(subscription as unknown as Stripe.Subscription);
 
         // Find user and downgrade to free
-        const { data: profiles, error: queryError } = await supabase
+        const { data: profiles } = await supabase
           .from('profiles')
           .select('id')
           .eq('stripe_customer_id', customerId)
           .limit(1);
 
-        if (queryError || !profiles || profiles.length === 0) {
-          break;
+        const userId = profiles && profiles.length > 0 ? profiles[0].id : null;
+
+        // Only set to 'free' for non-Suite cancellations. Suite leaves
+        // the underlying CP plan alone — the buyer might still be on
+        // their Pro/Agency tier, only Suite access goes away.
+        if (userId && !isSuite) {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              subscription_plan: 'free',
+              subscription_status: 'canceled',
+              subscription_end_date: new Date().toISOString(),
+            })
+            .eq('id', userId);
+
+          if (updateError) {
+            console.error('Failed to update subscription on deletion:', updateError);
+          }
         }
 
-        const userId = profiles[0].id;
-
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            subscription_plan: 'free',
-            subscription_status: 'canceled',
-            subscription_end_date: new Date().toISOString(),
-          })
-          .eq('id', userId);
-
-        if (updateError) {
-          console.error('Failed to update subscription on deletion:', updateError);
+        // Suite revoke — flip both profiles back to has_suite_access=false.
+        if (isSuite) {
+          try {
+            const customer = await stripe.customers.retrieve(customerId);
+            const email = (customer as Stripe.Customer).email ?? null;
+            if (email) {
+              await applySuiteAccess({
+                local: supabase,
+                email,
+                localUserId: userId,
+                grant: false,
+              });
+            } else {
+              console.warn('[webhook] Suite delete but customer has no email — skipping flip:', customerId);
+            }
+          } catch (err) {
+            console.error('[webhook] Suite-access revoke threw:', err);
+          }
         }
         break;
       }
