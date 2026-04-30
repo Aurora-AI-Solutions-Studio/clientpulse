@@ -23,6 +23,12 @@ interface User {
   };
 }
 
+interface StripeStatus {
+  connected: boolean;
+  accountId?: string;
+  email?: string;
+}
+
 interface IntegrationConnection {
   id: string;
   provider: string;
@@ -64,6 +70,7 @@ const TIER_DESCRIPTION: Record<MeSummary['tier'], string> = {
 export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [stripeStatus] = useState<StripeStatus>({ connected: false });
   const [connections, setConnections] = useState<IntegrationConnection[]>([]);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
   const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
@@ -72,6 +79,7 @@ export default function SettingsPage() {
   const [suiteStatus, setSuiteStatus] = useState<SuiteStatus | null>(null);
   const [unmatched, setUnmatched] = useState<UnmatchedSummary | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [stripeConnecting, setStripeConnecting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   const fetchConnections = useCallback(async () => {
@@ -231,6 +239,28 @@ export default function SettingsPage() {
       setStatusMessage({ kind: 'err', text: 'Sync failed — check your connection and retry.' });
     } finally {
       setSyncingProvider(null);
+    }
+  };
+
+  const handleStripeConnect = async () => {
+    setStripeConnecting(true);
+    setStatusMessage(null);
+    try {
+      const res = await fetch('/api/stripe/connect', { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body.authorizationUrl) {
+        window.location.href = body.authorizationUrl;
+        return;
+      }
+      setStatusMessage({
+        kind: 'err',
+        text: body.error || `Stripe Connect not available (${res.status})`,
+      });
+    } catch (error) {
+      console.error('Error starting Stripe Connect:', error);
+      setStatusMessage({ kind: 'err', text: 'Stripe Connect failed — check your connection and retry.' });
+    } finally {
+      setStripeConnecting(false);
     }
   };
 
@@ -727,13 +757,35 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Stripe — hidden for launch.
-              Stripe Connect (the OAuth integration this card needed) requires
-              registering Aurora as a Stripe Connect platform, which is multi-day
-              paperwork and out of scope for the MVP. The route + handler stay in
-              code so re-enabling is a single import flip once Connect is set up
-              and STRIPE_CLIENT_ID is provisioned in Vercel. Tracking task:
-              tasks/open/2026-04-30-cp-stripe-connect-platform-setup.md (post-launch). */}
+          {/* Stripe */}
+          <div className="flex items-center justify-between p-4 border border-[#1a2540] rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-[#635bff]/10 flex items-center justify-center">
+                <span className="text-[#635bff] font-bold text-sm">S</span>
+              </div>
+              <div>
+                <p className="font-medium text-white">Stripe</p>
+                <p className="text-xs text-[#7a88a8]">
+                  {stripeStatus.connected
+                    ? `Connected to ${stripeStatus.email}`
+                    : 'Track payment health & invoice signals'}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={stripeStatus.connected ? undefined : handleStripeConnect}
+              disabled={stripeConnecting}
+              className={
+                stripeStatus.connected
+                  ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border-green-500/20'
+                  : ''
+              }
+            >
+              {stripeStatus.connected ? 'Connected' : stripeConnecting ? 'Connecting…' : 'Connect'}
+            </Button>
+          </div>
 
           {/* Slack — webhook-based notifications */}
           <Link
