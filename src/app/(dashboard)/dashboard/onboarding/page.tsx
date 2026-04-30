@@ -11,8 +11,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
-  STEP_ORDER,
   STEP_LABELS,
+  buildStepOrder,
   canAdvance,
   isLastStep,
   nextStep,
@@ -25,6 +25,7 @@ import { StepStripe } from './steps/step-stripe';
 import { StepIntegrations } from './steps/step-integrations';
 import { StepFirstClient } from './steps/step-first-client';
 import { StepFirstBrief } from './steps/step-first-brief';
+import { StepSuite } from './steps/step-suite';
 
 interface MeResponse {
   agencyId: string | null;
@@ -34,6 +35,7 @@ interface MeResponse {
   onboardingCompletedAt: string | null;
   tier: 'free' | 'solo' | 'pro' | 'agency';
   tierLabel: string;
+  suiteAccess?: boolean;
 }
 
 export default function OnboardingPage() {
@@ -41,6 +43,7 @@ export default function OnboardingPage() {
   const params = useSearchParams();
   const step = parseStep(params.get('step'));
   const [me, setMe] = useState<MeResponse | null>(null);
+  const [unmatchedCount, setUnmatchedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   async function loadMe() {
@@ -52,9 +55,29 @@ export default function OnboardingPage() {
     }
   }
 
+  async function loadUnmatched() {
+    try {
+      const res = await fetch('/api/suite/unmatched-signals', { cache: 'no-store' });
+      if (res.ok) {
+        const body = (await res.json()) as { unresolved_count?: number };
+        setUnmatchedCount(body.unresolved_count ?? 0);
+      }
+    } catch {
+      // best-effort — suite step just stays out of the order
+    }
+  }
+
   useEffect(() => {
     loadMe();
+    loadUnmatched();
   }, []);
+
+  // Dynamic step order — Suite agencies with unresolved RF signals get
+  // a 'suite' mapping step inserted between 'client' and 'brief'.
+  const order = buildStepOrder({
+    hasSuiteAccess: Boolean(me?.suiteAccess),
+    unmatchedCount,
+  });
 
   useEffect(() => {
     if (me?.onboardingCompletedAt) {
@@ -62,12 +85,22 @@ export default function OnboardingPage() {
     }
   }, [me, router]);
 
+  // If the URL points to a step that isn't in the current order (e.g.
+  // ?step=suite for a non-Suite agency), redirect to the first valid
+  // step so the wizard doesn't render a blank card.
+  useEffect(() => {
+    if (loading) return;
+    if (stepIndex(step, order) === -1) {
+      router.replace(`/dashboard/onboarding?step=${order[0]}`);
+    }
+  }, [loading, step, order, router]);
+
   function goTo(next: OnboardingStep) {
     router.replace(`/dashboard/onboarding?step=${next}`);
   }
 
   async function onAdvance() {
-    const n = nextStep(step);
+    const n = nextStep(step, order);
     if (n) goTo(n);
   }
 
@@ -91,7 +124,7 @@ export default function OnboardingPage() {
       hasSubscription,
     });
 
-  const currentIdx = stepIndex(step);
+  const currentIdx = stepIndex(step, order);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -107,7 +140,7 @@ export default function OnboardingPage() {
 
       {/* Step rail */}
       <div className="flex items-center gap-2">
-        {STEP_ORDER.map((s, idx) => {
+        {order.map((s, idx) => {
           const done = idx < currentIdx;
           const active = idx === currentIdx;
           return (
@@ -132,7 +165,7 @@ export default function OnboardingPage() {
               >
                 {STEP_LABELS[s]}
               </span>
-              {idx < STEP_ORDER.length - 1 && (
+              {idx < order.length - 1 && (
                 <div className="flex-1 h-px bg-[#1a2540]" />
               )}
             </div>
@@ -160,6 +193,7 @@ export default function OnboardingPage() {
               {step === 'stripe' && <StepStripe me={me} onReload={loadMe} />}
               {step === 'integrations' && <StepIntegrations />}
               {step === 'client' && <StepFirstClient />}
+              {step === 'suite' && <StepSuite />}
               {step === 'brief' && <StepFirstBrief agencyId={me.agencyId} />}
             </>
           )}
@@ -171,16 +205,16 @@ export default function OnboardingPage() {
         <button
           type="button"
           onClick={() => {
-            const p = prevStep(step);
+            const p = prevStep(step, order);
             if (p) goTo(p);
           }}
-          disabled={!prevStep(step)}
+          disabled={!prevStep(step, order)}
           className="text-sm text-[#7a88a8] hover:text-white inline-flex items-center gap-1 disabled:opacity-30"
         >
           <ChevronLeft className="w-4 h-4" />
           Back
         </button>
-        {isLastStep(step) ? (
+        {isLastStep(step, order) ? (
           <button
             type="button"
             onClick={onComplete}

@@ -56,6 +56,10 @@ interface SuiteStatus {
   mappedClientCount: number;
 }
 
+interface UnmatchedSummary {
+  unresolved_count: number;
+}
+
 const TIER_DESCRIPTION: Record<MeSummary['tier'], string> = {
   free: 'Read-only · upgrade to add clients',
   solo: 'Up to 3 clients · 90-day retention · daily health refresh',
@@ -73,6 +77,7 @@ export default function SettingsPage() {
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [me, setMe] = useState<MeSummary | null>(null);
   const [suiteStatus, setSuiteStatus] = useState<SuiteStatus | null>(null);
+  const [unmatched, setUnmatched] = useState<UnmatchedSummary | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
 
   const fetchConnections = useCallback(async () => {
@@ -119,6 +124,14 @@ export default function SettingsPage() {
       try {
         const res = await fetch('/api/integrations/suite-status', { cache: 'no-store' });
         if (res.ok) setSuiteStatus(await res.json());
+      } catch {
+        // best-effort
+      }
+    })();
+    void (async () => {
+      try {
+        const res = await fetch('/api/suite/unmatched-signals', { cache: 'no-store' });
+        if (res.ok) setUnmatched(await res.json());
       } catch {
         // best-effort
       }
@@ -605,6 +618,26 @@ export default function SettingsPage() {
                   <p className="text-xs text-[#7a88a8]">
                     No signals received this week. If ReForge has active content for these clients, the next scheduled emission will arrive shortly.
                   </p>
+                </div>
+              )}
+              {unmatched && unmatched.unresolved_count > 0 && (
+                <div className="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-[#1a2540]">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-[#c8d0e0]">
+                      <span className="text-white font-medium">
+                        {unmatched.unresolved_count} RF client
+                        {unmatched.unresolved_count === 1 ? '' : 's'} waiting to be mapped
+                      </span>{' '}
+                      — incoming signals are dropping until you wire them up.
+                    </p>
+                  </div>
+                  <Link
+                    href="/dashboard/settings/suite-mapping"
+                    className="text-xs text-amber-300 hover:text-amber-200 underline whitespace-nowrap"
+                  >
+                    Map now →
+                  </Link>
                 </div>
               )}
             </div>

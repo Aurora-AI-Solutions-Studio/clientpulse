@@ -5,21 +5,42 @@
 // from UI events; this module answers "which step am I on, what's
 // next, is the sequence done?".
 
-export type OnboardingStep = 'stripe' | 'integrations' | 'client' | 'brief';
+export type OnboardingStep = 'stripe' | 'integrations' | 'client' | 'brief' | 'suite';
 
-export const STEP_ORDER: readonly OnboardingStep[] = [
+/** Static step set — `STEP_ORDER` returns this for non-Suite agencies.
+ *  Suite agencies with unmatched RF signals get the 'suite' step
+ *  inserted between 'client' and 'brief' via `buildStepOrder`. */
+const BASE_STEP_ORDER: readonly OnboardingStep[] = [
   'stripe',
   'integrations',
   'client',
   'brief',
 ] as const;
 
+export const STEP_ORDER: readonly OnboardingStep[] = BASE_STEP_ORDER;
+
 export const STEP_LABELS: Record<OnboardingStep, string> = {
   stripe: 'Billing',
   integrations: 'Connections',
   client: 'First client',
   brief: 'Monday Brief',
+  suite: 'Suite mapping',
 };
+
+/** Build the step order for a specific user. Inserts the 'suite' step
+ *  between 'client' and 'brief' for Suite agencies that have at least
+ *  one unresolved RF→CP unmatched signal. Otherwise returns the base
+ *  4-step sequence — non-Suite agencies and Suite agencies with no
+ *  pending mappings never see the wizard step. */
+export function buildStepOrder(opts: {
+  hasSuiteAccess: boolean;
+  unmatchedCount: number;
+}): readonly OnboardingStep[] {
+  if (!opts.hasSuiteAccess || opts.unmatchedCount <= 0) {
+    return BASE_STEP_ORDER;
+  }
+  return ['stripe', 'integrations', 'client', 'suite', 'brief'] as const;
+}
 
 export interface OnboardingState {
   step: OnboardingStep;
@@ -27,10 +48,23 @@ export interface OnboardingState {
   hasSubscription: boolean; // subscription_plan != 'free' and status active|trialing
 }
 
+/** All known step ids — superset of any concrete order. Used by
+ *  isValidStep so `?step=suite` doesn't get silently rewritten to
+ *  'stripe' for non-Suite users (the page itself decides whether the
+ *  step is reachable; the URL parser just decides whether the value is
+ *  a known step id). */
+const ALL_STEP_IDS: readonly OnboardingStep[] = [
+  'stripe',
+  'integrations',
+  'client',
+  'brief',
+  'suite',
+] as const;
+
 export function isValidStep(v: unknown): v is OnboardingStep {
   return (
     typeof v === 'string' &&
-    (STEP_ORDER as readonly string[]).includes(v)
+    (ALL_STEP_IDS as readonly string[]).includes(v)
   );
 }
 
@@ -38,24 +72,39 @@ export function parseStep(v: string | null | undefined): OnboardingStep {
   return isValidStep(v) ? v : 'stripe';
 }
 
-export function stepIndex(step: OnboardingStep): number {
-  return STEP_ORDER.indexOf(step);
+/** Step index against a specific order (defaults to the static
+ *  4-step `STEP_ORDER`). Pass the result of `buildStepOrder` from the
+ *  wizard page so the 'suite' step slot is honored. */
+export function stepIndex(
+  step: OnboardingStep,
+  order: readonly OnboardingStep[] = STEP_ORDER,
+): number {
+  return order.indexOf(step);
 }
 
-export function isLastStep(step: OnboardingStep): boolean {
-  return stepIndex(step) === STEP_ORDER.length - 1;
+export function isLastStep(
+  step: OnboardingStep,
+  order: readonly OnboardingStep[] = STEP_ORDER,
+): boolean {
+  return stepIndex(step, order) === order.length - 1;
 }
 
-export function nextStep(step: OnboardingStep): OnboardingStep | null {
-  const i = stepIndex(step);
-  if (i < 0 || i >= STEP_ORDER.length - 1) return null;
-  return STEP_ORDER[i + 1];
+export function nextStep(
+  step: OnboardingStep,
+  order: readonly OnboardingStep[] = STEP_ORDER,
+): OnboardingStep | null {
+  const i = stepIndex(step, order);
+  if (i < 0 || i >= order.length - 1) return null;
+  return order[i + 1];
 }
 
-export function prevStep(step: OnboardingStep): OnboardingStep | null {
-  const i = stepIndex(step);
+export function prevStep(
+  step: OnboardingStep,
+  order: readonly OnboardingStep[] = STEP_ORDER,
+): OnboardingStep | null {
+  const i = stepIndex(step, order);
   if (i <= 0) return null;
-  return STEP_ORDER[i - 1];
+  return order[i - 1];
 }
 
 // The wizard is complete only when:
