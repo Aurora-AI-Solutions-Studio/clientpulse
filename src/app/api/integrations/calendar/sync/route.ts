@@ -81,7 +81,23 @@ export async function POST(_request: NextRequest) {
       .eq('agency_id', agencyId);
 
     if (!clients || clients.length === 0) {
-      return NextResponse.json({ eventsFound: googleEvents.length, clientsMatched: 0, message: 'No clients to match against' });
+      // No clients to match against — record that the sync ran successfully
+      // anyway so the UI doesn't keep showing "Last sync: Never". Without
+      // this the user would think Sync Now was broken every time they hit
+      // it on an empty-roster account.
+      await serviceClient
+        .from('integration_connections')
+        .update({
+          last_sync_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', connection.id);
+      return NextResponse.json({
+        success: true,
+        eventsFound: googleEvents.length,
+        clientsMatched: 0,
+        message: 'Sync ran — no clients to match against. Add a client first to surface engagement.',
+      });
     }
 
     // Match events to clients
