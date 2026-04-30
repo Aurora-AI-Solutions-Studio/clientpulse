@@ -23,12 +23,6 @@ interface User {
   };
 }
 
-interface StripeStatus {
-  connected: boolean;
-  accountId?: string;
-  email?: string;
-}
-
 interface IntegrationConnection {
   id: string;
   provider: string;
@@ -38,6 +32,14 @@ interface IntegrationConnection {
   connected_at?: string;
   last_sync_at?: string;
   error?: string;
+}
+
+interface StripeConnectionStatus {
+  connected: boolean;
+  accountId: string | null;
+  syncedAt: string | null;
+  syncError: string | null;
+  invoiceCount: number;
 }
 
 interface MeSummary {
@@ -70,7 +72,7 @@ const TIER_DESCRIPTION: Record<MeSummary['tier'], string> = {
 export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [stripeStatus] = useState<StripeStatus>({ connected: false });
+  const [stripeConn, setStripeConn] = useState<StripeConnectionStatus | null>(null);
   const [connections, setConnections] = useState<IntegrationConnection[]>([]);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
   const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
@@ -80,6 +82,7 @@ export default function SettingsPage() {
   const [unmatched, setUnmatched] = useState<UnmatchedSummary | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [stripeConnecting, setStripeConnecting] = useState(false);
+  const [stripeSyncing, setStripeSyncing] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   const fetchConnections = useCallback(async () => {
@@ -91,6 +94,18 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Error fetching connections:', error);
+    }
+  }, []);
+
+  const fetchStripeStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/integrations/stripe/status', { cache: 'no-store' });
+      if (res.ok) {
+        const data: StripeConnectionStatus = await res.json();
+        setStripeConn(data);
+      }
+    } catch (error) {
+      console.error('Error fetching Stripe status:', error);
     }
   }, []);
 
@@ -114,6 +129,7 @@ export default function SettingsPage() {
 
     fetchUserData();
     fetchConnections();
+    fetchStripeStatus();
     void (async () => {
       try {
         const res = await fetch('/api/me', { cache: 'no-store' });
@@ -142,12 +158,17 @@ export default function SettingsPage() {
     // Check URL params for recently connected provider
     const params = new URLSearchParams(window.location.search);
     const connected = params.get('connected');
+    const stripeSuccess = params.get('connect_success');
     if (connected) {
       fetchConnections();
-      // Clean up URL
       window.history.replaceState({}, '', '/dashboard/settings');
     }
-  }, [fetchConnections]);
+    if (stripeSuccess) {
+      // Refresh Stripe status after the OAuth callback redirects back.
+      fetchStripeStatus();
+      window.history.replaceState({}, '', '/dashboard/settings');
+    }
+  }, [fetchConnections, fetchStripeStatus]);
 
   const getConnection = (provider: string) =>
     connections.find((c) => c.provider === provider && c.status === 'connected');
@@ -239,6 +260,33 @@ export default function SettingsPage() {
       setStatusMessage({ kind: 'err', text: 'Sync failed — check your connection and retry.' });
     } finally {
       setSyncingProvider(null);
+    }
+  };
+
+  const handleStripeSync = async () => {
+    setStripeSyncing(true);
+    setStatusMessage(null);
+    try {
+      const res = await fetch('/api/integrations/stripe/sync', { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const summary =
+          `${body.invoicesUpserted ?? 0} invoice(s) synced from Stripe` +
+          (body.message ? ` — ${body.message}` : '');
+        setStatusMessage({ kind: 'ok', text: summary });
+        await fetchStripeStatus();
+      } else {
+        setStatusMessage({
+          kind: 'err',
+          text: body.message || body.error || `Stripe sync failed (${res.status})`,
+        });
+        await fetchStripeStatus();
+      }
+    } catch (error) {
+      console.error('Error syncing Stripe:', error);
+      setStatusMessage({ kind: 'err', text: 'Stripe sync failed — check your connection and retry.' });
+    } finally {
+      setStripeSyncing(false);
     }
   };
 
@@ -757,34 +805,71 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Stripe */}
-          <div className="flex items-center justify-between p-4 border border-[#1a2540] rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#635bff]/10 flex items-center justify-center">
-                <span className="text-[#635bff] font-bold text-sm">S</span>
+          {/* Stripe — drives the Financial Health dimension of every
+              client's score. Connection state comes from
+              /api/integrations/stripe/status (reads
+              agencies.stripe_connected_account_id + sync state). */}
+          <div
+            className={`p-4 border rounded-lg transition-all ${
+              stripeConn?.connected
+                ? 'border-[#635bff]/30 bg-[#635bff]/5'
+                : 'border-[#1a2540]'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#635bff]/10 flex items-center justify-center">
+                  <span className="text-[#635bff] font-bold text-sm">S</span>
+                </div>
+                <div>
+                  <p className="font-medium text-white">Stripe</p>
+                  {stripeConn?.connected ? (
+                    <p className="text-xs text-[#a78bfa]">
+                      Connected · {stripeConn.invoiceCount} invoice
+                      {stripeConn.invoiceCount === 1 ? '' : 's'} cached
+                    </p>
+                  ) : (
+                    <p className="text-xs text-[#7a88a8]">
+                      Track payment health, invoice disputes, revenue trends — feeds the Monday Brief
+                    </p>
+                  )}
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-white">Stripe</p>
-                <p className="text-xs text-[#7a88a8]">
-                  {stripeStatus.connected
-                    ? `Connected to ${stripeStatus.email}`
-                    : 'Track payment health & invoice signals'}
-                </p>
+              <div className="flex items-center gap-2">
+                {stripeConn?.connected ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleStripeSync}
+                    disabled={stripeSyncing}
+                    className="text-[#a78bfa] border-[#635bff]/20 hover:bg-[#635bff]/10"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 mr-1.5 ${stripeSyncing ? 'animate-spin' : ''}`}
+                    />
+                    {stripeSyncing ? 'Syncing…' : 'Sync Now'}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleStripeConnect}
+                    disabled={stripeConnecting}
+                  >
+                    {stripeConnecting ? 'Connecting…' : 'Connect'}
+                  </Button>
+                )}
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={stripeStatus.connected ? undefined : handleStripeConnect}
-              disabled={stripeConnecting}
-              className={
-                stripeStatus.connected
-                  ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border-green-500/20'
-                  : ''
-              }
-            >
-              {stripeStatus.connected ? 'Connected' : stripeConnecting ? 'Connecting…' : 'Connect'}
-            </Button>
+            {stripeConn?.connected && (
+              <div className="mt-3 pt-3 border-t border-[#1a2540] text-xs text-[#7a88a8] flex items-center gap-3">
+                <Clock className="w-3 h-3" />
+                <span>Last sync: {formatSyncTime(stripeConn.syncedAt ?? undefined)}</span>
+                {stripeConn.syncError && (
+                  <span className="text-red-300">· {stripeConn.syncError}</span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Slack — webhook-based notifications */}
