@@ -87,7 +87,7 @@ export async function POST(_request: NextRequest) {
     // 3. Pull current CP clients for matching.
     const { data: clientsRaw } = await serviceClient
       .from('clients')
-      .select('id, contact_email, company')
+      .select('id, contact_email, company:company_name')
       .eq('agency_id', agencyId);
     const clients = (clientsRaw ?? []) as ClientMatchInput[];
 
