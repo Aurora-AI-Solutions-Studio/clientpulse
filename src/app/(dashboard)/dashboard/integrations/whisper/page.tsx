@@ -28,6 +28,16 @@ export default function WhisperIntegrationPage() {
   const [localUrl, setLocalUrl] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // The /api/transcription/settings route returns
+  //   { settings: { transcriptionMode, localWhisperEndpoint } }
+  // — adapt to this page's local TranscriptionSettings shape on read/write.
+  type RouteShape = {
+    settings: {
+      transcriptionMode: 'cloud' | 'local' | 'hybrid';
+      localWhisperEndpoint: string | null;
+    };
+  };
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -35,11 +45,15 @@ export default function WhisperIntegrationPage() {
         setLoading(true);
         const res = await fetch('/api/transcription/settings', { cache: 'no-store' });
         if (!res.ok) throw new Error(`Failed to load transcription settings (${res.status})`);
-        const data: TranscriptionSettings = await res.json();
+        const data: RouteShape = await res.json();
+        const next: TranscriptionSettings = {
+          mode: data.settings.transcriptionMode,
+          localWhisperUrl: data.settings.localWhisperEndpoint ?? undefined,
+        };
         if (!cancelled) {
-          setSettings(data);
-          setSelectedMode(data.mode);
-          setLocalUrl(data.localWhisperUrl || '');
+          setSettings(next);
+          setSelectedMode(next.mode);
+          setLocalUrl(next.localWhisperUrl || '');
         }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load');
@@ -56,9 +70,9 @@ export default function WhisperIntegrationPage() {
     try {
       setSaving(true);
       setError(null);
-      const payload: TranscriptionSettings = {
-        mode: selectedMode,
-        ...(selectedMode !== 'cloud' && localUrl ? { localWhisperUrl: localUrl } : {}),
+      const payload = {
+        transcriptionMode: selectedMode,
+        ...(selectedMode !== 'cloud' && localUrl ? { localWhisperEndpoint: localUrl } : {}),
       };
       const res = await fetch('/api/transcription/settings', {
         method: 'PATCH',
@@ -66,8 +80,11 @@ export default function WhisperIntegrationPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`Failed to save settings (${res.status})`);
-      const data: TranscriptionSettings = await res.json();
-      setSettings(data);
+      const data: RouteShape = await res.json();
+      setSettings({
+        mode: data.settings.transcriptionMode,
+        localWhisperUrl: data.settings.localWhisperEndpoint ?? undefined,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save');
     } finally {

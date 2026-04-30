@@ -79,6 +79,8 @@ export default function SettingsPage() {
   const [suiteStatus, setSuiteStatus] = useState<SuiteStatus | null>(null);
   const [unmatched, setUnmatched] = useState<UnmatchedSummary | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [stripeConnecting, setStripeConnecting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   const fetchConnections = useCallback(async () => {
     try {
@@ -173,15 +175,26 @@ export default function SettingsPage() {
 
   const handleDisconnect = async (connectionId: string) => {
     setDisconnectingId(connectionId);
+    setStatusMessage(null);
     try {
-      const res = await fetch(`/api/integrations/connections?connectionId=${connectionId}`, {
+      // Route accepts ?id= (canonical) and ?connectionId= (legacy alias);
+      // we send the canonical name now.
+      const res = await fetch(`/api/integrations/connections?id=${connectionId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
         await fetchConnections();
+        setStatusMessage({ kind: 'ok', text: 'Integration disconnected.' });
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setStatusMessage({
+          kind: 'err',
+          text: body.error || `Disconnect failed (${res.status})`,
+        });
       }
     } catch (error) {
       console.error('Error disconnecting:', error);
+      setStatusMessage({ kind: 'err', text: 'Disconnect failed — check your connection and retry.' });
     } finally {
       setDisconnectingId(null);
     }
@@ -189,6 +202,7 @@ export default function SettingsPage() {
 
   const handleSync = async (provider: 'google_calendar' | 'gmail' | 'zoom') => {
     setSyncingProvider(provider);
+    setStatusMessage(null);
     try {
       const syncEndpointMap: Record<string, string> = {
         google_calendar: '/api/integrations/calendar/sync',
@@ -197,13 +211,49 @@ export default function SettingsPage() {
       };
       const endpoint = syncEndpointMap[provider];
       const res = await fetch(endpoint, { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
       if (res.ok) {
         await fetchConnections();
+        const summary =
+          provider === 'google_calendar'
+            ? `${body.eventsFound ?? 0} calendar events synced`
+            : provider === 'gmail'
+            ? `${body.threadsFound ?? body.threadsProcessed ?? 0} email threads synced`
+            : `${body.meetingsCreated ?? 0} Zoom meetings synced`;
+        setStatusMessage({ kind: 'ok', text: summary });
+      } else {
+        setStatusMessage({
+          kind: 'err',
+          text: body.error || `Sync failed (${res.status})`,
+        });
       }
     } catch (error) {
       console.error(`Error syncing ${provider}:`, error);
+      setStatusMessage({ kind: 'err', text: 'Sync failed — check your connection and retry.' });
     } finally {
       setSyncingProvider(null);
+    }
+  };
+
+  const handleStripeConnect = async () => {
+    setStripeConnecting(true);
+    setStatusMessage(null);
+    try {
+      const res = await fetch('/api/stripe/connect', { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body.authorizationUrl) {
+        window.location.href = body.authorizationUrl;
+        return;
+      }
+      setStatusMessage({
+        kind: 'err',
+        text: body.error || `Stripe Connect not available (${res.status})`,
+      });
+    } catch (error) {
+      console.error('Error starting Stripe Connect:', error);
+      setStatusMessage({ kind: 'err', text: 'Stripe Connect failed — check your connection and retry.' });
+    } finally {
+      setStripeConnecting(false);
     }
   };
 
@@ -246,6 +296,26 @@ export default function SettingsPage() {
           Manage your account settings and integrations
         </p>
       </div>
+
+      {/* Inline status banner — shows sync / disconnect / Stripe-connect outcomes */}
+      {statusMessage && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm flex items-center justify-between gap-3 ${
+            statusMessage.kind === 'ok'
+              ? 'border-green-500/30 bg-green-500/10 text-green-300'
+              : 'border-red-500/30 bg-red-500/10 text-red-300'
+          }`}
+        >
+          <span>{statusMessage.text}</span>
+          <button
+            type="button"
+            onClick={() => setStatusMessage(null)}
+            className="text-xs uppercase tracking-wider opacity-70 hover:opacity-100"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Profile Section */}
       <Card>
@@ -698,13 +768,15 @@ export default function SettingsPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={stripeStatus.connected ? undefined : handleStripeConnect}
+              disabled={stripeConnecting}
               className={
                 stripeStatus.connected
                   ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border-green-500/20'
                   : ''
               }
             >
-              {stripeStatus.connected ? 'Connected' : 'Connect'}
+              {stripeStatus.connected ? 'Connected' : stripeConnecting ? 'Connecting…' : 'Connect'}
             </Button>
           </div>
 

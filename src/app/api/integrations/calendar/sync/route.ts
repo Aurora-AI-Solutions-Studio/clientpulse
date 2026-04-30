@@ -1,5 +1,4 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { encryptToken, decryptToken } from '@/lib/crypto/integration-tokens';
 import {
@@ -8,38 +7,24 @@ import {
   computeCalendarMetrics,
   refreshCalendarToken,
 } from '@/lib/agents/calendar-intelligence-agent';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 /**
  * POST /api/integrations/calendar/sync
- * Trigger a calendar sync: fetch events from Google, match to clients, compute metrics
+ * Trigger a calendar sync: fetch events from Google, match to clients, compute metrics.
+ * Auth + writes via service client to avoid RLS-context drift (see /api/slack/route.ts).
  */
 export async function POST(_request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.agency_id) {
-      return NextResponse.json({ error: 'No agency found' }, { status: 404 });
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient } = auth.ctx;
 
     // Get calendar connection
-    const { data: connection } = await supabase
+    const { data: connection } = await serviceClient
       .from('integration_connections')
       .select('*')
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .eq('provider', 'google_calendar')
       .eq('status', 'connected')
       .single();
@@ -63,7 +48,7 @@ export async function POST(_request: NextRequest) {
         accessToken = refreshed.access_token;
 
         // Update stored token
-        await supabase
+        await serviceClient
           .from('integration_connections')
           .update({
             access_token: encryptToken(refreshed.access_token),
@@ -75,7 +60,7 @@ export async function POST(_request: NextRequest) {
           .eq('id', connection.id);
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError);
-        await supabase
+        await serviceClient
           .from('integration_connections')
           .update({ status: 'expired', error: 'Token refresh failed' })
           .eq('id', connection.id);
@@ -90,10 +75,10 @@ export async function POST(_request: NextRequest) {
     const googleEvents = await fetchGoogleCalendarEvents(accessToken!, timeMin, timeMax);
 
     // Get agency clients for matching
-    const { data: clients } = await supabase
+    const { data: clients } = await serviceClient
       .from('clients')
       .select('id, contact_email, company')
-      .eq('agency_id', profile.agency_id);
+      .eq('agency_id', agencyId);
 
     if (!clients || clients.length === 0) {
       return NextResponse.json({ eventsFound: googleEvents.length, clientsMatched: 0, message: 'No clients to match against' });
@@ -125,11 +110,11 @@ export async function POST(_request: NextRequest) {
 
       if (!startTime || !endTime) continue;
 
-      const { error: upsertError } = await supabase
+      const { error: upsertError } = await serviceClient
         .from('calendar_events')
         .upsert(
           {
-            agency_id: profile.agency_id,
+            agency_id: agencyId,
             client_id: clientId,
             connection_id: connection.id,
             google_event_id: gEvent.id,
@@ -161,10 +146,10 @@ export async function POST(_request: NextRequest) {
     const matchedClientIds = new Set(eventClientMap.values());
 
     // Fetch all calendar events for these clients to compute metrics
-    const { data: allCalendarEvents } = await supabase
+    const { data: allCalendarEvents } = await serviceClient
       .from('calendar_events')
       .select('id, client_id, start_time, end_time, attendees, status, is_recurring')
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .not('client_id', 'is', null);
 
     for (const clientId of Array.from(matchedClientIds)) {
@@ -180,11 +165,11 @@ export async function POST(_request: NextRequest) {
       }>);
 
       // Upsert engagement_metrics
-      await supabase
+      await serviceClient
         .from('engagement_metrics')
         .upsert(
           {
-            agency_id: profile.agency_id,
+            agency_id: agencyId,
             client_id: clientId,
             calendar_score: metrics.cadenceScore,
             meeting_frequency: metrics.avgMeetingsPerWeek,
@@ -213,7 +198,7 @@ export async function POST(_request: NextRequest) {
     }
 
     // Update last sync time
-    await supabase
+    await serviceClient
       .from('integration_connections')
       .update({
         last_sync_at: new Date().toISOString(),
