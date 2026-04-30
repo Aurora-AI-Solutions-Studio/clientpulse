@@ -1,5 +1,4 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
@@ -33,38 +32,37 @@ export async function GET(_request: NextRequest) {
 
 /**
  * DELETE /api/integrations/connections?id=<connection_id>
- * Disconnect an integration
+ * (legacy alias `connectionId=` also accepted to match the settings-page caller)
+ * Disconnect an integration. Service-client auth + writes to avoid the
+ * RLS-context-drift bug; ownership is checked manually via agency_id.
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient } = auth.ctx;
 
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const connectionId = request.nextUrl.searchParams.get('id');
+    const connectionId =
+      request.nextUrl.searchParams.get('id') ||
+      request.nextUrl.searchParams.get('connectionId');
     if (!connectionId) {
       return NextResponse.json({ error: 'Connection ID required' }, { status: 400 });
     }
 
-    // Verify ownership
-    const { data: connection } = await supabase
+    // Ownership check — match the agency, not just the user, so a manager
+    // can disconnect a connection started by an owner (and vice versa).
+    const { data: connection } = await serviceClient
       .from('integration_connections')
-      .select('id, user_id')
+      .select('id, agency_id')
       .eq('id', connectionId)
-      .single();
+      .maybeSingle();
 
-    if (!connection || connection.user_id !== user.id) {
+    if (!connection || connection.agency_id !== agencyId) {
       return NextResponse.json({ error: 'Connection not found' }, { status: 404 });
     }
 
     // Soft disconnect (keep data, revoke tokens)
-    const { error } = await supabase
+    const { error } = await serviceClient
       .from('integration_connections')
       .update({
         status: 'disconnected',

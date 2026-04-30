@@ -1,5 +1,4 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { encryptToken, decryptToken } from '@/lib/crypto/integration-tokens';
 import {
@@ -9,38 +8,25 @@ import {
   matchMeetingsToClients,
   refreshZoomToken,
 } from '@/lib/agents/zoom-intelligence-agent';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 /**
  * POST /api/integrations/zoom/sync
- * Sync Zoom meetings + recordings: fetch from Zoom API, match to clients, store metadata
+ * Sync Zoom meetings + recordings: fetch from Zoom API, match to clients, store metadata.
+ * Auth + agency resolution + writes via service client to avoid the
+ * RLS-context-drift bug (see /api/slack/route.ts for rationale).
  */
 export async function POST(_request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.agency_id) {
-      return NextResponse.json({ error: 'No agency found' }, { status: 404 });
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient } = auth.ctx;
 
     // Get Zoom connection
-    const { data: connection } = await supabase
+    const { data: connection } = await serviceClient
       .from('integration_connections')
       .select('*')
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .eq('provider', 'zoom')
       .eq('status', 'connected')
       .single();
@@ -64,7 +50,7 @@ export async function POST(_request: NextRequest) {
         accessToken = refreshed.access_token;
 
         // Zoom rotates refresh tokens — store the new one
-        await supabase
+        await serviceClient
           .from('integration_connections')
           .update({
             access_token: encryptToken(refreshed.access_token),
@@ -77,7 +63,7 @@ export async function POST(_request: NextRequest) {
           .eq('id', connection.id);
       } catch (refreshError) {
         console.error('Zoom token refresh failed:', refreshError);
-        await supabase
+        await serviceClient
           .from('integration_connections')
           .update({ status: 'expired', error: 'Token refresh failed' })
           .eq('id', connection.id);
@@ -111,10 +97,10 @@ export async function POST(_request: NextRequest) {
     }
 
     // Get agency clients for matching
-    const { data: clients } = await supabase
+    const { data: clients } = await serviceClient
       .from('clients')
       .select('id, contact_email, company')
-      .eq('agency_id', profile.agency_id);
+      .eq('agency_id', agencyId);
 
     // Fetch participants for each meeting (rate-limited: max 30 to avoid throttling)
     const meetingsWithParticipants: Array<{
@@ -149,11 +135,11 @@ export async function POST(_request: NextRequest) {
 
       const participants = meetingsWithParticipants.find((m) => m.uuid === meeting.uuid)?.participants || [];
 
-      const { error: upsertError } = await supabase
+      const { error: upsertError } = await serviceClient
         .from('zoom_meetings')
         .upsert(
           {
-            agency_id: profile.agency_id,
+            agency_id: agencyId,
             client_id: clientId,
             connection_id: connection.id,
             zoom_meeting_id: String(meeting.id),
@@ -189,10 +175,10 @@ export async function POST(_request: NextRequest) {
     );
 
     // Fetch all zoom meetings for engagement computation
-    const { data: allZoomMeetings } = await supabase
+    const { data: allZoomMeetings } = await serviceClient
       .from('zoom_meetings')
       .select('client_id, start_time, duration_minutes, has_recording')
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .not('client_id', 'is', null);
 
     for (const clientId of Array.from(matchedClientIds)) {
@@ -208,21 +194,21 @@ export async function POST(_request: NextRequest) {
 
       // Update engagement_metrics with Zoom data
       // We add Zoom meetings to the calendar_score as supplementary meeting signal
-      const { data: existing } = await supabase
+      const { data: existing } = await serviceClient
         .from('engagement_metrics')
         .select('calendar_score, meeting_frequency')
-        .eq('agency_id', profile.agency_id)
+        .eq('agency_id', agencyId)
         .eq('client_id', clientId)
         .single();
 
       const zoomMeetingsPerWeek = last30d.length / 4.3;
       const combinedFrequency = (existing?.meeting_frequency || 0) + zoomMeetingsPerWeek;
 
-      await supabase
+      await serviceClient
         .from('engagement_metrics')
         .upsert(
           {
-            agency_id: profile.agency_id,
+            agency_id: agencyId,
             client_id: clientId,
             // Boost calendar_score with Zoom meeting data (cap at 100)
             calendar_score: Math.min(100, (existing?.calendar_score || 0) + Math.min(30, last30d.length * 10)),
@@ -247,7 +233,7 @@ export async function POST(_request: NextRequest) {
     }
 
     // Update last sync time
-    await supabase
+    await serviceClient
       .from('integration_connections')
       .update({
         last_sync_at: new Date().toISOString(),

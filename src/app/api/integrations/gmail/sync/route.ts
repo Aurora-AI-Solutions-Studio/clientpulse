@@ -1,5 +1,4 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   fetchGmailThreads,
@@ -9,38 +8,24 @@ import {
 } from '@/lib/agents/email-intelligence-agent';
 import { refreshCalendarToken } from '@/lib/agents/calendar-intelligence-agent';
 import { encryptToken, decryptToken } from '@/lib/crypto/integration-tokens';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 
 /**
  * POST /api/integrations/gmail/sync
- * Trigger a Gmail sync: fetch threads, match to clients, compute email metrics
+ * Trigger a Gmail sync: fetch threads, match to clients, compute email metrics.
+ * Auth + writes via service client to avoid RLS-context drift (see /api/slack/route.ts).
  */
 export async function POST(_request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.agency_id) {
-      return NextResponse.json({ error: 'No agency found' }, { status: 404 });
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient } = auth.ctx;
 
     // Get Gmail connection
-    const { data: connection } = await supabase
+    const { data: connection } = await serviceClient
       .from('integration_connections')
       .select('*')
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .eq('provider', 'gmail')
       .eq('status', 'connected')
       .single();
@@ -62,7 +47,7 @@ export async function POST(_request: NextRequest) {
           process.env.GOOGLE_CLIENT_SECRET!
         );
         accessToken = refreshed.access_token;
-        await supabase
+        await serviceClient
           .from('integration_connections')
           .update({
             access_token: encryptToken(refreshed.access_token),
@@ -71,7 +56,7 @@ export async function POST(_request: NextRequest) {
           })
           .eq('id', connection.id);
       } catch {
-        await supabase
+        await serviceClient
           .from('integration_connections')
           .update({ status: 'expired', error: 'Token refresh failed' })
           .eq('id', connection.id);
@@ -84,10 +69,10 @@ export async function POST(_request: NextRequest) {
     const threadList = await fetchGmailThreads(accessToken!, query, 100);
 
     // Get agency clients for matching
-    const { data: clients } = await supabase
+    const { data: clients } = await serviceClient
       .from('clients')
       .select('id, contact_email, company')
-      .eq('agency_id', profile.agency_id);
+      .eq('agency_id', agencyId);
 
     if (!clients || clients.length === 0) {
       return NextResponse.json({ threadsFound: threadList.length, clientsMatched: 0 });
@@ -176,11 +161,11 @@ export async function POST(_request: NextRequest) {
     // Upsert email threads into DB
     for (const thread of threadDetails) {
       const clientId = threadClientMap.get(thread.id) || null;
-      await supabase
+      await serviceClient
         .from('email_threads')
         .upsert(
           {
-            agency_id: profile.agency_id,
+            agency_id: agencyId,
             client_id: clientId,
             connection_id: connection.id,
             gmail_thread_id: thread.id,
@@ -199,10 +184,10 @@ export async function POST(_request: NextRequest) {
     // Compute email metrics per matched client
     const matchedClientIds = new Set(threadClientMap.values());
 
-    const { data: allEmailThreads } = await supabase
+    const { data: allEmailThreads } = await serviceClient
       .from('email_threads')
       .select('id, client_id, last_message_date, message_count, participants, is_inbound, synced_at')
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .not('client_id', 'is', null);
 
     for (const clientId of Array.from(matchedClientIds)) {
@@ -218,8 +203,8 @@ export async function POST(_request: NextRequest) {
       }>);
 
       // Upsert into engagement_metrics (merge with calendar data if exists)
-      const { error: rpcError } = await supabase.rpc('upsert_email_engagement', {
-        p_agency_id: profile.agency_id,
+      const { error: rpcError } = await serviceClient.rpc('upsert_email_engagement', {
+        p_agency_id: agencyId,
         p_client_id: clientId,
         p_email_score: 50, // Will be recomputed by engagement agent
         p_email_volume_trend: metrics.volumeTrend,
@@ -228,11 +213,11 @@ export async function POST(_request: NextRequest) {
       });
       if (rpcError) {
         // Fallback: direct upsert if RPC doesn't exist
-        await supabase
+        await serviceClient
           .from('engagement_metrics')
           .upsert(
             {
-              agency_id: profile.agency_id,
+              agency_id: agencyId,
               client_id: clientId,
               email_score: 50,
               email_volume_trend: metrics.volumeTrend,
@@ -246,7 +231,7 @@ export async function POST(_request: NextRequest) {
     }
 
     // Update last sync time
-    await supabase
+    await serviceClient
       .from('integration_connections')
       .update({ last_sync_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq('id', connection.id);
