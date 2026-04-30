@@ -71,7 +71,7 @@ export async function POST(_request: NextRequest) {
     // Get agency clients for matching
     const { data: clients } = await serviceClient
       .from('clients')
-      .select('id, contact_email, company')
+      .select('id, contact_email, company:company_name')
       .eq('agency_id', agencyId);
 
     if (!clients || clients.length === 0) {
