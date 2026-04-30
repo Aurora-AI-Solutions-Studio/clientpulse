@@ -1410,6 +1410,7 @@ export default function Home() {
                 { label: 'ReForge', href: 'https://reforge.helloaurora.ai' },
                 { label: 'Model Card', href: '/model-card' },
                 { label: 'Content Policy', href: '/content-policy' },
+                { label: 'FAQ', href: '/faq' },
                 { label: 'Impressum', href: 'https://helloaurora.ai/impressum' },
                 { label: 'Privacy', href: 'https://helloaurora.ai/privacy' },
                 { label: 'Terms', href: 'https://helloaurora.ai/terms' },
