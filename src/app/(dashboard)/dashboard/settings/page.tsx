@@ -83,6 +83,7 @@ export default function SettingsPage() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [stripeConnecting, setStripeConnecting] = useState(false);
   const [stripeSyncing, setStripeSyncing] = useState(false);
+  const [stripeDisconnecting, setStripeDisconnecting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   const fetchConnections = useCallback(async () => {
@@ -260,6 +261,29 @@ export default function SettingsPage() {
       setStatusMessage({ kind: 'err', text: 'Sync failed — check your connection and retry.' });
     } finally {
       setSyncingProvider(null);
+    }
+  };
+
+  const handleStripeDisconnect = async () => {
+    setStripeDisconnecting(true);
+    setStatusMessage(null);
+    try {
+      const res = await fetch('/api/integrations/stripe/disconnect', { method: 'POST' });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setStatusMessage({ kind: 'ok', text: body.message || 'Stripe disconnected.' });
+        await fetchStripeStatus();
+      } else {
+        setStatusMessage({
+          kind: 'err',
+          text: body.error || `Disconnect failed (${res.status})`,
+        });
+      }
+    } catch (error) {
+      console.error('Error disconnecting Stripe:', error);
+      setStatusMessage({ kind: 'err', text: 'Disconnect failed — check your connection and retry.' });
+    } finally {
+      setStripeDisconnecting(false);
     }
   };
 
@@ -837,18 +861,30 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center gap-2">
                 {stripeConn?.connected ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleStripeSync}
-                    disabled={stripeSyncing}
-                    className="text-[#a78bfa] border-[#635bff]/20 hover:bg-[#635bff]/10"
-                  >
-                    <RefreshCw
-                      className={`w-3.5 h-3.5 mr-1.5 ${stripeSyncing ? 'animate-spin' : ''}`}
-                    />
-                    {stripeSyncing ? 'Syncing…' : 'Sync Now'}
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleStripeSync}
+                      disabled={stripeSyncing || stripeDisconnecting}
+                      className="text-[#a78bfa] border-[#635bff]/20 hover:bg-[#635bff]/10"
+                    >
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 mr-1.5 ${stripeSyncing ? 'animate-spin' : ''}`}
+                      />
+                      {stripeSyncing ? 'Syncing…' : 'Sync Now'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleStripeDisconnect}
+                      disabled={stripeSyncing || stripeDisconnecting}
+                      className="text-red-400 border-red-500/20 hover:bg-red-500/10"
+                      title="Disconnect Stripe"
+                    >
+                      <Unlink className="w-3.5 h-3.5" />
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     variant="outline"
