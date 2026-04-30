@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   STEP_ORDER,
+  buildStepOrder,
   canAdvance,
   isLastStep,
   isValidStep,
@@ -77,6 +78,45 @@ describe('canAdvance', () => {
     for (const step of ['integrations', 'client', 'brief'] as const) {
       expect(canAdvance(step, state({ hasSubscription: false }))).toBe(true);
     }
+  });
+});
+
+describe('buildStepOrder + dynamic helpers (Slice 7b)', () => {
+  it('non-Suite agencies get the canonical 4-step order', () => {
+    const order = buildStepOrder({ hasSuiteAccess: false, unmatchedCount: 5 });
+    expect(order).toEqual(['stripe', 'integrations', 'client', 'brief']);
+  });
+
+  it('Suite agency with no unmatched signals gets the 4-step order', () => {
+    const order = buildStepOrder({ hasSuiteAccess: true, unmatchedCount: 0 });
+    expect(order).toEqual(['stripe', 'integrations', 'client', 'brief']);
+  });
+
+  it('Suite agency with unmatched signals gets the 5-step order with suite slotted before brief', () => {
+    const order = buildStepOrder({ hasSuiteAccess: true, unmatchedCount: 3 });
+    expect(order).toEqual(['stripe', 'integrations', 'client', 'suite', 'brief']);
+  });
+
+  it('nextStep / prevStep / isLastStep honor the dynamic order', () => {
+    const order = buildStepOrder({ hasSuiteAccess: true, unmatchedCount: 1 });
+    expect(nextStep('client', order)).toBe('suite');
+    expect(nextStep('suite', order)).toBe('brief');
+    expect(prevStep('brief', order)).toBe('suite');
+    expect(prevStep('suite', order)).toBe('client');
+    expect(isLastStep('brief', order)).toBe(true);
+    expect(isLastStep('suite', order)).toBe(false);
+  });
+
+  it('stepIndex returns -1 for steps not in the supplied order (e.g. ?step=suite for non-Suite)', () => {
+    const order = buildStepOrder({ hasSuiteAccess: false, unmatchedCount: 0 });
+    expect(stepIndex('suite', order)).toBe(-1);
+    expect(nextStep('suite', order)).toBeNull();
+    expect(prevStep('suite', order)).toBeNull();
+  });
+
+  it('isValidStep accepts "suite" so the URL parser doesn\'t silently rewrite it', () => {
+    expect(isValidStep('suite')).toBe(true);
+    expect(parseStep('suite')).toBe('suite');
   });
 });
 

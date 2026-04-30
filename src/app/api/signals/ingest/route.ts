@@ -95,6 +95,40 @@ export async function POST(req: NextRequest) {
   }
 
   if (!cpClientId) {
+    // Record the miss so the Suite onboarding wizard can surface it
+    // for manual mapping. Idempotent on (agency_id, rf_client_id) —
+    // repeated misses bump last_seen_at + signal_count instead of
+    // duplicating. Best-effort: a write failure here doesn't fail the
+    // request (RF's outbox would just retry the signal forever).
+    try {
+      const { data: existing } = await supabase
+        .from('cp_rf_unmatched_signals')
+        .select('id, signal_count')
+        .eq('agency_id', agencyId)
+        .eq('rf_client_id', payload.rf_client_id)
+        .maybeSingle();
+      if (existing) {
+        const { error: updErr } = await supabase
+          .from('cp_rf_unmatched_signals')
+          .update({
+            last_seen_at: new Date().toISOString(),
+            signal_count: ((existing.signal_count as number) ?? 1) + 1,
+            // Refresh the name in case it changed since the first miss.
+            rf_client_name: payload.rf_client_name,
+          })
+          .eq('id', existing.id as string);
+        if (updErr) throw updErr;
+      } else {
+        const { error: insErr } = await supabase.from('cp_rf_unmatched_signals').insert({
+          agency_id: agencyId,
+          rf_client_id: payload.rf_client_id,
+          rf_client_name: payload.rf_client_name,
+        });
+        if (insErr) throw insErr;
+      }
+    } catch (err) {
+      console.warn('[signals/ingest] unmatched-tracking write failed:', err);
+    }
     return NextResponse.json({ accepted: false, reason: 'unmatched_client' });
   }
 
