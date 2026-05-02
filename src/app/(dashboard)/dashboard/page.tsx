@@ -77,10 +77,10 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Welcome Section */}
       <div>
-        <h2 className="text-3xl text-white mb-2">
+        <h2 className="text-3xl text-white mb-2 font-playfair">
           Welcome back
         </h2>
-        <p className="text-[#7a88a8]">
+        <p className="text-[#7a88a8] font-outfit">
           Here&apos;s what&apos;s happening with your clients today.
         </p>
       </div>

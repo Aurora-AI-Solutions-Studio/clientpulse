@@ -371,6 +371,26 @@ export default function Home() {
           <p className="text-[13px]" style={{ color: 'var(--text-dim)' }}>
             <strong style={{ color: 'var(--teal)', fontWeight: 600 }}>30% off Agency &amp; Suite</strong> &middot; early adopter pricing &middot; first 20 customers per tier
           </p>
+
+          {/* Premium Dashboard Integration Preview */}
+          <div className="relative mx-auto mt-16 max-w-[960px] reveal rounded-xl overflow-hidden border border-[rgba(56,232,200,0.2)] shadow-2xl shadow-[rgba(56,232,200,0.15)] bg-[#06090f]">
+            {/* Browser Chrome */}
+            <div className="flex items-center px-4 py-3 bg-[#0a0f1a] border-b border-[rgba(56,232,200,0.1)] gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#e74c3c]"></div>
+              <div className="w-3 h-3 rounded-full bg-[#f0c84c]"></div>
+              <div className="w-3 h-3 rounded-full bg-[#38e8c8]"></div>
+            </div>
+            {/* Mockup Image / Content placeholder */}
+            <div className="aspect-[16/9] w-full relative">
+              <div className="absolute inset-0 bg-[url('/mockups/clientpulse-dashboard.png')] bg-cover bg-center opacity-90" />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center">
+                  <p className="font-playfair text-4xl font-bold text-white mb-2">94% Health Score</p>
+                  <p className="text-teal font-outfit text-sm">Predictive Retention Active</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -529,7 +549,7 @@ export default function Home() {
             One workflow. <span style={{ color: 'var(--teal)' }}>Five steps.</span>
           </h2>
           <p className="reveal text-[17px] max-w-[680px] font-light leading-[1.7] text-center mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            Connect your data once, see where you stand, get the next move ranked, ship it, and let every outcome sharpen the next decision.
+            Synchronize your data, analyze your client health, strategize the next move, execute it, and compound your retention success.
           </p>
 
           {/* Workflow rail — 5 nodes */}
@@ -560,11 +580,11 @@ export default function Home() {
             </div>
             <div className="grid gap-10 md:grid-cols-5 md:gap-6">
               {[
-                { num: '01', title: 'Connect', cue: 'wire it up', desc: 'Bring your data, voices, and clients in once.', cp: 'Stripe, calendar, email, transcripts' },
-                { num: '02', title: 'Discover', cue: 'look around', desc: "See where you stand — what’s healthy, what’s quiet, what’s at risk.", cp: 'Clients overview — health, signals, risk' },
-                { num: '03', title: 'Decide', cue: 'pick the play', desc: 'Get the next-best move ranked, with the why behind it.', cp: 'Monday Brief — ranked re-engage / upsell / save plays' },
-                { num: '04', title: 'Act', cue: 'execute', desc: 'Ship it — proposals, check-ins, follow-ups — without leaving the suite.', cp: 'Proposals, check-ins, follow-ups' },
-                { num: '05', title: 'Learn', cue: 'compound', desc: 'Every outcome trains the next decision. The more you use it, the sharper it gets.', cp: 'Outcome feedback sharpens future Briefs' },
+                { num: '01', title: 'Synchronize', cue: 'wire it up', desc: 'Bring your data, voices, and clients in once.', cp: 'Stripe, calendar, email, transcripts' },
+                { num: '02', title: 'Analyze', cue: 'look around', desc: "See where you stand — what’s healthy, what’s quiet, what’s at risk.", cp: 'Clients overview — health, signals, risk' },
+                { num: '03', title: 'Strategize', cue: 'pick the play', desc: 'Get the next-best move ranked, with the why behind it.', cp: 'Monday Brief — ranked re-engage / upsell / save plays' },
+                { num: '04', title: 'Execute', cue: 'execute', desc: 'Ship it — proposals, check-ins, follow-ups — without leaving the suite.', cp: 'Proposals, check-ins, follow-ups' },
+                { num: '05', title: 'Compound', cue: 'compound', desc: 'Every outcome trains the next decision. The more you use it, the sharper it gets.', cp: 'Outcome feedback sharpens future Briefs' },
               ].map((node) => (
                 <div key={node.num} className="reveal flex flex-col items-center text-center gap-3 px-2">
                   <div
@@ -608,11 +628,11 @@ export default function Home() {
             </p>
             <dl className="grid gap-2" style={{ gridTemplateColumns: 'max-content 1fr', columnGap: '1rem' }}>
               {[
-                { num: '01', title: 'Connect', cp: 'Stripe, calendar, email, transcripts' },
-                { num: '02', title: 'Discover', cp: 'Clients overview — health, signals, risk' },
-                { num: '03', title: 'Decide', cp: 'Monday Brief — ranked re-engage / upsell / save plays' },
-                { num: '04', title: 'Act', cp: 'Proposals, check-ins, follow-ups' },
-                { num: '05', title: 'Learn', cp: 'Outcome feedback sharpens future Briefs' },
+                { num: '01', title: 'Synchronize', cp: 'Stripe, calendar, email, transcripts' },
+                { num: '02', title: 'Analyze', cp: 'Clients overview — health, signals, risk' },
+                { num: '03', title: 'Strategize', cp: 'Monday Brief — ranked re-engage / upsell / save plays' },
+                { num: '04', title: 'Execute', cp: 'Proposals, check-ins, follow-ups' },
+                { num: '05', title: 'Compound', cp: 'Outcome feedback sharpens future Briefs' },
               ].map((row) => (
                 <div key={row.num} className="contents">
                   <dt style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', paddingTop: '0.1rem' }}>
