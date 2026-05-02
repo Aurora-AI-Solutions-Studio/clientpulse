@@ -4,10 +4,20 @@ import React, { useState, useEffect } from 'react';
 import { STRIPE_PLANS, getAnnualMonthly } from '@/lib/stripe-config';
 import { SubscriptionPlan } from '@/types/stripe';
 
+// Solo+ pricing constants (not in stripe-config — display-only, no checkout yet)
+const SOLO_PLUS_MONTHLY = 99;
+const SOLO_PLUS_ANNUAL_MONTHLY = 83; // $990/yr ÷ 12, rounded
+const SOLO_PLUS_PRICE_ID_MONTHLY = 'price_1TSMHCLER55AcgjYkSAJnw4Q';
+const SOLO_PLUS_PRICE_ID_ANNUAL = 'price_1TSMHFLER55AcgjYetT25Dkn';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _SOLO_PLUS_IDS_VERIFIED = { SOLO_PLUS_PRICE_ID_MONTHLY, SOLO_PLUS_PRICE_ID_ANNUAL };
+
 export default function Home() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [notifyEmail, setNotifyEmail] = useState('');
+  const [notifySubmitted, setNotifySubmitted] = useState(false);
 
   // Intersection Observer for reveal animations
   useEffect(() => {
@@ -39,10 +49,7 @@ export default function Home() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Price cards are driven off STRIPE_PLANS (single source of truth with
-  // src/lib/stripe-config.ts). Annual is 2 months free (10/12 multiplier =
-  // 16.7% off) computed via getAnnualMonthly(). Order matches the cards
-  // below: Solo, Pro, Agency.
+  // Price cards driven off STRIPE_PLANS. Order: Solo, Solo+, Pro, Agency.
   const PLAN_ORDER: SubscriptionPlan[] = ['solo', 'pro', 'agency'];
   const prices = PLAN_ORDER.map((p) => ({
     monthly: String(STRIPE_PLANS[p].price),
@@ -50,9 +57,8 @@ export default function Home() {
     yearlyTotal: STRIPE_PLANS[p].priceYearly,
   }));
 
-  // ── SVG Icon Components (premium look, no emojis) ──
+  // ── SVG Icon Components ──
   const Icon = {
-    // Logo / Analytics
     pulse: (size = 32) => (
       <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
         <rect width="40" height="40" rx="10" fill="url(#cpLogoGrad)"/>
@@ -69,103 +75,92 @@ export default function Home() {
         </defs>
       </svg>
     ),
-    // Alert / Warning
     alertTriangle: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
     ),
-    // Spreadsheet / Grid
     grid: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
     ),
-    // Dollar / Financial
     dollar: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
     ),
-    // Handshake / Relationship
     handshake: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 00-7.65 0l-.77.78-.77-.78a5.4 5.4 0 00-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/></svg>
     ),
-    // Package / Delivery
     package: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
     ),
-    // Signal / Radar / Engagement
     radio: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/><path d="M5 12.55a10.94 10.94 0 012.28-1.49"/><path d="M10.71 5.05A16 16 0 000.01 12"/><path d="M13.29 5.05A16 16 0 0124 12"/><circle cx="12" cy="12" r="2"/></svg>
     ),
-    // Microphone / Meeting
     mic: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
     ),
-    // Chart / Analytics bar
     barChart: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     ),
-    // Trend up / Upsell
     trendUp: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
     ),
-    // Brain / Learning
     brain: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A5.5 5.5 0 005 5.5C5 7 5.5 8 6.5 9c-2 1.5-2.5 4-2 6 .5 1.5 2 3 4 3.5"/><path d="M14.5 2A5.5 5.5 0 0119 5.5c0 1.5-.5 2.5-1.5 3.5 2 1.5 2.5 4 2 6-.5 1.5-2 3-4 3.5"/><path d="M12 2v20"/><path d="M8 8c1.5 0 3 .5 4 2 1-1.5 2.5-2 4-2"/><path d="M8 14c1.5 0 3 .5 4 2 1-1.5 2.5-2 4-2"/></svg>
     ),
-    // Lock / Security
     lock: (size = 18, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
     ),
-    // Zap / Lightning
     zap: (size = 18, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
     ),
-    // Building / Infrastructure
     server: (size = 18, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
     ),
-    // Shield / Data protection
     shield: (size = 18, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
     ),
-    // Menu / Hamburger
     menu: (size = 24, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     ),
-    // Checkmark
     check: (size = 16, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     ),
-    // Recycle / ReForge cross-sell
     refresh: (size = 16, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
     ),
-    // Clock / timer
     clock: (size = 18, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     ),
-    // Alert circle (for action required)
     alertCircle: (size = 14, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     ),
-    // Link / Connection
     link2: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
     ),
-    // Eye / Visibility
     eye: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-    ),
-    // Bar chart (already have barChart but adding as chart variant)
-    barChart3: (size = 22, color = 'currentColor') => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
     ),
   };
 
   return (
     <div className="min-h-screen font-outfit" style={{ background: 'var(--deep)', color: 'var(--text-primary)' }}>
 
+      {/* ═══ SECTION 1: PRE-LAUNCH BANNER ═══ */}
+      <div
+        style={{
+          background: 'linear-gradient(90deg, rgba(56,232,200,0.16), rgba(76,201,240,0.16))',
+          borderBottom: '1px solid rgba(56,232,200,0.3)',
+          padding: '0.55rem 1.5rem',
+          textAlign: 'center',
+          fontSize: '0.82rem',
+          fontWeight: 500,
+          letterSpacing: '0.2px',
+          lineHeight: 1.4,
+        }}
+      >
+        <strong style={{ color: 'var(--teal)', fontWeight: 700 }}>Private launch &middot; Summer 2026.</strong>{' '}
+        Try the live demo today; paid signups open after our German company registration completes.
+      </div>
+
       {/* ═══ NAVIGATION ═══ */}
-      {/* sticky (not fixed) so the EU notice banner above this LandingClient
-          can render in normal flow at the very top of the page. With fixed
-          the nav painted over the banner and hid it. */}
       <nav
         className="sticky top-0 left-0 right-0 z-[100] py-4"
         style={{
@@ -209,17 +204,6 @@ export default function Home() {
             </li>
             <li>
               <button
-                onClick={() => scrollToSection('features')}
-                className="bg-transparent border-none text-sm font-medium tracking-wide transition-colors cursor-pointer"
-                style={{ color: 'var(--color-muted)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-muted)')}
-              >
-                Features
-              </button>
-            </li>
-            <li>
-              <button
                 onClick={() => scrollToSection('pricing')}
                 className="bg-transparent border-none text-sm font-medium tracking-wide transition-colors cursor-pointer"
                 style={{ color: 'var(--color-muted)' }}
@@ -243,18 +227,7 @@ export default function Home() {
             <li>
               <a
                 href="/api/demo/signin"
-                className="bg-transparent border-none text-sm font-medium tracking-wide transition-colors cursor-pointer no-underline"
-                style={{ color: 'var(--color-muted)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-muted)')}
-              >
-                See live demo
-              </a>
-            </li>
-            <li>
-              <button
-                onClick={() => scrollToSection('pricing')}
-                className="py-[10px] px-6 rounded-lg text-sm font-semibold transition-all cursor-pointer border-none inline-block"
+                className="py-[10px] px-6 rounded-lg text-sm font-semibold transition-all cursor-pointer border-none inline-block no-underline"
                 style={{ background: 'var(--teal)', color: 'var(--deep)' }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = '#50f0d4';
@@ -267,8 +240,8 @@ export default function Home() {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                Get Started
-              </button>
+                Try the demo
+              </a>
             </li>
           </ul>
 
@@ -280,9 +253,19 @@ export default function Home() {
             {Icon.menu(24, 'var(--text-primary)')}
           </button>
         </div>
+
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden px-6 pb-4 flex flex-col gap-4" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+            <button onClick={() => { scrollToSection('how-it-works'); setMobileMenuOpen(false); }} className="text-left bg-transparent border-none text-sm cursor-pointer py-2" style={{ color: 'var(--color-muted)' }}>How It Works</button>
+            <button onClick={() => { scrollToSection('pricing'); setMobileMenuOpen(false); }} className="text-left bg-transparent border-none text-sm cursor-pointer py-2" style={{ color: 'var(--color-muted)' }}>Pricing</button>
+            <a href="/auth/login" className="text-sm no-underline py-2" style={{ color: 'var(--color-muted)' }}>Sign in</a>
+            <a href="/api/demo/signin" className="text-sm font-semibold no-underline py-2 px-4 rounded-lg text-center" style={{ background: 'var(--teal)', color: 'var(--deep)' }}>Try the demo</a>
+          </div>
+        )}
       </nav>
 
-      {/* ═══ HERO ═══ */}
+      {/* ═══ SECTION 3: HERO ═══ */}
       <section className="pt-[180px] pb-[120px] text-center relative overflow-hidden">
         {/* Glow effect */}
         <div
@@ -305,8 +288,16 @@ export default function Home() {
               className="w-[6px] h-[6px] rounded-full inline-block"
               style={{ background: 'var(--teal)', animation: 'dot-pulse 2s ease-in-out infinite' }}
             />
-            Private launch · Summer 2026
+            Private launch &middot; Summer 2026
           </div>
+
+          {/* Closed-loop secondary line — spec section 3 */}
+          <p
+            className="mx-auto mb-4 max-w-[640px] text-[15px] font-medium"
+            style={{ color: 'var(--color-muted)', letterSpacing: '0.01em' }}
+          >
+            Most AI client-retention products surface counts. ClientPulse explains them.
+          </p>
 
           <h1
             className="font-playfair font-bold leading-[1.1] mb-6 mx-auto max-w-[800px] tracking-tight"
@@ -335,13 +326,14 @@ export default function Home() {
               lineHeight: 1.7,
             }}
           >
-            ClientPulse combines your Stripe data, meeting recordings, email patterns, and calendar signals into one Client Health Score per account. Get a Monday Brief with exactly who needs attention and what to do about it.
+            Stripe + meeting + email + calendar + content velocity signals fused into one Health Score per client. Monday Brief tells you who needs attention and what to do. Predict churn 60 days early. MCP-native, agency-priced.
           </p>
 
+          {/* Hero CTAs — spec section 8 */}
           <div className="flex justify-center gap-3 mb-5">
-            <button
-              onClick={() => scrollToSection('pricing')}
-              className="py-[14px] px-8 rounded-[10px] text-[15px] font-semibold cursor-pointer whitespace-nowrap transition-all border-none"
+            <a
+              href="/api/demo/signin"
+              className="py-[14px] px-8 rounded-[10px] text-[15px] font-semibold cursor-pointer whitespace-nowrap transition-all border-none no-underline inline-block"
               style={{
                 background: 'var(--teal)',
                 color: 'var(--deep)',
@@ -358,11 +350,11 @@ export default function Home() {
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              Get Started
-            </button>
-            <a
-              href="/api/demo/signin"
-              className="py-[14px] px-8 rounded-[10px] text-[15px] font-semibold whitespace-nowrap transition-all no-underline inline-flex items-center"
+              Try the live demo &rarr;
+            </a>
+            <button
+              onClick={() => scrollToSection('pricing')}
+              className="py-[14px] px-8 rounded-[10px] text-[15px] font-semibold whitespace-nowrap transition-all inline-flex items-center border-none cursor-pointer"
               style={{
                 background: 'transparent',
                 color: 'var(--text-primary)',
@@ -372,12 +364,12 @@ export default function Home() {
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-teal)')}
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
             >
-              See live demo
-            </a>
+              See pricing
+            </button>
           </div>
 
           <p className="text-[13px]" style={{ color: 'var(--text-dim)' }}>
-            <strong style={{ color: 'var(--teal)', fontWeight: 600 }}>30% off Agency &amp; Suite</strong> &middot; early adopter pricing
+            <strong style={{ color: 'var(--teal)', fontWeight: 600 }}>30% off Agency &amp; Suite</strong> &middot; early adopter pricing &middot; first 20 customers per tier
           </p>
         </div>
       </section>
@@ -396,7 +388,7 @@ export default function Home() {
             {[
               { number: '$60K', label: 'Lost per year for every $5K/mo client that churns' },
               { number: '60 days', label: 'Earlier churn warning vs. gut feeling' },
-              { number: '4 signals', label: 'Combined into one health score no spreadsheet can replicate' },
+              { number: '5 signals', label: 'Fused into one health score: financial, relationship, engagement, delivery, content velocity' },
             ].map((stat, i) => (
               <div key={i} className="reveal">
                 <div
@@ -444,7 +436,7 @@ export default function Home() {
                 iconEl: Icon.alertTriangle(22, '#e74c3c'),
                 iconBg: 'rgba(231, 76, 60, 0.12)',
                 title: 'Invisible warnings',
-                desc: "Declining meeting sentiment, overdue payments, stakeholder disengagement — the signals are there, but they're spread across 6 different tools. Nobody connects the dots until the client is already gone.",
+                desc: "Declining meeting sentiment, overdue payments, stakeholder disengagement — the signals are there, but they're spread across 6 different products. Nobody connects the dots until the client is already gone.",
               },
               {
                 iconEl: Icon.grid(22, '#f0c84c'),
@@ -456,7 +448,7 @@ export default function Home() {
                 iconEl: Icon.dollar(22, '#b388eb'),
                 iconBg: 'rgba(179, 136, 235, 0.12)',
                 title: '$60K per miss',
-                desc: "A $5K/month client is $60K/year in recurring revenue. Agencies with 20 clients losing 3 per year? That's $180K gone. Preventing even one saves more than a year of ClientPulse.",
+                desc: "A $5K/month client is $60K/year in recurring revenue. Agencies with 20 clients losing 3 per year? That’s $180K gone. Preventing even one saves more than a year of ClientPulse.",
               },
             ].map((card, i) => (
               <div
@@ -483,8 +475,44 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ═══ THE WORKFLOW (canonical 5-step rail) ═══ */}
-      <section id="how-it-works" className="py-[120px] max-md:py-[80px] relative overflow-hidden" style={{ background: 'var(--polar)' }}>
+      {/* ═══ SECTION 4: SUITE CROSS-LINK — present-tense ═══ */}
+      <section className="py-[80px]" style={{ background: 'var(--polar)', borderTop: '1px solid var(--border-subtle)' }}>
+        <div className="max-w-[1140px] mx-auto px-6">
+          <div className="reveal max-w-[800px] mx-auto rounded-2xl p-8" style={{ background: 'linear-gradient(135deg, rgba(56,232,200,0.04), rgba(76,201,240,0.04))', border: '1px solid rgba(56,232,200,0.2)' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: 'var(--teal)' }}>Agency Suite</span>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'var(--teal)', color: 'var(--deep)' }}>Live</span>
+            </div>
+            <h3 className="font-playfair font-bold text-[22px] leading-[1.3] mb-3" style={{ color: 'var(--text-primary)' }}>
+              The Agency Suite is live.
+            </h3>
+            <p className="text-[15px] font-light leading-[1.7]" style={{ color: 'var(--text-secondary)' }}>
+              ReForge publishes content events (velocity, channel diversity, voice freshness, engagement delta). ClientPulse consumes them as a privileged signal alongside Stripe, meeting, email, and calendar data. Content velocity per client is a leading churn indicator no standalone CS product can offer &mdash; a 30-day head start on every retention risk.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <a
+                href="/api/demo/signin"
+                className="text-sm font-semibold no-underline px-4 py-2 rounded-lg transition-all"
+                style={{ background: 'var(--teal)', color: 'var(--deep)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#50f0d4'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal)'; }}
+              >
+                Try the demo &rarr;
+              </a>
+              <button
+                onClick={() => scrollToSection('pricing')}
+                className="text-sm font-semibold px-4 py-2 rounded-lg border-none cursor-pointer transition-all"
+                style={{ background: 'rgba(56,232,200,0.08)', color: 'var(--teal)', border: '1px solid rgba(56,232,200,0.2)' }}
+              >
+                Suite pricing &darr;
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ WORKFLOW (canonical 5-step rail) ═══ */}
+      <section id="how-it-works" className="py-[120px] max-md:py-[80px] relative overflow-hidden">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -498,13 +526,13 @@ export default function Home() {
             className="reveal font-playfair font-semibold leading-[1.2] mb-5 text-center"
             style={{ fontSize: 'clamp(28px, 3.5vw, 42px)', letterSpacing: '-0.02em' }}
           >
-            One workflow. <span style={{ color: 'var(--teal)' }}>Two products.</span>
+            One workflow. <span style={{ color: 'var(--teal)' }}>Five steps.</span>
           </h2>
           <p className="reveal text-[17px] max-w-[680px] font-light leading-[1.7] text-center mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            Same five steps across content (ReForge) and clients (ClientPulse). Bring your tools in once, see where you stand, get the next move ranked, ship it, and let every outcome sharpen the next decision.
+            Connect your data once, see where you stand, get the next move ranked, ship it, and let every outcome sharpen the next decision.
           </p>
 
-          {/* Workflow rail — 5 nodes connected by a hairline with a slow left-to-right pulse */}
+          {/* Workflow rail — 5 nodes */}
           <div className="relative mt-16">
             <div
               aria-hidden="true"
@@ -532,10 +560,10 @@ export default function Home() {
             </div>
             <div className="grid gap-10 md:grid-cols-5 md:gap-6">
               {[
-                { num: '01', title: 'Connect', cue: 'wire it up', desc: 'Bring your tools, voices, and clients in once.', cp: 'Stripe, calendar, email, transcripts' },
-                { num: '02', title: 'Discover', cue: 'look around', desc: "See where you stand — what's working, what's quiet, what's at risk.", cp: 'Clients overview — health, signals, risk' },
+                { num: '01', title: 'Connect', cue: 'wire it up', desc: 'Bring your data, voices, and clients in once.', cp: 'Stripe, calendar, email, transcripts' },
+                { num: '02', title: 'Discover', cue: 'look around', desc: "See where you stand — what’s healthy, what’s quiet, what’s at risk.", cp: 'Clients overview — health, signals, risk' },
                 { num: '03', title: 'Decide', cue: 'pick the play', desc: 'Get the next-best move ranked, with the why behind it.', cp: 'Monday Brief — ranked re-engage / upsell / save plays' },
-                { num: '04', title: 'Act', cue: 'execute', desc: 'Ship it — content, proposals, check-ins — without leaving the suite.', cp: 'Proposals, check-ins, follow-ups' },
+                { num: '04', title: 'Act', cue: 'execute', desc: 'Ship it — proposals, check-ins, follow-ups — without leaving the suite.', cp: 'Proposals, check-ins, follow-ups' },
                 { num: '05', title: 'Learn', cue: 'compound', desc: 'Every outcome trains the next decision. The more you use it, the sharper it gets.', cp: 'Outcome feedback sharpens future Briefs' },
               ].map((node) => (
                 <div key={node.num} className="reveal flex flex-col items-center text-center gap-3 px-2">
@@ -570,7 +598,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* CP-specific translation — what each step looks like in the ClientPulse product */}
+          {/* CP translation card */}
           <div className="reveal mx-auto mt-20 max-w-3xl rounded-2xl p-7" style={{ background: 'var(--deep)', border: '1px solid var(--hairline)', borderTop: '2px solid var(--teal)' }}>
             <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--teal)', letterSpacing: '0.15em', fontFamily: 'var(--font-mono)' }}>
               In ClientPulse, that means
@@ -608,19 +636,20 @@ export default function Home() {
             className="reveal font-playfair font-bold leading-[1.2] mb-5 text-center"
             style={{ fontSize: 'clamp(28px, 3.5vw, 42px)', letterSpacing: '-0.01em' }}
           >
-            Four signals. One score.<br />No blind spots.
+            Five signals. One score.<br />No blind spots.
           </h2>
           <p className="reveal text-[17px] max-w-[640px] font-light leading-[1.7] text-center mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            No single data source predicts churn. ClientPulse combines four signal categories into one composite Client Health Score (0–100) that gives you the full picture.
+            No single data source predicts churn. ClientPulse fuses five signal categories into one composite Health Score (0&ndash;100) that gives you the full picture.
           </p>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mt-14">
             <div className="flex flex-col gap-5">
               {[
                 { weight: '30%', iconEl: Icon.dollar(18, 'var(--teal)'), title: 'Financial Health', desc: 'Payment timeliness, invoice disputes, contract value trends, revenue concentration risk. Powered by Stripe.' },
-                { weight: '30%', iconEl: Icon.handshake(18, 'var(--teal)'), title: 'Relationship Health', desc: 'Meeting sentiment trends, stakeholder engagement (are decision-makers still showing up?), communication responsiveness.' },
-                { weight: '25%', iconEl: Icon.package(18, 'var(--teal)'), title: 'Delivery Health', desc: 'Scope creep signals, action items completed vs. overdue, deliverable cadence and quality indicators.' },
-                { weight: '15%', iconEl: Icon.radio(18, 'var(--teal)'), title: 'Engagement Health', desc: 'Meeting frequency trends, email/Slack volume patterns, response time changes — the subtle signals that precede churn.' },
+                { weight: '25%', iconEl: Icon.handshake(18, 'var(--teal)'), title: 'Relationship Health', desc: 'Meeting sentiment trends, stakeholder engagement (are decision-makers still showing up?), communication responsiveness.' },
+                { weight: '20%', iconEl: Icon.radio(18, 'var(--teal)'), title: 'Engagement Health', desc: 'Meeting frequency trends, email volume patterns, response time changes — the subtle signals that precede churn.' },
+                { weight: '15%', iconEl: Icon.refresh(18, 'var(--teal)'), title: 'Content Velocity', desc: 'When you also run ReForge, content velocity per client flows in automatically. A 30-day early warning signal no standalone CS product can offer.' },
+                { weight: '10%', iconEl: Icon.package(18, 'var(--teal)'), title: 'Delivery Health', desc: 'Scope creep signals, action items completed vs. overdue, deliverable cadence and quality indicators.' },
               ].map((signal, i) => (
                 <div
                   key={i}
@@ -677,14 +706,116 @@ export default function Home() {
                   color: 'var(--teal)',
                 }}
               >
-                Healthy — Low Risk
+                Healthy &mdash; Low Risk
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ═══ MONDAY BRIEF — KILLER FEATURE ═══ */}
+      {/* ═══ SECTION 5: MCP POSITIONING ═══ */}
+      <section id="mcp" className="py-[120px] max-md:py-[80px]">
+        <div className="max-w-[1140px] mx-auto px-6">
+          <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4 text-center" style={{ color: 'var(--teal)' }}>
+            Built into your stack
+          </div>
+          <h2
+            className="reveal font-playfair font-bold leading-[1.2] mb-5 text-center"
+            style={{ fontSize: 'clamp(28px, 3.5vw, 42px)', letterSpacing: '-0.01em' }}
+          >
+            Drive ClientPulse from your IDE.<br />
+            <span
+              className="bg-clip-text"
+              style={{
+                background: 'var(--gradient-aurora)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              Agency-priced, MCP-native.
+            </span>
+          </h2>
+          <p className="reveal text-[17px] max-w-[680px] font-light leading-[1.7] text-center mx-auto mb-14" style={{ color: 'var(--text-secondary)' }}>
+            Check a client&apos;s Health Score, pull Monday Brief summaries, or trigger a re-engage proposal &mdash; from Claude Desktop, Cursor, or VS Code, without opening a browser tab.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                label: 'Per-client signal fusion',
+                desc: 'Single-product CS platforms (Vitally, ChurnZero, Planhat) live in B2B SaaS land — they bill from $1,250/mo+ and assume product-usage signals you don’t have. ClientPulse fuses Stripe, meeting recordings, email patterns, calendar attendance, and content velocity for the actual buying motion of an agency: retainer relationships.',
+              },
+              {
+                label: 'Closed loop with ReForge',
+                desc: 'When you also run ReForge, the content velocity signal flows in automatically. The Agency Suite is the only place a content product and a retention product talk to each other — that’s why it’s $999/mo, not a bundle discount.',
+              },
+              {
+                label: 'Agency-priced MCP',
+                desc: 'Drive ClientPulse from Claude Desktop, Cursor, or VS Code via MCP. Vitally and ChurnZero don’t ship MCP at all. Aurora $799 CP Agency / $999 Suite is the only sub-$1K MCP-native client-health product.',
+              },
+            ].map((card, i) => (
+              <div
+                key={i}
+                className="reveal rounded-2xl p-7"
+                style={{
+                  background: 'var(--polar)',
+                  border: '1px solid rgba(76,201,240,0.08)',
+                }}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.15em] mb-3" style={{ color: 'var(--teal)', fontFamily: 'var(--font-mono)' }}>
+                  {card.label}
+                </p>
+                <p className="text-[14px] leading-[1.65]" style={{ color: 'var(--color-muted)', fontWeight: 300 }}>
+                  {card.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ SECTION 6: FOR AGENCIES, NOT B2B SAAS CS TEAMS ═══ */}
+      <section className="py-[80px]" style={{ background: 'var(--polar)' }}>
+        <div className="max-w-[1140px] mx-auto px-6">
+          <div
+            className="reveal max-w-[820px] mx-auto rounded-2xl p-8"
+            style={{
+              background: 'linear-gradient(135deg, rgba(56,232,200,0.03), rgba(76,201,240,0.03))',
+              border: '1px solid rgba(76,201,240,0.12)',
+              borderLeft: '4px solid var(--teal)',
+            }}
+          >
+            <h3 className="font-playfair font-bold text-[20px] leading-[1.3] mb-4" style={{ color: 'var(--text-primary)' }}>
+              For agencies. Not B2B SaaS customer success teams.
+            </h3>
+            <p className="text-[15px] font-light leading-[1.75]" style={{ color: 'var(--text-secondary)' }}>
+              Vitally / ChurnZero / Planhat are built for product-usage signals (logins, feature adoption, NPS surveys). Agencies don&apos;t have those. We&apos;re built for retainer relationships: payment patterns, meeting attendance, email response cadence, and content velocity. The signals that actually predict whether your retainer renews.
+            </p>
+            <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { label: 'Vitally / ChurnZero', note: '$1,250+/mo · product-usage signals · B2B SaaS ICP' },
+                { label: 'Planhat', note: '$500+/mo · usage analytics · SaaS-native' },
+                { label: 'ClientPulse Agency', note: '$799/mo · retainer signals · agency-native · MCP-native' },
+              ].map((row, i) => (
+                <div
+                  key={i}
+                  className="p-4 rounded-xl"
+                  style={{
+                    background: i === 2 ? 'rgba(56,232,200,0.06)' : 'rgba(255,255,255,0.02)',
+                    border: i === 2 ? '1px solid rgba(56,232,200,0.2)' : '1px solid var(--border-subtle)',
+                  }}
+                >
+                  <p className="text-[13px] font-semibold mb-1" style={{ color: i === 2 ? 'var(--teal)' : 'var(--text-primary)' }}>{row.label}</p>
+                  <p className="text-[12px]" style={{ color: 'var(--color-muted)' }}>{row.note}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ MONDAY BRIEF ═══ */}
       <section className="py-[120px] max-md:py-[80px]">
         <div className="max-w-[1140px] mx-auto px-6">
           <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4" style={{ color: 'var(--teal)' }}>
@@ -706,7 +837,7 @@ export default function Home() {
                 Every Monday morning, ClientPulse sends you one email with everything you need to know: which clients are thriving, which are slipping, and exactly what to do about it.
               </p>
               <p className="text-base font-light leading-[1.7] mb-4" style={{ color: 'var(--text-secondary)' }}>
-                It&apos;s not a status report. It&apos;s an action plan — with draft check-in emails, QBR suggestions, and upsell opportunities already prepared for your review.
+                It&apos;s not a status report. It&apos;s an action plan &mdash; with draft check-in emails, QBR suggestions, and upsell opportunities already prepared for your review.
               </p>
               <div
                 className="py-4 px-5 rounded-r-lg mt-6 text-[15px] italic"
@@ -730,14 +861,13 @@ export default function Home() {
                   From: ClientPulse &lt;brief@clientpulse.helloaurora.ai&gt;
                 </div>
                 <div className="text-[15px] font-semibold">
-                  Your Monday Brief — Apr 14: 1 client needs attention
+                  Your Monday Brief &mdash; Apr 14: 1 client needs attention
                 </div>
               </div>
               <div className="p-6">
                 <p className="text-[13px] mb-4 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                   Good morning, Sasa. Here&apos;s your portfolio snapshot for the week:
                 </p>
-
                 {[
                   { color: 'var(--teal)', name: 'Acme Creative', detail: '— Score 89 ↑ Invoice paid early. Meeting sentiment positive.' },
                   { color: 'var(--teal)', name: 'Stellar Digital', detail: '— Score 84 → Stable. All deliverables on track.' },
@@ -753,20 +883,19 @@ export default function Home() {
                     <span>
                       <strong>{item.name}</strong>{' '}
                       {item.special ? (
-                        <>— Score 34 ↓↓ <strong style={{ color: 'var(--pulse-red)' }}>73% churn risk.</strong> Action plan ready →</>
+                        <>— Score 34 ↓↓ <strong style={{ color: 'var(--pulse-red)' }}>73% churn risk.</strong> Action plan ready &rarr;</>
                       ) : (
                         item.detail
                       )}
                     </span>
                   </div>
                 ))}
-
                 <p
                   className="mt-3 p-3 rounded-lg text-[13px]"
                   style={{ background: 'rgba(56, 232, 200, 0.06)' }}
                 >
-                  <strong style={{ color: 'var(--teal)' }}>Prepared action:</strong> Draft check-in email for NexGen — addresses the invoice delay, proposes a QBR next week.{' '}
-                  <a href="#" style={{ color: 'var(--teal)' }}>Review &amp; send →</a>
+                  <strong style={{ color: 'var(--teal)' }}>Prepared action:</strong> Draft check-in email for NexGen &mdash; addresses the invoice delay, proposes a QBR next week.{' '}
+                  <a href="#" style={{ color: 'var(--teal)' }}>Review &amp; send &rarr;</a>
                 </p>
               </div>
             </div>
@@ -787,7 +916,7 @@ export default function Home() {
             Intelligence that acts,<br />not just reports
           </h2>
           <p className="reveal text-[17px] max-w-[640px] font-light leading-[1.7] text-center mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            ClientPulse isn&apos;t a dashboard. It&apos;s six specialized AI agents that monitor, predict, and prepare actions — so you make better decisions without the busywork.
+            ClientPulse isn&apos;t a dashboard. It&apos;s six specialized AI agents that monitor, predict, and prepare actions &mdash; so you make better decisions without the busywork.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-14">
@@ -822,107 +951,19 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ═══ COMPETITIVE COMPARISON ═══ */}
-      <section className="py-[120px] max-md:py-[80px]" style={{ background: 'var(--polar)' }}>
-        <div className="max-w-[1140px] mx-auto px-6">
-          <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4 text-center" style={{ color: 'var(--teal)' }}>
-            Why Not Just Use...
-          </div>
-          <h2
-            className="reveal font-playfair font-bold leading-[1.2] mb-5 text-center"
-            style={{ fontSize: 'clamp(28px, 3.5vw, 42px)', letterSpacing: '-0.01em' }}
-          >
-            &ldquo;We already track clients in<br />[spreadsheet / CRM / gut feeling].&rdquo;
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-14">
-            {[
-              {
-                title: 'vs. Spreadsheets',
-                desc: 'Your spreadsheet can\'t process a meeting recording, detect sentiment shifts, cross-reference payment patterns, and draft a check-in email. ClientPulse can. Before you finish your first coffee.',
-              },
-              {
-                title: 'vs. ChurnZero / Gainsight / Vitally',
-                desc: 'Built for SaaS companies tracking product usage. You\'re an agency — you don\'t have product usage data. And they cost $26K–$40K/year. ClientPulse is built for agencies at 1/10th the price.',
-              },
-              {
-                title: 'vs. CRM (HubSpot, Salesforce)',
-                desc: 'CRMs track contacts and deals. They don\'t track ongoing client health, meeting sentiment, or financial risk signals. ClientPulse sits on top of your CRM, not instead of it.',
-              },
-              {
-                title: 'vs. Gong / Fireflies',
-                desc: 'Meeting intelligence tools built for sales prospecting, not client retention. They don\'t combine financial signals, delivery data, and engagement patterns into a predictive Health Score.',
-              },
-            ].map((card, i) => (
-              <div
-                key={i}
-                className="reveal p-8 rounded-2xl transition-all hover:-translate-y-[2px]"
-                style={{
-                  background: 'var(--twilight)',
-                  border: '1px solid var(--border-subtle)',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-teal)')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
-              >
-                <h3 className="text-base font-semibold mb-3">{card.title}</h3>
-                <p className="text-sm leading-[1.65]" style={{ color: 'var(--color-muted)' }}>{card.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ WHY CLIENTPULSE ═══ */}
-      <section className="py-[120px] max-md:py-[80px] text-center">
-        <div className="max-w-[1140px] mx-auto px-6">
-          <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4" style={{ color: 'var(--teal)' }}>
-            Why ClientPulse
-          </div>
-          <h2
-            className="reveal font-playfair font-bold leading-[1.2] mb-5"
-            style={{ fontSize: 'clamp(28px, 3.5vw, 42px)', letterSpacing: '-0.01em' }}
-          >
-            This isn&apos;t another dashboard<br />you&apos;ll forget to check
-          </h2>
-          <p className="reveal text-base font-light leading-[1.7] max-w-[680px] mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            ClientPulse connects to your Stripe, calendar, email, and meeting recordings — then runs continuously in the background. It monitors 50 clients at once, learns your agency&apos;s specific patterns, and sends you an automated brief with action plans every Monday. No prompting, no manual checks, no spreadsheets.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-14 text-left">
-            {[
-              { title: 'Gets smarter every month', desc: "Health Scores train on YOUR client patterns, not generic benchmarks. Every renewal and every churn teaches the system. By month 6, predictions are calibrated to your agency specifically." },
-              { title: '5 minutes to first value', desc: "Connect Stripe — one OAuth click. You get financial health intelligence immediately. Every additional data source enriches the score, but isn't required to start seeing value." },
-              { title: 'Actions, not just alerts', desc: "When a client is at risk, ClientPulse doesn't just flag it. It prepares a draft check-in email, suggests a QBR agenda, and surfaces talking points — ready for your review and send." },
-            ].map((card, i) => (
-              <div
-                key={i}
-                className="reveal p-[32px_28px] rounded-2xl"
-                style={{
-                  background: 'var(--polar)',
-                  border: '1px solid var(--border-subtle)',
-                }}
-              >
-                <h4 className="text-base font-semibold mb-[10px]" style={{ color: 'var(--teal)' }}>{card.title}</h4>
-                <p className="text-sm leading-[1.65]" style={{ color: 'var(--color-muted)' }}>{card.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ═══ TRUST BAR ═══ */}
       <section className="py-12" style={{ background: 'var(--polar)', borderTop: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="max-w-[1140px] mx-auto px-6">
           <div className="reveal flex items-center justify-center gap-12 flex-wrap max-md:gap-6">
             {[
               { iconEl: Icon.lock(18, 'var(--teal)'), text: '256-bit encryption' },
-              { iconEl: Icon.shield(18, 'var(--teal)'), text: 'Your data never trains our AI' },
-              { iconEl: Icon.zap(18, 'var(--teal)'), text: '99.9% uptime SLA' },
-              { iconEl: Icon.server(18, 'var(--teal)'), text: 'Built on Stripe, AWS & Anthropic' },
+              { iconEl: Icon.shield(18, 'var(--teal)'), text: 'EU Frankfurt · GDPR compliant' },
+              { iconEl: Icon.zap(18, 'var(--teal)'), text: 'Your data never trains our AI' },
+              { iconEl: Icon.server(18, 'var(--teal)'), text: 'Built on Stripe, Supabase &amp; Anthropic' },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-[10px]">
                 <span className="flex items-center justify-center">{item.iconEl}</span>
-                <span className="text-sm font-medium" style={{ color: 'var(--color-muted)' }}>{item.text}</span>
+                <span className="text-sm font-medium" style={{ color: 'var(--color-muted)' }} dangerouslySetInnerHTML={{ __html: item.text }} />
               </div>
             ))}
           </div>
@@ -949,7 +990,6 @@ export default function Home() {
               border: '1px solid var(--border-teal)',
             }}
           >
-            {/* Aurora gradient top bar */}
             <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: 'var(--gradient-aurora)' }} />
 
             <p className="text-[15px] leading-relaxed mb-8" style={{ color: 'var(--text-secondary)' }}>
@@ -967,18 +1007,65 @@ export default function Home() {
               <div className="font-playfair text-2xl hidden md:block" style={{ color: 'var(--text-dim)' }}>vs.</div>
               <div className="p-6 rounded-xl" style={{ background: 'var(--color-surface-light)' }}>
                 <div className="font-playfair text-4xl font-bold leading-[1.2]" style={{ color: 'var(--teal)' }}>$1,990</div>
-                <div className="text-[13px] mt-[6px]" style={{ color: 'var(--color-muted)' }}>ClientPulse Pro — $199/mo, billed annually at $1,990 (2 months free)</div>
+                <div className="text-[13px] mt-[6px]" style={{ color: 'var(--color-muted)' }}>ClientPulse Pro &mdash; $199/mo, billed annually (2 months free)</div>
               </div>
             </div>
 
             <p className="text-lg font-semibold" style={{ color: 'var(--teal)' }}>
-              Prevent one churn = <span className="font-playfair text-[28px]">25x ROI</span>
+              Prevent one churn = <span className="font-playfair text-[28px]">25&times; ROI</span>
             </p>
           </div>
         </div>
       </section>
 
-      {/* ═══ PRICING ═══ */}
+      {/* ═══ SECTION 9: MID-PAGE EA PROMO BLOCK ═══ */}
+      <div
+        className="reveal py-[60px] text-center relative"
+        style={{
+          background: 'linear-gradient(180deg, var(--deep), var(--polar))',
+          borderTop: '1px solid var(--border-subtle)',
+          borderBottom: '1px solid var(--border-subtle)',
+        }}
+      >
+        <div className="max-w-[800px] mx-auto px-6 relative z-[1]">
+          <span
+            className="inline-block text-[11px] font-bold uppercase tracking-[0.15em] px-4 py-2 rounded-full mb-5"
+            style={{ color: 'var(--teal)', background: 'rgba(56,232,200,0.08)', border: '1px solid rgba(56,232,200,0.2)' }}
+          >
+            First 20 customers &middot; Agency + Suite only
+          </span>
+          <h3 className="font-playfair font-bold text-[24px] leading-[1.3] mb-3" style={{ color: 'var(--text-primary)' }}>
+            30% off for 12 months. Twenty seats per tier.
+          </h3>
+          <p className="text-[15px] font-light leading-[1.7] mb-6" style={{ color: 'var(--text-secondary)' }}>
+            Redeem at checkout with{' '}
+            <code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85em', background: 'rgba(56,232,200,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px', color: 'var(--teal)' }}>EA-CP-AGENCY-30</code>{' '}
+            or{' '}
+            <code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85em', background: 'rgba(56,232,200,0.08)', padding: '0.1rem 0.4rem', borderRadius: '4px', color: 'var(--teal)' }}>EA-SUITE-30</code>.{' '}
+            Stripe enforces the cap automatically.
+          </p>
+          <div className="flex justify-center gap-3">
+            <a
+              href="/api/demo/signin"
+              className="py-[12px] px-6 rounded-[10px] text-[14px] font-semibold no-underline transition-all inline-block"
+              style={{ background: 'var(--teal)', color: 'var(--deep)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#50f0d4'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              Try the demo &rarr;
+            </a>
+            <button
+              onClick={() => scrollToSection('pricing')}
+              className="py-[12px] px-6 rounded-[10px] text-[14px] font-semibold border-none cursor-pointer transition-all"
+              style={{ background: 'rgba(56,232,200,0.08)', color: 'var(--teal)', border: '1px solid rgba(56,232,200,0.2)' }}
+            >
+              See pricing &darr;
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ SECTION 7: PRICING ═══ */}
       <section id="pricing" className="py-[120px] max-md:py-[80px]">
         <div className="max-w-[1140px] mx-auto px-6">
           <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4 text-center" style={{ color: 'var(--teal)' }}>
@@ -991,10 +1078,11 @@ export default function Home() {
             Plans that pay for themselves
           </h2>
           <p className="reveal text-[17px] max-w-[640px] font-light leading-[1.7] text-center mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            Plans from ${STRIPE_PLANS.solo.price}/mo. Cancel anytime.
+            From ${STRIPE_PLANS.solo.price}/mo. Cancel anytime.{' '}
+            <strong style={{ color: 'var(--teal)' }}>Early Adopter: 30% off first year on Agency + Suite &mdash; first 20 customers per tier.</strong>
           </p>
 
-          {/* Toggle */}
+          {/* Annual toggle */}
           <div className="flex items-center justify-center gap-4 my-10">
             <span className="text-sm font-medium" style={{ color: isAnnual ? 'var(--color-muted)' : 'var(--text-primary)' }}>Monthly</span>
             <button
@@ -1022,141 +1110,190 @@ export default function Home() {
             </span>
           </div>
 
-          {/* Price Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4 max-md:max-w-[400px] max-md:mx-auto">
-            {[
-              {
-                tier: 'Solo',
-                featured: false,
-                desc: 'For freelancers and solo consultants with a focused book of key accounts.',
-                workflows: {
-                  'CONNECT': ['Stripe financial sync'],
-                  'MONITOR': ['Up to 3 clients', 'Daily health refresh', 'Client Health Scores', 'Monday Client Brief'],
-                  'ACT': [],
-                  'REVIEW': ['Churn prediction alerts', '90-day retention'],
-                },
-                features: ['Up to 3 clients', 'Client Health Scores', 'Monday Client Brief', 'Stripe financial sync', 'Churn prediction alerts', '90-day data retention', 'Email support'],
-              },
-              {
-                tier: 'Pro',
-                featured: false,
-                desc: "For growing agencies that can't afford to lose a single client.",
-                workflows: {
-                  'CONNECT': ['Stripe financial sync', 'Calendar & email sentiment sync'],
-                  'MONITOR': ['Up to 10 clients', 'Hourly health refresh', 'Everything in Solo'],
-                  'ACT': ['Action Proposal Engine', 'Meeting Intelligence (Zoom, Google Meet)', 'Upsell Detection Agent'],
-                  'REVIEW': ['Historical trends & accuracy tracking', '12-month retention'],
-                },
-                features: ['Up to 10 clients', 'Everything in Solo', 'Meeting Intelligence (Zoom, Google Meet)', 'Upsell Detection Agent', 'Action Proposal Engine', 'Calendar & email sentiment sync', '12-month data retention', '3 seats', '3 MCP connections', 'All models (Claude, GPT, Gemini)', 'Priority support'],
-              },
-              {
-                tier: 'Agency',
-                featured: true,
-                desc: 'For established agencies that treat client retention as a competitive advantage.',
-                workflows: {
-                  'CONNECT': ['Stripe financial sync', 'Calendar & email sentiment sync', 'Multi-data connectors'],
-                  'MONITOR': ['Unlimited clients', 'Real-time health refresh', 'Team dashboard & multi-user'],
-                  'ACT': ['Everything in Pro', 'Slack bot integration'],
-                  'REVIEW': ['White-label PDF reports', 'Recursive Learning insights', 'Portfolio analytics', '36-month retention'],
-                },
-                features: ['Unlimited clients', 'Everything in Pro', 'Team dashboard & 8 seats', 'Real-time health refresh', 'White-label PDF reports', 'Recursive Learning insights', 'Slack bot integration', 'Full API · unlimited MCP', '36-month data retention', 'On-device (post-launch)', 'Dedicated onboarding'],
-              },
-            ].map((plan, i) => (
-              <div
-                key={i}
-                className="reveal p-[40px_32px] rounded-[20px] relative transition-all hover:-translate-y-[2px]"
-                style={{
-                  background: plan.featured
-                    ? 'linear-gradient(to bottom, rgba(56, 232, 200, 0.04), var(--polar))'
-                    : 'var(--polar)',
-                  border: plan.featured ? '1px solid var(--teal)' : '1px solid var(--border-subtle)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!plan.featured) e.currentTarget.style.borderColor = 'var(--border-teal)';
-                }}
-                onMouseLeave={(e) => {
-                  if (!plan.featured) e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                }}
-              >
-                {/* Aurora gradient top bar for featured */}
-                {plan.featured && (
-                  <>
-                    <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-[20px]" style={{ background: 'var(--gradient-aurora)' }} />
-                    <div
-                      className="absolute -top-3 left-1/2 -translate-x-1/2 py-1 px-4 rounded-full text-[11px] font-bold uppercase tracking-wide"
-                      style={{ background: 'var(--teal)', color: 'var(--deep)' }}
-                    >
-                      Most Popular
-                    </div>
-                  </>
-                )}
-
-                <div className="text-sm font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--color-muted)' }}>
-                  {plan.tier}
-                </div>
-                <div className="flex items-baseline gap-1 mb-1">
-                  <span className="text-xl font-semibold" style={{ color: 'var(--text-secondary)' }}>$</span>
-                  <span className="font-playfair text-5xl font-bold leading-none" style={{ color: 'var(--text-primary)' }}>
-                    {isAnnual ? prices[i].annual : prices[i].monthly}
-                  </span>
-                  <span className="text-[15px]" style={{ color: 'var(--text-dim)' }}>/mo</span>
-                </div>
-                <div className="text-[13px] mb-5 min-h-[20px]" style={{ color: 'var(--teal)' }}>
-                  {isAnnual ? 'billed annually' : `$${prices[i].annual}/mo billed annually`}
-                </div>
-                <p className="text-sm mb-6 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{plan.desc}</p>
-
-                <ul className="flex flex-col gap-3 mb-8 list-none">
-                  {plan.features.map((feature, j) => (
-                    <li key={j} className="flex items-start gap-[10px] text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                      <span className="min-w-[16px] mt-[2px] flex items-center">{Icon.check(16, 'var(--teal)')}</span>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-
-                <button
-                  onClick={() => {
-                    window.location.href = `/auth/signup?plan=${plan.tier.toLowerCase()}`;
-                  }}
-                  className="block w-full py-[14px] text-center rounded-[10px] text-[15px] font-semibold cursor-pointer transition-all border-none"
-                  style={
-                    plan.featured
-                      ? { background: 'var(--teal)', color: 'var(--deep)' }
-                      : { background: 'var(--color-surface-light)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)' }
-                  }
-                  onMouseEnter={(e) => {
-                    if (plan.featured) {
-                      e.currentTarget.style.background = '#50f0d4';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(56, 232, 200, 0.3)';
-                    } else {
-                      e.currentTarget.style.borderColor = 'var(--border-teal)';
-                      e.currentTarget.style.background = 'var(--color-surface-hover)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (plan.featured) {
-                      e.currentTarget.style.background = 'var(--teal)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    } else {
-                      e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                      e.currentTarget.style.background = 'var(--color-surface-light)';
-                    }
-                  }}
-                >
-                  {plan.featured ? 'Get Started' : 'Get Started'}
-                </button>
-              </div>
-            ))}
+          {/* Section 6 callout near Agency tier */}
+          <div
+            className="reveal mb-8 p-4 rounded-xl text-center text-[13px]"
+            style={{ background: 'rgba(56,232,200,0.04)', border: '1px solid rgba(56,232,200,0.12)' }}
+          >
+            <strong style={{ color: 'var(--teal)' }}>For agencies. Not B2B SaaS CS teams.</strong>{' '}
+            <span style={{ color: 'var(--color-muted)' }}>Built for retainer relationships &mdash; payment patterns, meeting attendance, email cadence, content velocity.</span>
           </div>
 
-          {/* ─── Agency Suite — full-feature card mirroring RF's SuiteCard ─── */}
-          {/* Same density/structure as the ReForge landing's Suite card so the
-              two products feel like one Suite story. CTA lands directly in
-              ReForge's /auth/signup?plan=suite (Suite is a ReForge SKU and
-              the signup UX is on that side). */}
+          {/* Price Cards: Solo · Solo+ · Pro · Agency */}
+          <div className="reveal grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+
+            {/* Solo */}
+            <div
+              className="p-[32px_24px] rounded-[20px] relative transition-all hover:-translate-y-[2px]"
+              style={{ background: 'var(--polar)', border: '1px solid var(--border-subtle)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-teal)')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
+            >
+              <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--color-muted)' }}>Solo</div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-xl font-semibold" style={{ color: 'var(--text-secondary)' }}>$</span>
+                <span className="font-playfair text-5xl font-bold leading-none">{isAnnual ? prices[0].annual : prices[0].monthly}</span>
+                <span className="text-[15px]" style={{ color: 'var(--text-dim)' }}>/mo</span>
+              </div>
+              <div className="text-[13px] mb-4" style={{ color: 'var(--teal)' }}>
+                {isAnnual ? 'billed annually' : `$${prices[0].annual}/mo billed annually`}
+              </div>
+              <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                For freelancers and solo consultants with a focused book of key accounts.
+              </p>
+              <ul className="flex flex-col gap-2 mb-6 list-none">
+                {['Up to 3 clients', 'Daily health refresh', 'Stripe financial sync', 'Client Health Scores', 'Monday Client Brief', '90-day data retention', '1 seat', 'Email support'].map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    <span className="mt-0.5 flex-shrink-0">{Icon.check(14, 'var(--teal)')}</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href="/api/demo/signin"
+                className="block w-full py-[12px] text-center rounded-[10px] text-[14px] font-semibold no-underline transition-all"
+                style={{ background: 'var(--color-surface-light)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-teal)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
+              >
+                Try the demo &rarr;
+              </a>
+            </div>
+
+            {/* Solo+ */}
+            <div
+              className="p-[32px_24px] rounded-[20px] relative transition-all hover:-translate-y-[2px]"
+              style={{ background: 'var(--polar)', border: '1px solid var(--border-subtle)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-teal)')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
+            >
+              <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--color-muted)' }}>Solo+</div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-xl font-semibold" style={{ color: 'var(--text-secondary)' }}>$</span>
+                <span className="font-playfair text-5xl font-bold leading-none">{isAnnual ? SOLO_PLUS_ANNUAL_MONTHLY : SOLO_PLUS_MONTHLY}</span>
+                <span className="text-[15px]" style={{ color: 'var(--text-dim)' }}>/mo</span>
+              </div>
+              <div className="text-[13px] mb-4" style={{ color: 'var(--teal)' }}>
+                {isAnnual ? 'billed annually ($990/yr)' : `$${SOLO_PLUS_ANNUAL_MONTHLY}/mo billed annually`}
+              </div>
+              <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                For solo consultants growing past 5 retained clients.
+              </p>
+              <ul className="flex flex-col gap-2 mb-6 list-none">
+                {[
+                  '7 clients tracked',
+                  'Hourly health refresh',
+                  'Stripe + Calendar integration',
+                  '12-month data retention',
+                  '1 seat',
+                  'All models (Claude, GPT, Gemini)',
+                  'Recursive learning insights',
+                  'Read-only API · 3 MCP connections',
+                ].map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    <span className="mt-0.5 flex-shrink-0">{Icon.check(14, 'var(--teal)')}</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href="/api/demo/signin"
+                className="block w-full py-[12px] text-center rounded-[10px] text-[14px] font-semibold no-underline transition-all"
+                style={{ background: 'var(--color-surface-light)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-teal)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
+              >
+                Try the demo &rarr;
+              </a>
+            </div>
+
+            {/* Pro */}
+            <div
+              className="p-[32px_24px] rounded-[20px] relative transition-all hover:-translate-y-[2px]"
+              style={{ background: 'var(--polar)', border: '1px solid var(--border-subtle)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-teal)')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
+            >
+              <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--color-muted)' }}>Pro</div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-xl font-semibold" style={{ color: 'var(--text-secondary)' }}>$</span>
+                <span className="font-playfair text-5xl font-bold leading-none">{isAnnual ? prices[1].annual : prices[1].monthly}</span>
+                <span className="text-[15px]" style={{ color: 'var(--text-dim)' }}>/mo</span>
+              </div>
+              <div className="text-[13px] mb-4" style={{ color: 'var(--teal)' }}>
+                {isAnnual ? 'billed annually' : `$${prices[1].annual}/mo billed annually`}
+              </div>
+              <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                For growing agencies that can&apos;t afford to lose a single client.
+              </p>
+              <ul className="flex flex-col gap-2 mb-6 list-none">
+                {['Up to 10 clients', 'Hourly health refresh', 'Churn Prediction + Upsell Detection', 'Action Proposal Engine', 'Meeting Intelligence (Zoom, Google Meet)', 'Calendar & email sentiment sync', '12-month data retention', '3 seats', '3 MCP connections', 'All models (Claude, GPT, Gemini)', 'Priority support'].map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    <span className="mt-0.5 flex-shrink-0">{Icon.check(14, 'var(--teal)')}</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href="/api/demo/signin"
+                className="block w-full py-[12px] text-center rounded-[10px] text-[14px] font-semibold no-underline transition-all"
+                style={{ background: 'var(--color-surface-light)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-teal)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
+              >
+                Try the demo &rarr;
+              </a>
+            </div>
+
+            {/* Agency */}
+            <div
+              className="p-[32px_24px] rounded-[20px] relative transition-all hover:-translate-y-[2px]"
+              style={{
+                background: 'linear-gradient(to bottom, rgba(56, 232, 200, 0.04), var(--polar))',
+                border: '1px solid var(--teal)',
+              }}
+            >
+              {/* Aurora gradient top bar + badge */}
+              <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-[20px]" style={{ background: 'var(--gradient-aurora)' }} />
+              <div
+                className="absolute -top-3 left-1/2 -translate-x-1/2 py-1 px-4 rounded-full text-[11px] font-bold uppercase tracking-wide whitespace-nowrap"
+                style={{ background: 'var(--teal)', color: 'var(--deep)' }}
+              >
+                Most Popular
+              </div>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-2 mt-2" style={{ color: 'var(--teal)' }}>Agency</div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-xl font-semibold" style={{ color: 'var(--text-secondary)' }}>$</span>
+                <span className="font-playfair text-5xl font-bold leading-none">{isAnnual ? prices[2].annual : prices[2].monthly}</span>
+                <span className="text-[15px]" style={{ color: 'var(--text-dim)' }}>/mo</span>
+              </div>
+              <div className="text-[13px] mb-1" style={{ color: 'var(--teal)' }}>
+                {isAnnual ? 'billed annually · 30% off first year (EA)' : `$${prices[2].annual}/mo billed annually`}
+              </div>
+              <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                For established agencies treating client retention as a competitive advantage.
+              </p>
+              <ul className="flex flex-col gap-2 mb-6 list-none">
+                {['Unlimited clients', 'Real-time health refresh', 'Team dashboard · 8 seats', 'White-label PDF reports', 'Recursive Learning insights', 'Slack bot integration', 'Full API · unlimited MCP', '36-month data retention', 'On-device (post-launch)', 'Dedicated onboarding'].map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    <span className="mt-0.5 flex-shrink-0">{Icon.check(14, 'var(--teal)')}</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <a
+                href="/api/demo/signin"
+                className="block w-full py-[12px] text-center rounded-[10px] text-[14px] font-semibold no-underline transition-all"
+                style={{ background: 'var(--teal)', color: 'var(--deep)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#50f0d4'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(56, 232, 200, 0.3)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                Try the demo &rarr;
+              </a>
+            </div>
+          </div>
+
+          {/* Agency Suite */}
           <div className="reveal mt-14 max-w-[1140px] mx-auto relative overflow-hidden rounded-2xl p-8 max-md:p-6"
             style={{
               background: 'linear-gradient(135deg, rgba(56, 232, 200, 0.06), rgba(56, 232, 200, 0.02) 60%), var(--polar)',
@@ -1170,16 +1307,19 @@ export default function Home() {
                     Agency Suite
                   </span>
                   <span className="rounded-full px-3 py-1 text-[11px] font-semibold" style={{ background: 'rgba(56, 232, 200, 0.15)', color: 'var(--teal)', border: '1px solid rgba(56, 232, 200, 0.3)' }}>
-                    Early Adopter · 30% off 1st year
+                    Early Adopter &middot; 30% off 1st year
+                  </span>
+                  <span className="rounded-full px-3 py-1 text-[11px] font-semibold" style={{ background: 'rgba(76,201,240,0.1)', color: 'var(--aurora-blue)', border: '1px solid rgba(76,201,240,0.2)' }}>
+                    Live
                   </span>
                 </div>
                 <h3 className="mt-3 font-playfair text-[22px] font-bold leading-[1.3]" style={{ color: 'var(--text-primary)' }}>
                   ClientPulse Agency + ReForge Agency, talking to each other.
                 </h3>
                 <p className="mt-2 max-w-2xl text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                  Most agencies use a content tool <em>and</em> a client-health tool.
+                  Most agencies use a content product <em>and</em> a client-health product.
                   Ours talk to each other. Yours don&apos;t. Content velocity becomes a
-                  leading churn indicator — a 30-day head start on every risk.
+                  leading churn indicator &mdash; a 30-day head start on every risk. That&apos;s why it&apos;s $999/mo, not a bundle discount.
                 </p>
                 <ul className="mt-4 grid gap-2 sm:grid-cols-2">
                   {[
@@ -1188,9 +1328,10 @@ export default function Home() {
                     'Content velocity as a leading churn indicator',
                     'A 30-day head start on every churn risk',
                     '20 EA slots · 30% off first year',
+                    'MCP-native · agency-priced',
                   ].map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      <span className="mt-0.5 flex-shrink-0" style={{ color: 'var(--teal)' }}>{'✓'}</span>
+                      <span className="mt-0.5 flex-shrink-0" style={{ color: 'var(--teal)' }}>&#x2713;</span>
                       {f}
                     </li>
                   ))}
@@ -1206,12 +1347,12 @@ export default function Home() {
                 </p>
                 {isAnnual && (
                   <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                    Billed $9,984 · <span style={{ color: 'var(--teal)' }}>2 months free</span>
+                    Billed $9,984 &middot; <span style={{ color: 'var(--teal)' }}>2 months free</span>
                   </p>
                 )}
                 <a
-                  href="https://reforge.helloaurora.ai/auth/signup?plan=suite"
-                  className="mt-4 block rounded-xl px-6 py-3 text-center text-sm font-semibold transition-all"
+                  href="/api/demo/signin"
+                  className="mt-4 block rounded-xl px-6 py-3 text-center text-sm font-semibold transition-all no-underline"
                   style={{ background: 'var(--teal)', color: 'var(--deep)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = '#50f0d4';
@@ -1224,15 +1365,19 @@ export default function Home() {
                     e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
-                  Get Agency Suite
+                  Try the demo &rarr;
                 </a>
               </div>
             </div>
           </div>
+
+          <p className="reveal text-center text-[12px] mt-6 opacity-60" style={{ color: 'var(--text-muted)' }}>
+            All prices in USD. Annual plans get 2 months free (16.7% off). Early Adopter 30% discount applies to Agency + Suite only, first 20 per tier, Stripe-enforced.
+          </p>
         </div>
       </section>
 
-      {/* ═══ FAQ ═══ */}
+      {/* ═══ SECTION 10: FAQ ═══ */}
       <section className="py-[120px] max-md:py-[80px]" style={{ background: 'var(--polar)' }}>
         <div className="max-w-[1140px] mx-auto px-6">
           <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4 text-center" style={{ color: 'var(--teal)' }}>
@@ -1248,36 +1393,36 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 max-w-[900px] mx-auto">
             {[
               {
-                q: 'How much data do I need before predictions are useful?',
-                a: "ClientPulse delivers value from day one with financial health intelligence (Stripe). Churn predictions improve over time — after 2-3 months of data across your client base, the system starts producing calibrated risk scores. We don't over-promise early predictions; we let the accuracy earn your trust.",
+                q: "What’s the Solo+ tier?",
+                a: "Solo+ is the bridge between Solo (3 clients, daily refresh) and Pro (10 clients, full agent suite). At $99/mo you get 7 clients tracked, hourly health refresh, Stripe + Calendar integration, 12-month data retention, all models (Claude, GPT, Gemini), recursive learning insights, and 3 MCP connections. One seat. No advanced agents (Churn Prediction / Upsell Detection / Action Proposal) — those are Pro. Right tier if you’re a solo consultant growing past 5 retained clients.",
               },
               {
-                q: "What if I don't use Stripe?",
-                a: "Stripe is our primary financial connector for launch. QuickBooks and FreshBooks integrations are on the roadmap for Q3 2026. In the meantime, you can still get value from meeting intelligence, calendar patterns, and engagement signals — the financial component just won't be active.",
+                q: 'What signals does the Health Score include?',
+                a: 'Five categories: Financial Health (30%) — payment timeliness, invoice disputes, contract value trends via Stripe. Relationship Health (25%) — meeting sentiment, stakeholder engagement, communication responsiveness. Engagement Health (20%) — meeting frequency, email patterns, response time changes. Content Velocity (15%) — when you also run ReForge, content velocity per client flows in automatically. Delivery Health (10%) — scope creep, action items, deliverable cadence.',
               },
               {
-                q: 'How is this different from my CRM?',
-                a: "CRMs track contacts and deals. They don't analyze meeting sentiment, detect payment patterns, predict churn probability, or send you a weekly brief with prepared action plans. ClientPulse sits on top of your existing tools and turns raw data into client intelligence.",
+                q: 'How is this different from Vitally, ChurnZero, Planhat?',
+                a: 'Different ICP entirely. Vitally / ChurnZero / Planhat are built for B2B SaaS companies with product-usage signals (logins, feature adoption, NPS). They bill from $1,250/mo+ and assume you have usage telemetry. Agencies don’t have that. ClientPulse is built for retainer relationships: payment patterns, meeting attendance, email cadence, content velocity. Price floor is 1/2 to 1/6 of those platforms. MCP-native at agency price — Vitally and ChurnZero don’t ship MCP at all.',
               },
               {
-                q: 'Is my client data safe?',
-                a: "All data is encrypted at rest and in transit (256-bit). Your data is never used to train our AI models. We use Anthropic's Claude API with strict data processing agreements. Each agency's data is fully isolated — no cross-tenant access, no shared models.",
+                q: 'What integrations are supported?',
+                a: 'At launch: Stripe (financial signals), Google Calendar (meeting attendance), Gmail (email pattern analysis), Zoom and Google Meet (meeting recordings for sentiment analysis). On the roadmap: QuickBooks, FreshBooks (for agencies not on Stripe). Content Velocity via ReForge is available when you’re on the Agency Suite.',
               },
               {
-                q: 'Can my whole team use it?',
-                a: 'The Agency plan ($799/mo) includes 8 seats with role-based permissions. Account managers see their clients, agency owners see the full portfolio. The Monday Brief can be sent to multiple team members.',
+                q: 'How do I get started right now?',
+                a: 'Try the live demo — auto-signs you in as a sandboxed user with realistic seed clients, Health Scores, and a Monday Brief preview. Poke around before committing anything. Paid signups open after our German company registration completes (Summer 2026). Drop your email below and we’ll send one note when paid signups open.',
               },
               {
-                q: 'What happens after the 7-day trial?',
-                a: "You choose a plan or your account pauses — no surprise charges. Your data stays available for 30 days so you can pick up where you left off. Founding members get 30% off their first year.",
+                q: "What’s the EA discount?",
+                a: '30% off for 12 months on the Agency tier or the full Agency Suite. First 20 customers per tier — Stripe enforces the cap automatically. Redeem at checkout with EA-CP-AGENCY-30 (CP Agency) or EA-SUITE-30 (Agency Suite). Solo, Solo+, and Pro are full price. Early Adopters get direct access to Sasa and influence over the roadmap.',
               },
               {
-                q: "What's the difference between Solo, Pro, and Agency?",
-                a: "Solo ($59/mo) covers up to 3 clients with Health Scores, Monday Brief, and Stripe sync — perfect for freelancers or solo consultants. Pro ($199/mo) adds Meeting Intelligence, Upsell Detection, the Action Proposal Engine, and calendar/email sentiment for up to 10 clients. Agency ($799/mo) unlocks unlimited clients, team dashboard with 8 seats, white-label reports, Slack bot, Recursive Learning insights, and full API access.",
+                q: 'Is my data safe?',
+                a: 'All data stored in EU Frankfurt (Supabase), encrypted at rest and in transit (256-bit). Your data never trains our AI models — we use Anthropic’s Claude API with strict data processing agreements. Each agency’s data is fully isolated. GDPR compliant with full data retention controls and account deletion.',
               },
               {
-                q: 'Is there a discount for annual billing?',
-                a: "Yes — annual plans get 2 months free (16.7% off). That brings Solo to $49/mo, Pro to $166/mo, and Agency to $666/mo. Early Adopters also get an additional 30% off the first year on Agency + Agency Suite — apply the EA-CP-AGENCY-30 or EA-SUITE-30 coupon at checkout (20 slots each).",
+                q: 'What if we cancel?',
+                a: 'Export all your data at any time — client health reports, signal history, Monday Brief archives. No retention penalty, no lock-in. We’d rather earn your subscription every month than trap you. The intelligence compounds with use, so the longer you stay, the more valuable it gets — that’s the only switching cost that should matter.',
               },
             ].map((faq, i) => (
               <div
@@ -1310,92 +1455,105 @@ export default function Home() {
               Creating content for clients?<br />Meet <a href="https://reforge.helloaurora.ai" className="no-underline" style={{ color: 'var(--teal)' }}>ReForge</a>.
             </h3>
             <p className="reveal text-base font-light leading-[1.7] max-w-[680px] mx-auto mb-8" style={{ color: 'var(--text-secondary)' }}>
-              ClientPulse tells you which clients need attention. ReForge helps you deliver the content that keeps them happy. Same workflow thinking. Same agency focus. Built to work together.
+              ClientPulse tells you which clients need attention. ReForge helps you deliver the content that keeps them happy. Same workflow. Same agency focus. Built to work together &mdash; and when they do, content velocity becomes your earliest churn signal.
             </p>
-            <div className="reveal text-sm" style={{ color: 'var(--color-muted)' }}>
-              <strong style={{ color: 'var(--text-primary)' }}>ReForge:</strong> Discover → Create → Engage → Learn<br />
-              <strong style={{ color: 'var(--text-primary)' }}>ClientPulse:</strong> Connect → Monitor → Act → Review<br />
-              <strong style={{ color: 'var(--text-primary)' }}>Two products. One operating system for your agency.</strong>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* ═══ FINAL CTA ═══ */}
-      <section id="waitlist" className="py-[120px] max-md:py-[80px] text-center relative">
+      {/* ═══ SECTION 11: BOTTOM CTA — notify me ═══ */}
+      <section id="waitlist" className="py-[120px] max-md:py-[80px] text-center relative" style={{ background: 'var(--polar)' }}>
         <div
           className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] pointer-events-none"
           style={{ background: 'radial-gradient(circle, rgba(56, 232, 200, 0.06) 0%, transparent 70%)' }}
         />
-        <div className="max-w-[1140px] mx-auto px-6 relative">
-          <div
-            className="reveal inline-flex items-center gap-2 py-2 px-5 rounded-full text-[13px] font-semibold mb-6"
-            style={{
-              background: 'rgba(231, 76, 60, 0.08)',
-              border: '1px solid rgba(231, 76, 60, 0.2)',
-              color: 'var(--pulse-red)',
-            }}
-          >
-            <span
-              className="w-[6px] h-[6px] rounded-full inline-block"
-              style={{ background: 'var(--teal)', animation: 'dot-pulse 2s ease-in-out infinite' }}
-            />
-            Limited to the first 50 founding agencies
+        <div className="max-w-[600px] mx-auto px-6 relative">
+          <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4" style={{ color: 'var(--teal)' }}>
+            Stay in the loop
           </div>
-
           <h2
             className="reveal font-playfair font-bold leading-[1.2] mb-4"
             style={{ fontSize: 'clamp(28px, 4vw, 44px)' }}
           >
-            Stop finding out about churn<br />
-            <span
-              className="bg-clip-text"
-              style={{
-                background: 'var(--gradient-aurora)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              from a cancellation email
-            </span>
+            Notify me when paid signups open.
           </h2>
-
-          <p className="reveal text-[17px] font-light leading-[1.7] max-w-[520px] mx-auto mb-10" style={{ color: 'var(--text-secondary)' }}>
-            Pick a plan and start tracking client health in minutes. Agency &amp; Suite tiers come with 30% off year one for early adopters.
+          <p className="reveal text-[17px] font-light leading-[1.7] mb-10" style={{ color: 'var(--text-secondary)' }}>
+            Try the live demo today. Drop your email and we&apos;ll send one note when paid signups open in Summer 2026 &mdash; including the Early Adopter window for the first 20 customers per tier.
+          </p>
+          <p className="reveal text-[13px] mb-6" style={{ color: 'var(--color-muted)' }}>
+            No drip nurture. One email. Unsubscribe is one click.
           </p>
 
-          <div className="reveal flex justify-center mb-5">
-            <button
-              onClick={() => scrollToSection('pricing')}
-              className="py-[14px] px-8 rounded-[10px] text-[15px] font-semibold cursor-pointer whitespace-nowrap transition-all border-none"
-              style={{
-                background: 'var(--teal)',
-                color: 'var(--deep)',
-                fontFamily: 'var(--font-outfit)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#50f0d4';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(56, 232, 200, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--teal)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
+          {!notifySubmitted ? (
+            <form
+              className="reveal flex gap-3 max-w-[440px] mx-auto"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                // Best-effort submission — non-blocking
+                try {
+                  await fetch('/api/waitlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: notifyEmail, source: 'clientpulse-landing-bottom' }),
+                  });
+                } catch { /* silent */ }
+                setNotifySubmitted(true);
               }}
             >
-              Get Started
-            </button>
+              <input
+                type="email"
+                required
+                placeholder="you@agency.com"
+                value={notifyEmail}
+                onChange={(e) => setNotifyEmail(e.target.value)}
+                className="flex-1 px-4 py-3 rounded-[10px] text-[14px] outline-none"
+                style={{
+                  background: 'var(--twilight)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-body)',
+                }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--border-teal)')}
+                onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
+              />
+              <button
+                type="submit"
+                className="py-3 px-6 rounded-[10px] text-[14px] font-semibold border-none cursor-pointer transition-all"
+                style={{ background: 'var(--teal)', color: 'var(--deep)', fontFamily: 'var(--font-body)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#50f0d4'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal)'; }}
+              >
+                Notify me
+              </button>
+            </form>
+          ) : (
+            <div
+              className="reveal py-4 px-6 rounded-[10px] text-[15px] font-semibold"
+              style={{ background: 'rgba(56,232,200,0.08)', border: '1px solid rgba(56,232,200,0.2)', color: 'var(--teal)' }}
+            >
+              Got it. We&apos;ll send one email when paid signups open.
+            </div>
+          )}
+
+          <div className="reveal mt-6 flex justify-center gap-3">
+            <a
+              href="/api/demo/signin"
+              className="py-[12px] px-6 rounded-[10px] text-[14px] font-semibold no-underline transition-all inline-block"
+              style={{ background: 'var(--teal)', color: 'var(--deep)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#50f0d4'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              Try the live demo &rarr;
+            </a>
           </div>
 
-          <p className="reveal text-[13px]" style={{ color: 'var(--text-dim)' }}>
-            Private launch · Summer 2026 · Built for agencies managing 5–50 clients
+          <p className="reveal mt-4 text-[13px]" style={{ color: 'var(--text-dim)' }}>
+            Private launch &middot; Summer 2026 &middot; Built for agencies managing 5&ndash;50 clients
           </p>
         </div>
       </section>
 
-      {/* ═══ FOOTER ═══ */}
+      {/* ═══ SECTION 12: FOOTER ═══ */}
       <footer className="py-12" style={{ borderTop: '1px solid var(--border-subtle)' }}>
         <div className="max-w-[1140px] mx-auto px-6">
           <div className="flex items-center justify-between max-md:flex-col max-md:gap-6 max-md:text-center">
@@ -1408,6 +1566,7 @@ export default function Home() {
               {[
                 { label: 'Aurora', href: 'https://helloaurora.ai' },
                 { label: 'ReForge', href: 'https://reforge.helloaurora.ai' },
+                { label: 'For creators', href: '/for-creators' },
                 { label: 'Model Card', href: '/model-card' },
                 { label: 'Content Policy', href: '/content-policy' },
                 { label: 'FAQ', href: '/faq' },
@@ -1430,7 +1589,7 @@ export default function Home() {
               ))}
             </ul>
             <span className="text-xs" style={{ color: 'var(--text-dim)' }}>
-              © 2026 Aurora AI Solutions Studio UG
+              &copy; 2026 Aurora AI Solutions Studio UG
             </span>
           </div>
         </div>
@@ -1446,6 +1605,11 @@ export default function Home() {
         .reveal.visible {
           opacity: 1;
           transform: translateY(0);
+        }
+        @keyframes wfPulse {
+          0% { transform: translateX(0%); opacity: 0.85; }
+          70% { opacity: 0.85; }
+          100% { transform: translateX(550%); opacity: 0; }
         }
       `}</style>
     </div>
