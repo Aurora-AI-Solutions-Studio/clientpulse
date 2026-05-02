@@ -118,7 +118,7 @@ export default function UpgradePage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-[#7a88a8]" />
+          <Loader2 className="h-6 w-6 animate-spin text-text-muted" />
         </div>
       }
     >
@@ -222,7 +222,7 @@ function UpgradePageInner() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-[#7a88a8]" />
+        <Loader2 className="h-6 w-6 animate-spin text-text-muted" />
       </div>
     );
   }
@@ -251,10 +251,10 @@ function UpgradePageInner() {
         }}
       >
         <div>
-          <p className="font-semibold text-white">
+          <p className="font-semibold text-text-primary">
             You picked the {plan.name} plan
           </p>
-          <p className="mt-1 text-sm text-[#7a88a8]">
+          <p className="mt-1 text-sm text-text-muted">
             Confirm below to continue to Stripe checkout. You can switch
             tiers from this page if you change your mind.
           </p>
@@ -292,13 +292,13 @@ function UpgradePageInner() {
               className="flex h-10 w-10 items-center justify-center rounded-full"
               style={{ background: 'rgba(56,232,200,0.15)' }}
             >
-              <Crown className="h-5 w-5 text-[#38e8c8]" />
+              <Crown className="h-5 w-5 text-teal" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">
-                You&apos;re on the <span className="text-[#38e8c8]">{currentTierName}</span> plan
+              <p className="text-sm font-semibold text-text-primary">
+                You&apos;re on the <span className="text-teal">{currentTierName}</span> plan
               </p>
-              <p className="text-xs text-[#7a88a8]">
+              <p className="text-xs text-text-muted">
                 Active subscription · Manage billing, invoices, or cancel anytime
               </p>
             </div>
@@ -326,12 +326,11 @@ function UpgradePageInner() {
       {/* ─── Header + interval toggle ─── */}
       <div className="text-center">
         <h1
-          className="text-white"
-          style={{ fontFamily: "'Playfair Display', serif", fontSize: '36px', fontWeight: 700 }}
+          className="font-playfair text-[36px] font-bold text-text-primary"
         >
           {isSubscribed ? 'Your Plan' : 'Choose your plan'}
         </h1>
-        <p className="mt-2 text-[#7a88a8]">
+        <p className="mt-2 text-text-muted">
           {isSubscribed
             ? 'Compare plans or upgrade to unlock more.'
             : 'Client intelligence that pays for itself — prevent one churn, you break even.'}
@@ -446,26 +445,25 @@ function UpgradePageInner() {
                 </span>
               )}
 
-              <h3 className="text-lg font-semibold text-white">{plan.name}</h3>
-              <p className="mt-0.5 text-xs text-[#7a88a8]">{copy.subtitle}</p>
+              <h3 className="text-lg font-semibold text-text-primary">{plan.name}</h3>
+              <p className="mt-0.5 text-xs text-text-muted">{copy.subtitle}</p>
 
               <p className="mt-3">
                 <span
-                  className="text-3xl text-white"
-                  style={{ fontFamily: "'Playfair Display', serif" }}
+                  className="font-playfair text-3xl text-text-primary"
                 >
                   ${displayPrice}
                 </span>
-                <span className="text-sm text-[#7a88a8]">/mo</span>
+                <span className="text-sm text-text-muted">/mo</span>
               </p>
 
               {billingInterval === 'year' ? (
-                <p className="mt-1 text-xs text-[#7a88a8]">
+                <p className="mt-1 text-xs text-text-muted">
                   Billed ${plan.priceYearly}/yr ·{' '}
-                  <span className="text-[#38e8c8]">2 months free</span>
+                  <span className="text-teal">2 months free</span>
                 </p>
               ) : (
-                <p className="mt-1 text-xs text-[#7a88a8]">
+                <p className="mt-1 text-xs text-text-muted">
                   ${getAnnualMonthly(tier)}/mo billed annually
                 </p>
               )}
@@ -474,9 +472,9 @@ function UpgradePageInner() {
                 {copy.features.map((f) => (
                   <li
                     key={f}
-                    className="flex items-start gap-2 text-sm text-[#7a88a8]"
+                    className="flex items-start gap-2 text-sm text-text-muted"
                   >
-                    <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#38e8c8]" />
+                    <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-teal" />
                     {f}
                   </li>
                 ))}
@@ -554,8 +552,7 @@ function UpgradePageInner() {
       {/* ─── Feature comparison table ─── */}
       <div className="mt-8">
         <h2
-          className="mb-6 text-center text-xl font-semibold text-white"
-          style={{ fontFamily: "'Playfair Display', serif" }}
+          className="font-playfair mb-6 text-center text-xl font-semibold text-text-primary"
         >
           Compare Plans
         </h2>
@@ -563,7 +560,7 @@ function UpgradePageInner() {
           className="overflow-x-auto rounded-xl"
           style={{ border: '1px solid rgba(232,236,245,0.06)' }}
         >
-          <table className="w-full text-sm text-[#7a88a8]">
+          <table className="w-full text-sm text-text-muted">
             <thead>
               <tr
                 style={{
@@ -572,7 +569,7 @@ function UpgradePageInner() {
                 }}
               >
                 <th
-                  className="py-3.5 pl-5 pr-4 text-left font-medium text-white"
+                  className="py-3.5 pl-5 pr-4 text-left font-medium text-text-primary"
                   style={{ minWidth: '200px' }}
                 >
                   Feature
@@ -656,12 +653,11 @@ function UpgradePageInner() {
             Agency Suite
           </div>
           <h3
-            className="text-lg font-semibold mb-1 text-white"
-            style={{ fontFamily: "'Playfair Display', serif" }}
+            className="font-playfair text-lg font-semibold mb-1 text-text-primary"
           >
             Already running ReForge? Bundle both for a built-in upsell loop.
           </h3>
-          <p className="text-sm text-[#7a88a8]">
+          <p className="text-sm text-text-muted">
             ReForge publishing signals feed ClientPulse health scores. The bundled Agency Suite lives on the ReForge pricing page.
           </p>
         </div>
@@ -682,9 +678,9 @@ function UpgradePageInner() {
       </div>
 
       {/* ─── Coupon hint ─── */}
-      <p className="text-center text-xs text-[#7a88a8]">
+      <p className="text-center text-xs text-text-muted">
         Have a promo code? Apply it at checkout — 30% off first year for Agency with{' '}
-        <code className="text-[#38e8c8]">EA-CP-AGENCY-30</code> (20 slots remaining).
+        <code className="text-teal">EA-CP-AGENCY-30</code> (20 slots remaining).
       </p>
     </div>
   );

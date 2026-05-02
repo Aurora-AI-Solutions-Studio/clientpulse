@@ -380,13 +380,119 @@ export default function Home() {
               <div className="w-3 h-3 rounded-full bg-[#f0c84c]"></div>
               <div className="w-3 h-3 rounded-full bg-[#38e8c8]"></div>
             </div>
-            {/* Mockup Image / Content placeholder */}
-            <div className="aspect-[16/9] w-full relative">
-              <div className="absolute inset-0 bg-[url('/mockups/clientpulse-dashboard.png')] bg-cover bg-center opacity-90" />
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center">
-                  <p className="font-playfair text-4xl font-bold text-white mb-2">94% Health Score</p>
-                  <p className="text-teal font-outfit text-sm">Predictive Retention Active</p>
+            {/* High-Fidelity DOM Mockup */}
+            <div className="aspect-[16/9] w-full relative flex bg-[#0c1220] text-left overflow-hidden">
+              {/* Sidebar */}
+              <div className="w-48 shrink-0 border-r border-[rgba(56,232,200,0.08)] bg-[#0a0f1a] p-4 flex flex-col gap-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-6 h-6 rounded-md bg-[linear-gradient(135deg,#38e8c8,#4cc9f0)]" />
+                  <div className="h-4 w-20 rounded bg-[rgba(232,236,245,0.1)]" />
+                </div>
+                <div className="space-y-3">
+                  <div className="h-3 w-full rounded bg-[rgba(56,232,200,0.15)]" />
+                  <div className="h-3 w-3/4 rounded bg-[rgba(232,236,245,0.05)]" />
+                  <div className="h-3 w-5/6 rounded bg-[rgba(232,236,245,0.05)]" />
+                </div>
+              </div>
+
+              {/* Main Content */}
+              <div className="flex-1 flex flex-col bg-[#0c1220]">
+                {/* Header */}
+                <div className="h-14 border-b border-[rgba(232,236,245,0.06)] flex items-center px-6 justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="font-playfair text-lg font-bold text-white">Client Health Portfolio</span>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <div className="h-6 w-20 rounded-md bg-[rgba(232,236,245,0.05)]" />
+                    <div className="h-7 w-24 rounded-full bg-[#38e8c8]/10 border border-[#38e8c8]/30 flex items-center justify-center">
+                      <span className="text-[10px] text-[#38e8c8] font-bold">Stripe Synced</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Dashboard Area */}
+                <div className="flex-1 p-6 flex flex-col gap-4 overflow-hidden">
+                  {/* Top Stats */}
+                  <div className="flex gap-4">
+                    <div className="flex-1 rounded-xl bg-polar border border-[rgba(232,236,245,0.06)] p-4 flex flex-col justify-center">
+                      <span className="text-xs text-[#7a88a8] mb-1">Avg Health Score</span>
+                      <span className="font-playfair text-3xl font-bold text-[#38e8c8]">88</span>
+                    </div>
+                    <div className="flex-1 rounded-xl bg-polar border border-[rgba(232,236,245,0.06)] p-4 flex flex-col justify-center">
+                      <span className="text-xs text-[#7a88a8] mb-1">Total ARR</span>
+                      <span className="font-playfair text-3xl font-bold text-white">$4.2M</span>
+                    </div>
+                    <div className="flex-1 rounded-xl bg-[rgba(232,76,76,0.05)] border border-[rgba(232,76,76,0.2)] p-4 flex flex-col justify-center">
+                      <span className="text-xs text-[#e74c3c] mb-1">Churn Risk</span>
+                      <span className="font-playfair text-3xl font-bold text-white">$120k</span>
+                    </div>
+                  </div>
+
+                  {/* Client List */}
+                  <div className="flex-1 rounded-xl bg-polar border border-[rgba(232,236,245,0.06)] p-4 overflow-hidden flex flex-col">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-sm font-semibold text-white">Recent Signals</span>
+                    </div>
+                    
+                    <div className="flex flex-col gap-3">
+                      {/* Row 1 */}
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-[rgba(232,236,245,0.02)] border border-[rgba(232,236,245,0.04)]">
+                        <div className="flex items-center gap-3 w-1/3">
+                          <div className="w-8 h-8 rounded-full bg-[rgba(232,236,245,0.1)]" />
+                          <div className="flex flex-col gap-1">
+                            <div className="w-24 h-3 bg-white/80 rounded" />
+                            <div className="w-16 h-2 bg-white/30 rounded" />
+                          </div>
+                        </div>
+                        <div className="flex-1 flex items-center justify-center">
+                          <div className="w-full max-w-[120px] h-2 bg-[rgba(232,236,245,0.1)] rounded-full overflow-hidden">
+                            <div className="w-[94%] h-full bg-[#38e8c8]" />
+                          </div>
+                        </div>
+                        <div className="w-20 text-right">
+                          <span className="rounded bg-[#38e8c8]/10 px-2 py-1 text-[10px] font-bold text-[#38e8c8]">Healthy</span>
+                        </div>
+                      </div>
+
+                      {/* Row 2 - Risk */}
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-[rgba(232,76,76,0.05)] border border-[rgba(232,76,76,0.2)]">
+                        <div className="flex items-center gap-3 w-1/3">
+                          <div className="w-8 h-8 rounded-full bg-[rgba(232,236,245,0.1)]" />
+                          <div className="flex flex-col gap-1">
+                            <div className="w-32 h-3 bg-white/80 rounded" />
+                            <div className="w-20 h-2 bg-white/30 rounded" />
+                          </div>
+                        </div>
+                        <div className="flex-1 flex items-center justify-center">
+                          <div className="w-full max-w-[120px] h-2 bg-[rgba(232,236,245,0.1)] rounded-full overflow-hidden">
+                            <div className="w-[42%] h-full bg-[#e74c3c]" />
+                          </div>
+                        </div>
+                        <div className="w-20 text-right">
+                          <span className="rounded bg-[#e74c3c]/10 px-2 py-1 text-[10px] font-bold text-[#e74c3c]">At Risk</span>
+                        </div>
+                      </div>
+
+                      {/* Row 3 */}
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-[rgba(232,236,245,0.02)] border border-[rgba(232,236,245,0.04)] opacity-60">
+                        <div className="flex items-center gap-3 w-1/3">
+                          <div className="w-8 h-8 rounded-full bg-[rgba(232,236,245,0.1)]" />
+                          <div className="flex flex-col gap-1">
+                            <div className="w-20 h-3 bg-white/80 rounded" />
+                            <div className="w-12 h-2 bg-white/30 rounded" />
+                          </div>
+                        </div>
+                        <div className="flex-1 flex items-center justify-center">
+                          <div className="w-full max-w-[120px] h-2 bg-[rgba(232,236,245,0.1)] rounded-full overflow-hidden">
+                            <div className="w-[78%] h-full bg-[#f0c84c]" />
+                          </div>
+                        </div>
+                        <div className="w-20 text-right">
+                          <span className="rounded bg-[#f0c84c]/10 px-2 py-1 text-[10px] font-bold text-[#f0c84c]">Stable</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1067,7 +1173,7 @@ export default function Home() {
           <div className="flex justify-center gap-3">
             <a
               href="/api/demo/signin"
-              className="py-[12px] px-6 rounded-[10px] text-[14px] font-semibold no-underline transition-all inline-block"
+              className="py-[14px] px-8 rounded-[10px] text-[14px] font-semibold no-underline transition-all inline-block"
               style={{ background: 'var(--teal)', color: 'var(--deep)' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = '#50f0d4'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal)'; e.currentTarget.style.transform = 'translateY(0)'; }}
@@ -1076,7 +1182,7 @@ export default function Home() {
             </a>
             <button
               onClick={() => scrollToSection('pricing')}
-              className="py-[12px] px-6 rounded-[10px] text-[14px] font-semibold border-none cursor-pointer transition-all"
+              className="py-[14px] px-8 rounded-[10px] text-[14px] font-semibold border-none cursor-pointer transition-all"
               style={{ background: 'rgba(56,232,200,0.08)', color: 'var(--teal)', border: '1px solid rgba(56,232,200,0.2)' }}
             >
               See pricing &darr;
@@ -1372,7 +1478,7 @@ export default function Home() {
                 )}
                 <a
                   href="/api/demo/signin"
-                  className="mt-4 block rounded-xl px-6 py-3 text-center text-sm font-semibold transition-all no-underline"
+                  className="mt-4 block rounded-[10px] px-8 py-3.5 text-center text-sm font-semibold transition-all no-underline"
                   style={{ background: 'var(--teal)', color: 'var(--deep)' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = '#50f0d4';
@@ -1558,7 +1664,7 @@ export default function Home() {
           <div className="reveal mt-6 flex justify-center gap-3">
             <a
               href="/api/demo/signin"
-              className="py-[12px] px-6 rounded-[10px] text-[14px] font-semibold no-underline transition-all inline-block"
+              className="py-[14px] px-8 rounded-[10px] text-[14px] font-semibold no-underline transition-all inline-block"
               style={{ background: 'var(--teal)', color: 'var(--deep)' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = '#50f0d4'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal)'; e.currentTarget.style.transform = 'translateY(0)'; }}

@@ -143,7 +143,7 @@ export default function DashboardLayout({
         <main className="flex-1 overflow-auto">
           <div className="p-4 md:p-8 max-w-[1400px] mx-auto w-full space-y-4">
             {/* Agency-workflow strip — visible spine of the suite. Surfaces
-                Connect → Discover → Decide → Act → Learn with the current
+                Synchronize → Analyze → Strategize → Execute → Compound with the current
                 step lit. Hidden on the onboarding wizard so it doesn't
                 compete with the wizard's own progress. */}
             {!pathname?.startsWith('/dashboard/onboarding') && <WorkflowStrip />}

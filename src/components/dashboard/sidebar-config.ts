@@ -30,7 +30,7 @@ export interface NavItem {
 }
 
 export interface Workspace {
-  id: 'connect' | 'discover' | 'decide' | 'act' | 'learn';
+  id: 'synchronize' | 'analyze' | 'strategize' | 'execute' | 'compound';
   label: string;
   icon: React.ElementType;
   /** Per-workspace accent — the 5 stops of the Aurora suite gradient.
@@ -44,8 +44,8 @@ export interface Workspace {
 
 export const WORKSPACES: Workspace[] = [
   {
-    id: 'connect',
-    label: 'Connect',
+    id: 'synchronize',
+    label: 'Synchronize',
     icon: Plug,
     accent: '#4cc9f0',
     glow: 'rgba(76,201,240,0.35)',
@@ -54,16 +54,16 @@ export const WORKSPACES: Workspace[] = [
     ],
   },
   {
-    id: 'discover',
-    label: 'Discover',
+    id: 'analyze',
+    label: 'Analyze',
     icon: Search,
     accent: '#38e8c8',
     glow: 'rgba(56,232,200,0.35)',
     items: [{ label: 'Clients', icon: Users, href: '/dashboard/clients' }],
   },
   {
-    id: 'decide',
-    label: 'Decide',
+    id: 'strategize',
+    label: 'Strategize',
     icon: CheckSquare,
     accent: '#b388eb',
     glow: 'rgba(179,136,235,0.35)',
@@ -74,8 +74,8 @@ export const WORKSPACES: Workspace[] = [
     ],
   },
   {
-    id: 'act',
-    label: 'Act',
+    id: 'execute',
+    label: 'Execute',
     icon: Zap,
     accent: '#e87fa5',
     glow: 'rgba(232,127,165,0.35)',
@@ -86,8 +86,8 @@ export const WORKSPACES: Workspace[] = [
     ],
   },
   {
-    id: 'learn',
-    label: 'Learn',
+    id: 'compound',
+    label: 'Compound',
     icon: TrendingUp,
     accent: '#f0c84c',
     glow: 'rgba(240,200,76,0.35)',

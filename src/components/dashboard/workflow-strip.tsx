@@ -1,7 +1,7 @@
 'use client';
 
 // Agency-workflow strip — a thin horizontal row of the 5 suite workspaces
-// (Connect / Discover / Decide / Act / Learn) with the current step lit
+// (Synchronize / Analyze / Strategize / Execute / Compound) with the current step lit
 // up in its workspace accent and the rest as muted, click-to-navigate
 // markers. Drops on top of any page that wants to make the agency
 // content workflow visible to the user.

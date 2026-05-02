@@ -142,12 +142,12 @@ export default function ReportsPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h2 className="text-3xl text-white mb-2">Client Reports</h2>
-        <p className="text-[#7a88a8]">Generate and download professional white-label client reports</p>
+        <h2 className="font-playfair text-[28px] font-bold text-text-primary mb-2">Client Reports</h2>
+        <p className="text-sm text-text-muted">Generate and download professional white-label client reports</p>
       </div>
 
       {/* Report Generator Controls */}
-      <Card className="bg-[#1a2849] border-[#2a3f5f] p-6">
+      <Card className="rounded-[10px] bg-polar border-border-subtle p-6">
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#e8f0ff] mb-2">
@@ -156,7 +156,7 @@ export default function ReportsPage() {
             <select
               value={selectedClientId}
               onChange={(e) => setSelectedClientId(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg bg-[#0f1929] border border-[#2a3f5f] text-white placeholder-[#7a88a8] focus:border-[#00d4ff] focus:outline-none transition-colors"
+              className="w-full px-4 py-2 rounded-xl bg-deep border border-border-subtle text-text-primary placeholder-text-muted focus:border-teal focus:outline-none transition-colors"
             >
               <option value="">Choose a client...</option>
               {clients.map((client) => (
@@ -170,7 +170,7 @@ export default function ReportsPage() {
           <Button
             onClick={handleGenerateReport}
             disabled={!selectedClientId || generatingReport}
-            className="w-full bg-[#00d4ff] hover:bg-[#00a8cc] text-[#0f1929] font-semibold"
+            className="w-full bg-teal hover:brightness-110 text-deep font-semibold rounded-xl transition-all"
           >
             {generatingReport ? (
               <>
@@ -497,7 +497,7 @@ export default function ReportsPage() {
           <div className="print:hidden flex gap-3 mt-6">
             <Button
               onClick={handleDownloadPDF}
-              className="flex-1 bg-[#00d4ff] hover:bg-[#00a8cc] text-[#0f1929] font-semibold"
+              className="flex-1 bg-teal hover:brightness-110 text-deep font-semibold rounded-xl transition-all"
             >
               <Download className="w-4 h-4 mr-2" />
               Download as PDF

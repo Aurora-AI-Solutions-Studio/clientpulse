@@ -2,7 +2,7 @@
 
 // Unified Suite Shell — CP sidebar.
 //
-// 5 workspaces (Connect / Discover / Decide / Act / Learn) — each with its
+// 5 workspaces (Synchronize / Analyze / Strategize / Execute / Compound) — each with its
 // own accent (the 5 stops of the Aurora gradient). Active workspace label
 // + icon + active item all key off the workspace's accent, so switching
 // workspaces feels like moving along the suite gradient.
