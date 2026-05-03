@@ -14,14 +14,14 @@
   --polar: #0c1220;
   --twilight: #141e33;
   --color-surface-hover: #223052;
-  --teal: #00E5FF;
-  --teal-glow: rgba(0, 229, 255, 0.15);
-  --teal-subtle: rgba(0, 229, 255, 0.08);
+  --teal: #38E8C8;
+  --teal-glow: rgba(56, 232, 200, 0.15);
+  --teal-subtle: rgba(56, 232, 200, 0.08);
   --aurora-blue: #00E5FF;
-  --aurora-purple: #B026FF;
-  --aurora-pink: #FF007A;
-  --reforge-gold: #B026FF;
-  --border-teal: rgba(0, 229, 255, 0.12);
+  --aurora-purple: #7B2CBF;
+  --aurora-pink: #7B2CBF;
+  --reforge-gold: #7B2CBF;
+  --border-teal: rgba(56, 232, 200, 0.12);
   --border-subtle: rgba(122, 136, 168, 0.12);
   --text-primary: #e8ecf5;
   --text-secondary: #a0adc4;
@@ -34,7 +34,7 @@
   --color-surface-light: #1a2540;
 
   /* Aurora Gradient */
-  --gradient-aurora: linear-gradient(135deg, #00E5FF, #B026FF, #FF007A);
+  --gradient-aurora: linear-gradient(135deg, #38E8C8, #00E5FF, #7B2CBF);
 
   /* Fonts — canonical Aurora landing stack. CSS variables fed by next/font in layout.tsx. */
   --font-playfair: var(--font-space-grotesk), system-ui, sans-serif; /* legacy alias kept for back-compat */
