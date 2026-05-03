@@ -1661,9 +1661,9 @@ export default function Home() {
           <div className="flex items-center justify-between max-md:flex-col max-md:gap-6 max-md:text-center">
           <div className="flex items-center gap-2">
             <img src="/icon.png" width={24} height={24} alt="Aurora Logo" className="rounded-full shadow-[0_0_8px_rgba(0,229,255,0.4)]" />
-            <span className="text-sm font-medium" style={{ color: 'white' }}>ClientPulse</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>ClientPulse</span>
             <span className="ml-2 text-sm" style={{ color: 'var(--color-muted)' }}>
-              by <a href="https://helloaurora.ai" target="_blank" rel="noopener noreferrer" className="font-medium transition hover:text-white" style={{ background: 'var(--aurora-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Aurora</a>
+              by <a href="https://helloaurora.ai" target="_blank" rel="noopener noreferrer" className="font-medium transition hover:text-white" style={{ background: 'var(--gradient-aurora)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Aurora</a>
             </span>
           </div>
             <ul className="flex gap-6 list-none max-md:flex-wrap max-md:justify-center">
