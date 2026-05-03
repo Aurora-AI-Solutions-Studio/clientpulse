@@ -1,18 +1,21 @@
 'use client';
 
+// Sprint 7.8 visibility hotfix: Edit + Delete were previously hidden behind
+// a 16px MoreVertical kebab in subtle grey next to the HealthScoreBadge —
+// effectively invisible to a non-technical agency owner doing a 30-second
+// scan of /dashboard/clients. The dropdown shipped in PR #86, the routes
+// work, but Sasa reported "no way to change or delete a client". So this
+// pulls Edit + Delete out of the overflow menu and onto the card itself
+// as always-visible, labeled icon buttons in a footer row, mirroring the
+// affordance pattern of the page-level "+ Add client" / "Mass-upload"
+// buttons. No more discoverability gap.
+
 import { Client } from '@/types/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
 import HealthScoreBadge from './health-score-badge';
 import { format } from 'date-fns';
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 
 interface ClientCardProps {
   client: Client;
@@ -46,6 +49,12 @@ export default function ClientCard({
 
   const showActions = Boolean(onEdit || onDelete);
 
+  const stop = (e: React.MouseEvent) => {
+    // Card has its own onClick (navigate to detail). Action buttons must not
+    // bubble — clicking Edit should not also navigate away from the list.
+    e.stopPropagation();
+  };
+
   return (
     <Card
       className="group p-5 cursor-pointer transition-all hover:border-[#38e8c8]/40 hover:shadow-[0_2px_28px_-8px_rgba(56,232,200,0.18)]"
@@ -58,54 +67,7 @@ export default function ClientCard({
           </h3>
           <p className="text-xs text-[#9aa6c0] mt-0.5 truncate">{client.name}</p>
         </div>
-        <div className="flex items-center gap-1.5">
-          <HealthScoreBadge score={client.healthScore?.overall ?? 0} size="md" />
-          {showActions && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={`Actions for ${client.company || client.name}`}
-                  className="p-1 rounded-md text-[#7a88a8] hover:text-white hover:bg-[#1a2540]/60 transition-colors"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                onClick={(e) => e.stopPropagation()}
-                className="bg-[#0d1422] border-[#1a2540]"
-              >
-                {onEdit && (
-                  <DropdownMenuItem
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      onEdit(client);
-                    }}
-                    className="text-[#c8d0e0] focus:bg-[#1a2540] focus:text-white"
-                  >
-                    <Pencil className="w-3.5 h-3.5 mr-2" />
-                    Edit client
-                  </DropdownMenuItem>
-                )}
-                {onEdit && onDelete && <DropdownMenuSeparator className="bg-[#1a2540]" />}
-                {onDelete && (
-                  <DropdownMenuItem
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      onDelete(client);
-                    }}
-                    className="text-red-400 focus:bg-red-500/10 focus:text-red-300"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-2" />
-                    Delete client
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
+        <HealthScoreBadge score={client.healthScore?.overall ?? 0} size="md" />
       </div>
 
       <div className="space-y-2.5 text-sm">
@@ -130,6 +92,42 @@ export default function ClientCard({
           </Badge>
         </div>
       </div>
+
+      {showActions && (
+        <div
+          className="mt-4 pt-3 border-t border-[#1a2540] flex items-center justify-end gap-2"
+          onClick={stop}
+        >
+          {onEdit && (
+            <button
+              type="button"
+              aria-label={`Edit ${client.company || client.name}`}
+              onClick={(e) => {
+                stop(e);
+                onEdit(client);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-[#c8d0e0] bg-[#0d1422] border border-[#1a2540] hover:text-white hover:border-[#38e8c8]/40 hover:bg-[#1a2540]/50 transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              aria-label={`Delete ${client.company || client.name}`}
+              onClick={(e) => {
+                stop(e);
+                onDelete(client);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-red-400 bg-red-500/5 border border-red-500/20 hover:text-red-300 hover:bg-red-500/10 hover:border-red-500/40 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete
+            </button>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
