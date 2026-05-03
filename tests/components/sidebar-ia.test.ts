@@ -1,9 +1,14 @@
 // IA contract test for the unified-suite sidebar. Asserts the workspaces
-// + items match the locked Apr-25 spec — protects against accidental
-// renames or item moves that would break the CP/RF parity story.
+// + items match the locked spec — protects against accidental renames or
+// item moves that would break the CP/RF parity story.
 //
 // Pure data assertion (no React render) — that's intentional: the visual
 // behavior is reviewed on Vercel preview, not in tests.
+//
+// May 2026 — workspace IDs renamed to canonical synchronize/analyze/
+// strategize/execute/compound (was connect/discover/decide/act/learn).
+// Same workspaces, same shape — just the verb-noun rename Sasa locked in
+// in commit 5f3f01a (the canonical workflow names update).
 
 import { describe, expect, it } from 'vitest';
 import { WORKSPACES } from '../../src/components/dashboard/sidebar-config';
@@ -11,46 +16,46 @@ import { WORKSPACES } from '../../src/components/dashboard/sidebar-config';
 describe('Sidebar IA — unified suite shell', () => {
   it('exposes exactly 5 workspaces in the locked order', () => {
     expect(WORKSPACES.map((w) => w.id)).toEqual([
-      'connect',
-      'discover',
-      'decide',
-      'act',
-      'learn',
+      'synchronize',
+      'analyze',
+      'strategize',
+      'execute',
+      'compound',
     ]);
   });
 
-  it('Discover collapses to a single Clients destination (no standalone Health/Predictions/Alerts)', () => {
-    const discover = WORKSPACES.find((w) => w.id === 'discover');
-    expect(discover).toBeDefined();
-    const hrefs = discover!.items.map((i) => i.href);
+  it('Analyze collapses to a single Clients destination (no standalone Health/Predictions/Alerts)', () => {
+    const analyze = WORKSPACES.find((w) => w.id === 'analyze');
+    expect(analyze).toBeDefined();
+    const hrefs = analyze!.items.map((i) => i.href);
     expect(hrefs).toEqual(['/dashboard/clients']);
   });
 
-  it('Decide carries the weekly-decision items', () => {
-    const decide = WORKSPACES.find((w) => w.id === 'decide');
-    expect(decide?.items.map((i) => i.label)).toEqual([
+  it('Strategize carries the weekly-decision items', () => {
+    const strategize = WORKSPACES.find((w) => w.id === 'strategize');
+    expect(strategize?.items.map((i) => i.label)).toEqual([
       'Monday Brief',
       'Proposals',
       'Approvals',
     ]);
   });
 
-  it('Act carries the doing items', () => {
-    const act = WORKSPACES.find((w) => w.id === 'act');
-    expect(act?.items.map((i) => i.label)).toEqual(['Check-ins', 'Upsell', 'Meetings']);
+  it('Execute carries the doing items', () => {
+    const execute = WORKSPACES.find((w) => w.id === 'execute');
+    expect(execute?.items.map((i) => i.label)).toEqual(['Check-ins', 'Upsell', 'Meetings']);
   });
 
-  it('Learn carries the insights items', () => {
-    const learn = WORKSPACES.find((w) => w.id === 'learn');
-    expect(learn?.items.map((i) => i.label)).toEqual(['Reports', 'Outcomes', 'Learning']);
+  it('Compound carries the insights items', () => {
+    const compound = WORKSPACES.find((w) => w.id === 'compound');
+    expect(compound?.items.map((i) => i.label)).toEqual(['Reports', 'Outcomes', 'Learning']);
   });
 
-  it('Connect carries the data-source items', () => {
+  it('Synchronize carries the data-source items', () => {
     // Apr 28, 2026 — Slack + Transcription consolidated into the
     // Integrations panel (cards on /dashboard/settings) so the sidebar
     // is not cluttered with a top-level entry per integration.
-    const connect = WORKSPACES.find((w) => w.id === 'connect');
-    expect(connect?.items.map((i) => i.label)).toEqual([
+    const synchronize = WORKSPACES.find((w) => w.id === 'synchronize');
+    expect(synchronize?.items.map((i) => i.label)).toEqual([
       'Integrations',
     ]);
   });
