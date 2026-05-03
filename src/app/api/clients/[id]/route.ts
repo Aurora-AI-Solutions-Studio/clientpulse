@@ -156,6 +156,10 @@ export async function PUT(
   }
 }
 
+// PATCH is an alias for PUT — we accept partial updates either way, and
+// PATCH is the more idiomatic verb for the dashboard's "Edit client" form.
+export const PATCH = PUT;
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -166,6 +170,28 @@ export async function DELETE(
     if (!auth.ok) return auth.response;
     const { agencyId, serviceClient: supabase } = auth.ctx;
 
+    // Confirm the client exists in this agency before deleting. Without
+    // this check Supabase's .delete() reports success even when zero rows
+    // matched, which would mask 404s for cross-agency IDs.
+    const { data: existing, error: checkError } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('id', id)
+      .eq('agency_id', agencyId)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('[clients/[id] DELETE] ownership check failed', checkError);
+      return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 });
+    }
+    if (!existing) {
+      return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+    }
+
+    // Hard-delete. The clients table's child rows (signals, action_items,
+    // health scores, meetings, monday_briefs facts, client_invoices, etc.)
+    // all FK with ON DELETE CASCADE / SET NULL — see schema.sql + the
+    // sprint-4/5/6/7/8a migrations. No soft-delete column on clients.
     const { error: deleteError } = await supabase
       .from('clients')
       .delete()
@@ -173,6 +199,7 @@ export async function DELETE(
       .eq('agency_id', agencyId);
 
     if (deleteError) {
+      console.error('[clients/[id] DELETE] delete failed', deleteError);
       return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 });
     }
     return NextResponse.json({ success: true });

@@ -3,15 +3,30 @@
 import { Client } from '@/types/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import HealthScoreBadge from './health-score-badge';
 import { format } from 'date-fns';
+import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
 
 interface ClientCardProps {
   client: Client;
   onClick?: () => void;
+  onEdit?: (client: Client) => void;
+  onDelete?: (client: Client) => void;
 }
 
-export default function ClientCard({ client, onClick }: ClientCardProps) {
+export default function ClientCard({
+  client,
+  onClick,
+  onEdit,
+  onDelete,
+}: ClientCardProps) {
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -29,6 +44,8 @@ export default function ClientCard({ client, onClick }: ClientCardProps) {
     ? format(new Date(client.lastMeetingDate), 'MMM dd, yyyy')
     : 'No meeting';
 
+  const showActions = Boolean(onEdit || onDelete);
+
   return (
     <Card
       className="group p-5 cursor-pointer transition-all hover:border-[#38e8c8]/40 hover:shadow-[0_2px_28px_-8px_rgba(56,232,200,0.18)]"
@@ -41,7 +58,54 @@ export default function ClientCard({ client, onClick }: ClientCardProps) {
           </h3>
           <p className="text-xs text-[#9aa6c0] mt-0.5 truncate">{client.name}</p>
         </div>
-        <HealthScoreBadge score={client.healthScore?.overall ?? 0} size="md" />
+        <div className="flex items-center gap-1.5">
+          <HealthScoreBadge score={client.healthScore?.overall ?? 0} size="md" />
+          {showActions && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Actions for ${client.company || client.name}`}
+                  className="p-1 rounded-md text-[#7a88a8] hover:text-white hover:bg-[#1a2540]/60 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                onClick={(e) => e.stopPropagation()}
+                className="bg-[#0d1422] border-[#1a2540]"
+              >
+                {onEdit && (
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      onEdit(client);
+                    }}
+                    className="text-[#c8d0e0] focus:bg-[#1a2540] focus:text-white"
+                  >
+                    <Pencil className="w-3.5 h-3.5 mr-2" />
+                    Edit client
+                  </DropdownMenuItem>
+                )}
+                {onEdit && onDelete && <DropdownMenuSeparator className="bg-[#1a2540]" />}
+                {onDelete && (
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      onDelete(client);
+                    }}
+                    className="text-red-400 focus:bg-red-500/10 focus:text-red-300"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-2" />
+                    Delete client
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2.5 text-sm">

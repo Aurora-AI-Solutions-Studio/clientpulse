@@ -5,16 +5,24 @@
 // real-data API, which had no row to find). Inherits the new visual
 // language: layered surfaces, gradient accents on tier-style filters,
 // soft hover glow on cards.
+//
+// Sprint 7.8 (CRUD): card overflow menu now wires up Edit + Delete, and
+// the header has a "Mass-upload" button alongside "+ Add client".
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Users } from 'lucide-react';
+import { Plus, Search, Upload, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import ClientCard from '@/components/clients/client-card';
 import AddClientDialog from '@/components/clients/add-client-dialog';
-import { Client, ClientCreateInput } from '@/types/client';
+import ClientFormDialog from '@/components/clients/client-form-dialog';
+import DeleteClientDialog from '@/components/clients/delete-client-dialog';
+import MassUploadDialog, {
+  type MassUploadResult,
+} from '@/components/clients/mass-upload-dialog';
+import { Client, ClientCreateInput, ClientUpdateInput } from '@/types/client';
 import { useToast } from '@/components/ui/use-toast';
 
 type HealthFilter = 'all' | 'healthy' | 'at-risk' | 'critical';
@@ -57,12 +65,25 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [healthFilter, setHealthFilter] = useState<HealthFilter>('all');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Add
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+
+  // Edit
+  const [editTarget, setEditTarget] = useState<Client | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Delete
+  const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Mass upload
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Initial load + reload after add
   const reload = async () => {
     try {
       setLoading(true);
@@ -121,6 +142,69 @@ export default function ClientsPage() {
     }
   };
 
+  const handleEditClient = async (data: ClientCreateInput | ClientUpdateInput) => {
+    if (!editTarget) return;
+    setIsEditing(true);
+    try {
+      const res = await fetch(`/api/clients/${editTarget.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(`Failed to update (${res.status})`);
+      const updated: Client = await res.json();
+      setClients((prev) =>
+        prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)),
+      );
+      setEditTarget(null);
+      toast({ title: 'Client updated', description: `${updated.name} saved.` });
+    } catch (err) {
+      console.error('Error updating client:', err);
+      toast({
+        title: 'Could not update client',
+        description: 'Try again, or refresh to see the current state.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/clients/${deleteTarget.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`Failed to delete (${res.status})`);
+      setClients((prev) => prev.filter((c) => c.id !== deleteTarget.id));
+      toast({
+        title: 'Client deleted',
+        description: `${deleteTarget.company || deleteTarget.name} and all attached history were removed.`,
+      });
+      setDeleteTarget(null);
+    } catch (err) {
+      console.error('Error deleting client:', err);
+      toast({
+        title: 'Could not delete client',
+        description: 'Try again. The client may already be gone — refresh to check.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleMassUpload = async (file: File): Promise<MassUploadResult> => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch('/api/clients/bulk', { method: 'POST', body: form });
+    if (!res.ok) {
+      const errBody = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(errBody.error ?? `Upload failed (${res.status})`);
+    }
+    return (await res.json()) as MassUploadResult;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -133,13 +217,23 @@ export default function ClientsPage() {
             Your portfolio. Click any client to see signals, actions, health, and alerts.
           </p>
         </div>
-        <Button
-          onClick={() => setIsDialogOpen(true)}
-          className="bg-gradient-to-r from-[#38e8c8] to-[#4cc9f0] text-[#0a1f1a] font-semibold hover:opacity-95 shadow-[0_4px_18px_-4px_rgba(56,232,200,0.4)]"
-        >
-          <Plus className="w-4 h-4 mr-1.5" />
-          Add client
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsUploadOpen(true)}
+            className="border-[#1a2540] text-[#c8d0e0] hover:text-white hover:bg-[#0d1422]"
+          >
+            <Upload className="w-4 h-4 mr-1.5" />
+            Mass-upload
+          </Button>
+          <Button
+            onClick={() => setIsAddDialogOpen(true)}
+            className="bg-gradient-to-r from-[#38e8c8] to-[#4cc9f0] text-[#0a1f1a] font-semibold hover:opacity-95 shadow-[0_4px_18px_-4px_rgba(56,232,200,0.4)]"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Add client
+          </Button>
+        </div>
       </div>
 
       {/* Search + filter */}
@@ -202,7 +296,7 @@ export default function ClientsPage() {
                   and action items.
                 </p>
                 <Button
-                  onClick={() => setIsDialogOpen(true)}
+                  onClick={() => setIsAddDialogOpen(true)}
                   className="bg-gradient-to-r from-[#38e8c8] to-[#4cc9f0] text-[#0a1f1a] font-semibold hover:opacity-95"
                 >
                   <Plus className="w-4 h-4 mr-1.5" />
@@ -226,16 +320,46 @@ export default function ClientsPage() {
               key={client.id}
               client={client}
               onClick={() => router.push(`/dashboard/clients/${client.id}`)}
+              onEdit={(c) => setEditTarget(c)}
+              onDelete={(c) => setDeleteTarget(c)}
             />
           ))}
         </div>
       )}
 
       <AddClientDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
         onSubmit={handleAddClient}
         isLoading={isAdding}
+      />
+
+      <ClientFormDialog
+        mode="edit"
+        open={editTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null);
+        }}
+        initial={editTarget ?? undefined}
+        onSubmit={handleEditClient}
+        isLoading={isEditing}
+      />
+
+      <DeleteClientDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        client={deleteTarget}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
+
+      <MassUploadDialog
+        open={isUploadOpen}
+        onOpenChange={setIsUploadOpen}
+        onUpload={handleMassUpload}
+        onDoneIfChanged={reload}
       />
     </div>
   );
