@@ -60,20 +60,7 @@ export default function Home() {
   // ── SVG Icon Components ──
   const Icon = {
     pulse: (size = 32) => (
-      <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
-        <rect width="40" height="40" rx="10" fill="url(#cpLogoGrad)"/>
-        <circle cx="20" cy="20" r="13" stroke="#06090f" strokeWidth="2" opacity="0.3" fill="none"/>
-        <circle cx="20" cy="20" r="7" fill="#06090f" opacity="0.15"/>
-        <polyline points="7,20 13,20 16,12 20,28 24,12 27,20 33,20" stroke="#06090f" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-        <circle cx="20" cy="7" r="2.5" fill="#06090f"/>
-        <circle cx="33" cy="20" r="2" fill="#06090f" opacity="0.6"/>
-        <defs>
-          <linearGradient id="cpLogoGrad" x1="0" y1="0" x2="40" y2="40">
-            <stop offset="0%" stopColor="#38e8c8"/>
-            <stop offset="100%" stopColor="#4cc9f0"/>
-          </linearGradient>
-        </defs>
-      </svg>
+      <img src="/icon.png" width={size} height={size} alt="Aurora Logo" className="rounded-full shadow-[0_0_8px_rgba(0,229,255,0.4)] inline-block" />
     ),
     alertTriangle: (size = 22, color = 'currentColor') => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
