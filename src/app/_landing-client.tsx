@@ -173,20 +173,9 @@ export default function Home() {
       >
         <div className="max-w-[1140px] mx-auto px-6 flex items-center justify-between">
           <a href="#" className="flex items-center gap-[10px] no-underline">
-            {Icon.pulse(32)}
+            <img src="/icon.png" alt="Aurora Logo" style={{ width: 32, height: 32, borderRadius: '50%', boxShadow: '0 0 8px rgba(0, 229, 255, 0.4)' }} />
             <span className="font-bold text-xl" style={{ color: 'var(--text-primary)' }}>
-              Client
-              <span
-                className="bg-clip-text"
-                style={{
-                  background: 'var(--gradient-aurora)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                Pulse
-              </span>
+              ClientPulse
             </span>
           </a>
 
