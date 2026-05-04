@@ -1656,9 +1656,14 @@ export default function Home() {
       </section>
 
       {/* ═══ SECTION 12: FOOTER ═══ */}
-      <footer className="py-12" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-        <div className="max-w-[1140px] mx-auto px-6">
-          <div className="flex items-center justify-between max-md:flex-col max-md:gap-6 max-md:text-center">
+      {/* Three-row layout, mirrors ReForge's footer pattern:
+          row 1: brand left, primary nav right
+          row 2: legal links centered
+          row 3: copyright centered
+          Top accent: Aurora gradient hairline. */}
+      <footer>
+        <div className="h-[2px] w-full" style={{ background: 'var(--gradient-aurora)' }} />
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-6 py-10 md:flex-row md:justify-between">
           <div className="flex items-center gap-2">
             <img src="/icon.png" width={24} height={24} alt="Aurora Logo" className="rounded-full shadow-[0_0_8px_rgba(0,229,255,0.4)]" />
             <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>ClientPulse</span>
@@ -1666,38 +1671,51 @@ export default function Home() {
               by <a href="https://helloaurora.ai" target="_blank" rel="noopener noreferrer" className="font-medium transition hover:text-white" style={{ background: 'var(--gradient-aurora)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Aurora</a>
             </span>
           </div>
-            <ul className="flex gap-6 list-none max-md:flex-wrap max-md:justify-center">
-              {[
-                { label: 'Aurora', href: 'https://helloaurora.ai' },
-                { label: 'ReForge', href: 'https://reforge.helloaurora.ai' },
-                { label: 'For creators', href: '/for-creators' },
-                { label: 'Model Card', href: '/model-card' },
-                { label: 'Content Policy', href: '/content-policy' },
-                { label: 'FAQ', href: '/faq' },
-                { label: 'Impressum', href: 'https://helloaurora.ai/impressum' },
-                { label: 'Privacy', href: 'https://helloaurora.ai/privacy' },
-                { label: 'Terms', href: 'https://helloaurora.ai/terms' },
-                { label: 'DPA', href: 'https://helloaurora.ai/dpa' },
-                { label: 'Refund', href: 'https://helloaurora.ai/refund' },
-              ].map((link, i) => (
-                <li key={i}>
-                  <a
-                    href={link.href}
-                    className="text-[13px] no-underline transition-colors"
-                    style={{ color: 'var(--text-dim)' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-dim)')}
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-            <span className="text-xs" style={{ color: 'var(--text-dim)' }}>
-              &copy; 2026 Aurora AI Solutions Studio UG
-            </span>
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            {[
+              { label: 'Log In', href: '/auth/login' },
+              { label: 'Sign Up', href: '/auth/signup' },
+              { label: 'Aurora', href: 'https://helloaurora.ai' },
+              { label: 'ReForge', href: 'https://reforge.helloaurora.ai' },
+              { label: 'For Creators', href: '/for-creators' },
+            ].map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                {...(link.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                className="text-sm transition hover:text-white"
+                style={{ color: 'var(--color-muted)' }}
+              >
+                {link.label}
+              </a>
+            ))}
           </div>
         </div>
+        <div className="mx-auto flex max-w-6xl flex-wrap justify-center gap-6 px-6 pb-8">
+          {[
+            { label: 'Impressum', href: 'https://helloaurora.ai/impressum' },
+            { label: 'Privacy', href: 'https://helloaurora.ai/privacy' },
+            { label: 'DPA', href: 'https://helloaurora.ai/dpa' },
+            { label: 'Terms', href: 'https://helloaurora.ai/terms' },
+            { label: 'Model Card', href: '/model-card' },
+            { label: 'Content Policy', href: '/content-policy' },
+            { label: 'FAQ', href: '/faq' },
+            { label: 'Refund Policy', href: 'https://helloaurora.ai/refund' },
+          ].map((link) => (
+            <a
+              key={link.label}
+              href={link.href}
+              {...(link.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              className="text-xs transition hover:text-white"
+              style={{ color: 'var(--color-muted)' }}
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+        <p className="pb-6 text-center text-xs" style={{ color: 'var(--color-muted)', opacity: 0.5 }}>
+          &copy; 2026 Aurora AI Solutions Studio UG
+        </p>
       </footer>
 
       {/* Reveal animation styles */}
