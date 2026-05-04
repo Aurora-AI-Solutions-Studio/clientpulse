@@ -24,8 +24,11 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
+      // Recovery emails go through /auth/callback (PKCE exchange), which
+      // sets the session cookie and forwards to the reset-password form.
+      // The reset-password page also defends against direct ?code= landings.
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
       });
 
       if (resetError) {
