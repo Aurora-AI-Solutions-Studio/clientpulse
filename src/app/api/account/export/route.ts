@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 /**
@@ -24,20 +24,9 @@ export async function GET(request: Request) {
   if (!rl.success) return rateLimitResponse(rl.reset);
 
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    const userId = user.id;
-
-    const { createServiceClient } = await import('@/lib/supabase/service');
-    const admin = createServiceClient();
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { userId, email, serviceClient: admin } = auth.ctx;
 
     // Resolve the user's agency memberships (drives agency-scoped queries).
     const { data: memberships } = await admin
@@ -135,7 +124,7 @@ export async function GET(request: Request) {
       exportedAt: new Date().toISOString(),
       exportedFor: {
         userId,
-        email: user.email,
+        email,
       },
       notice:
         'This export contains all personal data associated with your account ' +

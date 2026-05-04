@@ -1,9 +1,7 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
-import { createServiceClient } from '@/lib/supabase/service';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveTier, tierDisplayName } from '@/lib/tiers';
-import { ensureAgencyForUser } from '@/lib/agency/bootstrap';
 import { stripe } from '@/lib/stripe';
 import { getPlanByPriceId } from '@/lib/stripe-config';
 
@@ -15,46 +13,23 @@ import { getPlanByPriceId } from '@/lib/stripe-config';
 // check subscription status before advancing.
 export async function GET(_request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // getAuthedContext handles auth verification, profile lookup via
+    // service client (bypassing RLS context drift), and self-heal of
+    // missing agency_id via ensureAgencyForUser.
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { userId, agencyId, serviceClient: profileService } = auth.ctx;
 
-    // Use service client for profile reads. We've already verified the user
-    // via auth.getUser() above; the .eq('id', user.id) filter scopes the
-    // query to their row alone. This bypasses any RLS context drift caused
-    // by JWT/cookie issues. (Previous bug: RLS returned null even when the
-    // row existed, causing /api/me to 404 silently.)
-    const profileService = createServiceClient();
+    // Re-read the full profile row — getAuthedContext only exposes a
+    // narrow projection. We need stripe_customer_id, has_suite_access,
+    // onboarding_completed_at, etc.
     let { data: profile } = await profileService
       .from('profiles')
       .select(
         'agency_id, subscription_plan, subscription_status, stripe_customer_id, onboarding_completed_at, full_name, email, has_suite_access'
       )
-      .eq('id', user.id)
+      .eq('id', userId)
       .maybeSingle();
-
-    // Self-heal: backfill agency for users whose accounts predate the
-    // handle_new_user trigger (migration 20260411). Idempotent.
-    if (!profile?.agency_id) {
-      await ensureAgencyForUser(supabase, {
-        userId: user.id,
-        email: profile?.email ?? user.email ?? null,
-        fullName: profile?.full_name ?? null,
-      });
-      const { data: healed } = await profileService
-        .from('profiles')
-        .select(
-          'agency_id, subscription_plan, subscription_status, stripe_customer_id, onboarding_completed_at, full_name, email, has_suite_access'
-        )
-        .eq('id', user.id)
-        .maybeSingle();
-      profile = healed;
-    }
 
     if (!profile) {
       return NextResponse.json({ error: 'No profile' }, { status: 404 });
@@ -79,14 +54,13 @@ export async function GET(_request: NextRequest) {
           const priceId = sub.items.data[0]?.price.id;
           const plan = priceId ? getPlanByPriceId(priceId) : null;
           if (plan) {
-            const service = createServiceClient();
-            await service
+            await profileService
               .from('profiles')
               .update({
                 subscription_plan: plan,
                 subscription_status: sub.status,
               })
-              .eq('id', user.id);
+              .eq('id', userId);
             profile = { ...profile, subscription_plan: plan, subscription_status: sub.status };
           }
         }
@@ -104,10 +78,10 @@ export async function GET(_request: NextRequest) {
     // happened to slot into.
     const tierLabel = suiteAccess ? 'Suite' : tierDisplayName(tier);
     return NextResponse.json({
-      userId: user.id,
-      email: profile.email ?? user.email ?? null,
+      userId,
+      email: profile.email ?? null,
       fullName: profile.full_name ?? null,
-      agencyId: profile.agency_id ?? null,
+      agencyId: profile.agency_id ?? agencyId,
       subscriptionPlan: profile.subscription_plan ?? 'free',
       subscriptionStatus: profile.subscription_status ?? 'active',
       stripeCustomerId: profile.stripe_customer_id ?? null,

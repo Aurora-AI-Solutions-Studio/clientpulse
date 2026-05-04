@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { sendEmail } from '@/lib/email/resend';
@@ -42,31 +42,9 @@ function escapeHtml(s: string): string {
 
 export async function GET(_request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient: supabase } = auth.ctx;
 
     // Fetch all agency members with their profile info
     const { data: members, error: membersError } = await supabase
@@ -84,7 +62,7 @@ export async function GET(_request: NextRequest) {
         )
       `
       )
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .order('created_at', { ascending: true });
 
     if (membersError) {
@@ -118,38 +96,16 @@ export async function GET(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID and check permissions
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { userId, agencyId, serviceClient: supabase } = auth.ctx;
 
     // Check if user is owner or manager
     const { data: currentMember } = await supabase
       .from('agency_members')
       .select('role')
-      .eq('user_id', user.id)
-      .eq('agency_id', profile.agency_id)
+      .eq('user_id', userId)
+      .eq('agency_id', agencyId)
       .single();
 
     if (!currentMember || (currentMember.role !== 'owner' && currentMember.role !== 'manager')) {
@@ -182,7 +138,7 @@ export async function POST(request: NextRequest) {
       .from('team_invitations')
       .select('id')
       .eq('email', body.email)
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .eq('status', 'pending')
       .single();
 
@@ -197,7 +153,7 @@ export async function POST(request: NextRequest) {
     const { data: existingMember } = await supabase
       .from('profiles')
       .select('id')
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .textSearch('email', body.email)
       .single();
 
@@ -218,8 +174,8 @@ export async function POST(request: NextRequest) {
     const { data: invitation, error: inviteError } = await supabase
       .from('team_invitations')
       .insert({
-        agency_id: profile.agency_id,
-        invited_by: user.id,
+        agency_id: agencyId,
+        invited_by: userId,
         email: body.email,
         role: body.role,
         token: token,
@@ -241,7 +197,7 @@ export async function POST(request: NextRequest) {
     const { data: agency } = await supabase
       .from('agencies')
       .select('name')
-      .eq('id', profile.agency_id)
+      .eq('id', agencyId)
       .single();
 
     const agencyName = agency?.name || 'ClientPulse';

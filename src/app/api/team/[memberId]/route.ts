@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function PATCH(
@@ -8,38 +8,16 @@ export async function PATCH(
 ) {
   try {
     const { memberId } = await params;
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID and check permissions
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { userId, agencyId, serviceClient: supabase } = auth.ctx;
 
     // Check if user is owner (only owners can change roles)
     const { data: currentMember } = await supabase
       .from('agency_members')
       .select('role')
-      .eq('user_id', user.id)
-      .eq('agency_id', profile.agency_id)
+      .eq('user_id', userId)
+      .eq('agency_id', agencyId)
       .single();
 
     if (!currentMember || currentMember.role !== 'owner') {
@@ -54,7 +32,7 @@ export async function PATCH(
       .from('agency_members')
       .select('id, user_id')
       .eq('id', memberId)
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .single();
 
     if (memberCheckError || !member) {
@@ -65,7 +43,7 @@ export async function PATCH(
     }
 
     // Prevent changing own role
-    if (member.user_id === user.id) {
+    if (member.user_id === userId) {
       return NextResponse.json(
         { error: 'Cannot change your own role' },
         { status: 400 }
@@ -136,38 +114,16 @@ export async function DELETE(
 ) {
   try {
     const { memberId } = await params;
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID and check permissions
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { userId, agencyId, serviceClient: supabase } = auth.ctx;
 
     // Check if user is owner or manager
     const { data: currentMember } = await supabase
       .from('agency_members')
       .select('role')
-      .eq('user_id', user.id)
-      .eq('agency_id', profile.agency_id)
+      .eq('user_id', userId)
+      .eq('agency_id', agencyId)
       .single();
 
     if (!currentMember || (currentMember.role !== 'owner' && currentMember.role !== 'manager')) {
@@ -182,7 +138,7 @@ export async function DELETE(
       .from('agency_members')
       .select('user_id')
       .eq('id', memberId)
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .single();
 
     if (memberCheckError || !member) {
@@ -193,7 +149,7 @@ export async function DELETE(
     }
 
     // Prevent removing yourself
-    if (member.user_id === user.id) {
+    if (member.user_id === userId) {
       return NextResponse.json(
         { error: 'Cannot remove yourself from the team' },
         { status: 400 }
@@ -205,7 +161,7 @@ export async function DELETE(
       .from('agency_members')
       .delete()
       .eq('id', memberId)
-      .eq('agency_id', profile.agency_id);
+      .eq('agency_id', agencyId);
 
     if (deleteError) {
       console.error('Error removing member:', deleteError);

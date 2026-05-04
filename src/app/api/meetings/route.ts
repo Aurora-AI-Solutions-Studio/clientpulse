@@ -1,35 +1,13 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { NextRequest, NextResponse } from 'next/server';
 import { Meeting, MeetingWithIntelligence, MeetingCreateInput } from '@/types/meeting';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient: supabase } = auth.ctx;
 
     // Get query params
     const searchParams = request.nextUrl.searchParams;
@@ -64,7 +42,7 @@ export async function GET(request: NextRequest) {
         )
       `
       )
-      .eq('agency_id', profile.agency_id);
+      .eq('agency_id', agencyId);
 
     // Filter by client if provided
     if (clientId) {
@@ -124,31 +102,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient: supabase } = auth.ctx;
 
     const body: MeetingCreateInput = await request.json();
 
@@ -165,7 +121,7 @@ export async function POST(request: NextRequest) {
       .from('meetings')
       .insert({
         client_id: body.clientId,
-        agency_id: profile.agency_id,
+        agency_id: agencyId,
         title: body.title,
         meeting_date: body.meetingDate,
         duration_minutes: body.durationMinutes,
