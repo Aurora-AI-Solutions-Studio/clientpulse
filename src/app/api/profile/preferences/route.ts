@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import { createClient } from '@/lib/supabase/server';
-import { createServiceClient } from '@/lib/supabase/service';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -12,23 +11,16 @@ import { NextRequest, NextResponse } from 'next/server';
  * without leaking the full profile row.
  */
 export async function GET(_request: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await getAuthedContext();
+  if (!auth.ok) return auth.response;
+  const { userId, serviceClient: service } = auth.ctx;
 
-  // Service client: same RLS-bypass pattern used by /api/me. Filter by
-  // user.id (already verified above) so we only ever read the caller's
-  // own row.
-  const service = createServiceClient();
+  // Service client + .eq('id', userId) (already verified) — scopes the
+  // read to the caller's own row, same pattern as /api/me.
   const { data, error } = await service
     .from('profiles')
     .select('timezone, brief_send_hour')
-    .eq('id', user.id)
+    .eq('id', userId)
     .maybeSingle();
 
   if (error) {
@@ -55,14 +47,9 @@ export async function GET(_request: NextRequest) {
  * cron). briefSendHour must be an integer 0..23.
  */
 export async function PATCH(request: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await getAuthedContext();
+  if (!auth.ok) return auth.response;
+  const { userId, serviceClient: service } = auth.ctx;
 
   let body: { timezone?: unknown; briefSendHour?: unknown };
   try {
@@ -105,11 +92,10 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
   }
 
-  const service = createServiceClient();
   const { data, error } = await service
     .from('profiles')
     .update(update)
-    .eq('id', user.id)
+    .eq('id', userId)
     .select('timezone, brief_send_hour')
     .single();
 

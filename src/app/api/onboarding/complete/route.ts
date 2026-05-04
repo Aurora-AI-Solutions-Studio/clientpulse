@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { NextRequest, NextResponse } from 'next/server';
 
 // POST /api/onboarding/complete
@@ -9,19 +9,14 @@ import { NextRequest, NextResponse } from 'next/server';
 // timestamp. Called from the last step of /dashboard/onboarding.
 export async function POST(_request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { userId, serviceClient: supabase } = auth.ctx;
 
     const { data: existing } = await supabase
       .from('profiles')
       .select('onboarding_completed_at')
-      .eq('id', user.id)
+      .eq('id', userId)
       .maybeSingle();
 
     if (existing?.onboarding_completed_at) {
@@ -35,7 +30,7 @@ export async function POST(_request: NextRequest) {
     const { error: updateErr } = await supabase
       .from('profiles')
       .update({ onboarding_completed_at: now })
-      .eq('id', user.id);
+      .eq('id', userId);
 
     if (updateErr) {
       return NextResponse.json(

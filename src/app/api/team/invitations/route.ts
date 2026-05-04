@@ -1,34 +1,12 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(_request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient: supabase } = auth.ctx;
 
     // Fetch pending invitations for the agency
     const { data: invitations, error: invitationsError } = await supabase
@@ -47,7 +25,7 @@ export async function GET(_request: NextRequest) {
         )
       `
       )
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
 
@@ -83,38 +61,16 @@ export async function GET(_request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID and check permissions
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { userId, agencyId, serviceClient: supabase } = auth.ctx;
 
     // Check if user is owner or manager
     const { data: currentMember } = await supabase
       .from('agency_members')
       .select('role')
-      .eq('user_id', user.id)
-      .eq('agency_id', profile.agency_id)
+      .eq('user_id', userId)
+      .eq('agency_id', agencyId)
       .single();
 
     if (!currentMember || (currentMember.role !== 'owner' && currentMember.role !== 'manager')) {
@@ -139,7 +95,7 @@ export async function DELETE(request: NextRequest) {
       .from('team_invitations')
       .select('id')
       .eq('id', body.invitationId)
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .single();
 
     if (checkError || !invitation) {
@@ -154,7 +110,7 @@ export async function DELETE(request: NextRequest) {
       .from('team_invitations')
       .delete()
       .eq('id', body.invitationId)
-      .eq('agency_id', profile.agency_id);
+      .eq('agency_id', agencyId);
 
     if (deleteError) {
       console.error('Error deleting invitation:', deleteError);

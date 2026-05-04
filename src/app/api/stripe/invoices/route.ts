@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { StripeInvoiceData } from '@/types/stripe';
 
 export async function GET(request: NextRequest) {
@@ -25,18 +25,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Get authenticated user
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { userId, subscriptionPlan, serviceClient: supabase } = auth.ctx;
 
     let accountId = connectedAccountId;
 
@@ -44,8 +35,8 @@ export async function GET(request: NextRequest) {
     if (!accountId) {
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('stripe_connect_account_id, subscription_plan')
-        .eq('id', user.id)
+        .select('stripe_connect_account_id')
+        .eq('id', userId)
         .single();
 
       if (profileError || !profile) {
@@ -56,7 +47,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Only Agency plan users can fetch invoices
-      if (profile.subscription_plan !== 'agency') {
+      if (subscriptionPlan !== 'agency') {
         return NextResponse.json(
           { error: 'Invoice access is only available on the Agency plan' },
           { status: 403 }

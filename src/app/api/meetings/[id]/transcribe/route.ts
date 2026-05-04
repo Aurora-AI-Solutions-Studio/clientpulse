@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { NextRequest, NextResponse } from 'next/server';
 import { WhisperTranscriptionAgent } from '@/lib/agents/whisper-transcription-agent';
 import { MeetingIntelligenceAgent } from '@/lib/agents/meeting-intelligence-agent';
@@ -16,35 +16,13 @@ export async function POST(
 
   try {
     const { id } = await params;
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID and subscription plan (Sprint 8A M1.1)
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id, subscription_plan')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, subscriptionPlan: rawPlan, serviceClient: supabase } = auth.ctx;
 
     // Meeting transcription + Meeting Intelligence are Pro+ per D-D2.
     try {
-      requireTier({ subscription_plan: profile.subscription_plan }, 'pro');
+      requireTier({ subscription_plan: rawPlan }, 'pro');
     } catch (err) {
       if (err instanceof TierLimitError) {
         return NextResponse.json(
@@ -55,14 +33,14 @@ export async function POST(
       throw err;
     }
 
-    const subscriptionPlan = (profile.subscription_plan as 'solo' | 'pro' | 'agency' | null) ?? 'solo';
+    const subscriptionPlan = (rawPlan as 'solo' | 'pro' | 'agency' | null) ?? 'solo';
 
     // Get meeting record and verify ownership
     const { data: meeting, error: meetingError } = await supabase
       .from('meetings')
       .select('*')
       .eq('id', id)
-      .eq('agency_id', profile.agency_id)
+      .eq('agency_id', agencyId)
       .single();
 
     if (meetingError || !meeting) {

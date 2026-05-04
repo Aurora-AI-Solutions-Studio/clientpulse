@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { NextRequest, NextResponse } from 'next/server';
 import { WhisperTranscriptionAgent } from '@/lib/agents/whisper-transcription-agent';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
@@ -10,37 +10,15 @@ export async function POST(request: NextRequest) {
   if (rl) return rl;
 
   try {
-    const supabase = await createClient();
-
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's agency ID
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, serviceClient: supabase } = auth.ctx;
 
     // Get agency transcription settings
     const { data: agency, error: agencyError } = await supabase
       .from('agencies')
       .select('transcription_mode, local_whisper_endpoint')
-      .eq('id', profile.agency_id)
+      .eq('id', agencyId)
       .single();
 
     if (agencyError) {

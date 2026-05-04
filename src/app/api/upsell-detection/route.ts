@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
+import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { NextRequest, NextResponse } from 'next/server';
 import { UpsellDetectionAgent, UpsellDetectionInput } from '@/lib/agents/upsell-detection-agent';
 import { UpsellOpportunity } from '@/types/alerts';
@@ -8,33 +8,13 @@ import { requireTier, TierLimitError } from '@/lib/tiers';
 
 export async function GET(_request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id, subscription_plan')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, subscriptionPlan, serviceClient: supabase } = auth.ctx;
 
     // Upsell Detection is Pro+ per D-D2.
     try {
-      requireTier({ subscription_plan: profile.subscription_plan }, 'pro');
+      requireTier({ subscription_plan: subscriptionPlan }, 'pro');
     } catch (err) {
       if (err instanceof TierLimitError) {
         return NextResponse.json(
@@ -44,8 +24,6 @@ export async function GET(_request: NextRequest) {
       }
       throw err;
     }
-
-    const agencyId = profile.agency_id as string;
 
     const { data: opportunities, error: fetchError } = await supabase
       .from('upsell_opportunities')
@@ -92,33 +70,13 @@ export async function POST(request: NextRequest) {
   if (rl) return rl;
 
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('agency_id, subscription_plan')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile?.agency_id) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    const auth = await getAuthedContext();
+    if (!auth.ok) return auth.response;
+    const { agencyId, subscriptionPlan: rawPlan, serviceClient: supabase } = auth.ctx;
 
     // Upsell Detection is Pro+ per D-D2.
     try {
-      requireTier({ subscription_plan: profile.subscription_plan }, 'pro');
+      requireTier({ subscription_plan: rawPlan }, 'pro');
     } catch (err) {
       if (err instanceof TierLimitError) {
         return NextResponse.json(
@@ -129,8 +87,7 @@ export async function POST(request: NextRequest) {
       throw err;
     }
 
-    const agencyId = profile.agency_id as string;
-    const subscriptionPlan = (profile.subscription_plan as 'solo' | 'pro' | 'agency' | null) ?? 'solo';
+    const subscriptionPlan = (rawPlan as 'solo' | 'pro' | 'agency' | null) ?? 'solo';
 
     const body = await request.json();
     const { clientId } = body;
