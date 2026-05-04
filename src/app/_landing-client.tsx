@@ -1677,6 +1677,7 @@ export default function Home() {
                 { label: 'Impressum', href: 'https://helloaurora.ai/impressum' },
                 { label: 'Privacy', href: 'https://helloaurora.ai/privacy' },
                 { label: 'Terms', href: 'https://helloaurora.ai/terms' },
+                { label: 'DPA', href: 'https://helloaurora.ai/dpa' },
                 { label: 'Refund', href: 'https://helloaurora.ai/refund' },
               ].map((link, i) => (
                 <li key={i}>
