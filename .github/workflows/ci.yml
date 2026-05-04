@@ -50,3 +50,28 @@ jobs:
 
       - name: Type check
         run: npx tsc --noEmit
+
+      - name: Next build (gates production deploy)
+        # Runs the same strict ESLint + production build that Vercel runs.
+        # Catches issues that pure tsc/lint miss (e.g. react/* rules, RSC errors).
+        # Must pass — no continue-on-error.
+        env:
+          # Build-time placeholders so Next can statically analyze without real secrets.
+          # Vercel injects real values at deploy time; CI only verifies the build compiles.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder_anon_key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder_service_role_key
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
+          STRIPE_CP_WEBHOOK_SECRET: whsec_placeholder
+          ANTHROPIC_API_KEY: placeholder_anthropic_key
+          RESEND_API_KEY: placeholder_resend_key
+          LEARNING_CRON_SECRET: placeholder_cron_secret
+          MONDAY_BRIEF_CRON_SECRET: placeholder_cron_secret
+          RETENTION_CRON_SECRET: placeholder_cron_secret
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          # Skip Sentry upload in CI (no auth token, would fail otherwise)
+          SENTRY_SUPPRESS_TURBOPACK_WARNING: "1"
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
