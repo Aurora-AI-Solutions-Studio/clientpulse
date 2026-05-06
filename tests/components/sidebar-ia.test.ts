@@ -1,6 +1,6 @@
 // IA contract test for the unified-suite sidebar. Asserts the workspaces
 // + items match the locked spec — protects against accidental renames or
-// item moves that would break the CP/RF parity story.
+// item moves that would break the CP/ContentPulse parity story.
 //
 // Pure data assertion (no React render) — that's intentional: the visual
 // behavior is reviewed on Vercel preview, not in tests.

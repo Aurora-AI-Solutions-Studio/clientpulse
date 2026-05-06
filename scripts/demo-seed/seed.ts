@@ -227,10 +227,11 @@ async function insertActionItems(sb: SupabaseClient, ownerId: string): Promise<v
 }
 
 async function insertClientMap(sb: SupabaseClient, agencyId: string): Promise<void> {
-  // Identity by construction: same UUID on CP and RF, so each map row's
+  // Identity by construction: same UUID on CP and ContentPulse, so each map row's
   // rf_client_id and cp_client_id are equal. Lets the signal pipeline
-  // route signals from RF straight to the right CP client without the
-  // exact-name fallback path.
+  // route signals from ContentPulse straight to the right CP client without the
+  // exact-name fallback path. The `rf_client_id` column name keeps the
+  // legacy token because the schema is shared with the sibling product.
   const rows = DEMO_CLIENTS.map((c) => ({
     agency_id: agencyId,
     cp_client_id: c.id,

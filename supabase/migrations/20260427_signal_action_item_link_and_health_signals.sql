@@ -1,4 +1,4 @@
--- Slice 2B — RF→CP Signal Pipeline consumers
+-- Slice 2B — ContentPulse→CP Signal Pipeline consumers
 --
 -- Wires two long-lived columns the slice needs:
 --
@@ -10,7 +10,7 @@
 --      as source_email_token_hash from 20260426_brief_email_branding.sql.
 --
 --   2) client_health_scores.signals_score
---      Persists the RF-activity 5th dimension surfaced by the
+--      Persists the ContentPulse-activity 5th dimension surfaced by the
 --      HealthScoringAgent. Sits alongside the existing four subscore
 --      columns so the dashboard can render it without touching the
 --      JSONB signals payload (which carries the human-readable signal

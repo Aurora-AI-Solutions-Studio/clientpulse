@@ -2,7 +2,7 @@
 // Maps provider id → singleton BaseLLMProvider instance. All callers
 // must go through this registry — never instantiate providers directly.
 //
-// Ported from reforge/lib/llm/registry.ts (Sprint 7.6 M1).
+// Ported from contentpulse/lib/llm/registry.ts (Sprint 7.6 M1).
 
 import type { BaseLLMProvider } from './base-provider';
 import { AnthropicProvider } from './providers/anthropic';

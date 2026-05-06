@@ -3,9 +3,9 @@
 // deliberately avoid the `openai` SDK dependency here — the surface
 // area we need is tiny and we'd rather keep this layer dependency-light.
 // (CP does have the `openai` package for Whisper transcription, but
-//  chat completions are routed via fetch for parity with the RF port.)
+//  chat completions are routed via fetch for parity with the ContentPulse port.)
 //
-// Ported from reforge/lib/llm/providers/openai.ts (Sprint 7.6 M1).
+// Ported from contentpulse/lib/llm/providers/openai.ts (Sprint 7.6 M1).
 
 import { BaseLLMProvider } from '../base-provider';
 import { getModel } from '../models';

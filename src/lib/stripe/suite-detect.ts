@@ -1,7 +1,7 @@
 // Sprint 7.8 — Suite SKU detection for the webhook handler.
 //
-// Mirror of reforge/lib/stripe/suite-detect.ts. The Suite SKU is one
-// product (single Stripe product id) sold from either RF or CP
+// Mirror of contentpulse/lib/stripe/suite-detect.ts. The Suite SKU is one
+// product (single Stripe product id) sold from either ContentPulse or CP
 // checkout. Two prices live under it (monthly + annual). Both
 // products' webhook handlers read from the SAME env vars so the
 // detection is symmetric.
@@ -18,7 +18,7 @@ export function getSuitePriceIds(): Set<string> {
   const ids = new Set<string>();
   if (process.env.STRIPE_SUITE_PRICE_ID) ids.add(process.env.STRIPE_SUITE_PRICE_ID);
   if (process.env.STRIPE_SUITE_ANNUAL_PRICE_ID) ids.add(process.env.STRIPE_SUITE_ANNUAL_PRICE_ID);
-  // Sandbox fallbacks — the canonical live IDs from RF's
+  // Sandbox fallbacks — the canonical live IDs from ContentPulse's
   // SUITE_LAUNCH_PLAN config. Allows webhook detection to keep working
   // in tests + dev without env vars set.
   if (ids.size === 0) {

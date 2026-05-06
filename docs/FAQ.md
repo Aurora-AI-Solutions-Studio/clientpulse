@@ -11,7 +11,7 @@ The 10 launch-honest questions below are the canonical answers. The public `/faq
 
 ### 1. How much does ClientPulse cost?
 
-Three monthly plans: **Solo $59** · **Pro $199** · **Agency $799**. Annual billing gives you **two months free** on every tier. The Aurora Agency Suite — ReForge Agency + ClientPulse Agency bundled — is **$999/mo** (vs $1,398 stacked).
+Three monthly plans: **Solo $59** · **Pro $199** · **Agency $799**. Annual billing gives you **two months free** on every tier. The Aurora Agency Suite — ContentPulse Agency + ClientPulse Agency bundled — is **$999/mo** (vs $1,398 stacked).
 
 Each tier raises the number of clients you can track, the data retention window, the health-score refresh cadence, agency seats, and API/MCP access. Solo tracks 3 clients; Pro tracks 10; Agency is unlimited.
 
@@ -33,13 +33,13 @@ We offer a **14-day refund window** on first-time monthly subscriptions and a **
 
 Four OAuth-based connections at launch: **Google Calendar** (meeting cadence, attendee patterns), **Gmail** (response latency, sentiment shifts, reply-rate decay), **Zoom** (recording cadence, attendance, transcripts when present), and **Stripe** (subscription status, MRR changes, churn signals).
 
-Plus content velocity from **ReForge** when both products are connected via the Aurora Suite — engagement events from each client's published content feed CP's health signals automatically.
+Plus content velocity from **ContentPulse** when both products are connected via the Aurora Suite — engagement events from each client's published content feed CP's health signals automatically.
 
 All connections are **read-only**. CP never sends emails, books meetings, or modifies billing on your behalf.
 
 ### 5. How does the client health score work?
 
-CP rolls every signal it sees per client into a 0–100 health score across five dimensions: **communication frequency**, **communication sentiment**, **meeting cadence**, **commercial signals** (Stripe), and **content velocity** (ReForge engagement when connected).
+CP rolls every signal it sees per client into a 0–100 health score across five dimensions: **communication frequency**, **communication sentiment**, **meeting cadence**, **commercial signals** (Stripe), and **content velocity** (ContentPulse engagement when connected).
 
 The scoring isn't a black box — every score change shows the underlying signals that moved it, with timestamps and the raw data that caused the swing. You can mark a signal as "not applicable" and it stops weighing into the score for that client.
 
@@ -51,7 +51,7 @@ Every Monday morning at 6 a.m. local time, you get the **Monday Brief** — a on
 
 The **Action Proposal Engine (APE)** turns the "what to take" into one-click action items: send this follow-up, book this check-in, escalate this conversation. Each proposal is ranked by urgency and impact; you accept it (it becomes a tracked action item), edit it, or dismiss it.
 
-The Brief is also where Suite-connected agencies see the cross-product picture: CP signals × ReForge engagement × content velocity in one place.
+The Brief is also where Suite-connected agencies see the cross-product picture: CP signals × ContentPulse engagement × content velocity in one place.
 
 ---
 

@@ -589,7 +589,7 @@ export default function Home() {
               The Agency Suite is live.
             </h3>
             <p className="text-[15px] font-light leading-[1.7]" style={{ color: 'var(--text-secondary)' }}>
-              ReForge publishes content events (velocity, channel diversity, voice freshness, engagement delta). ClientPulse consumes them as a privileged signal alongside Stripe, meeting, email, and calendar data. Content velocity per client is a leading churn indicator no standalone CS product can offer &mdash; a 30-day head start on every retention risk.
+              ContentPulse publishes content events (velocity, channel diversity, voice freshness, engagement delta). ClientPulse consumes them as a privileged signal alongside Stripe, meeting, email, and calendar data. Content velocity per client is a leading churn indicator no standalone CS product can offer &mdash; a 30-day head start on every retention risk.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <a
@@ -750,7 +750,7 @@ export default function Home() {
                 { weight: '30%', iconEl: Icon.dollar(18, 'var(--teal)'), title: 'Financial Health', desc: 'Payment timeliness, invoice disputes, contract value trends, revenue concentration risk. Powered by Stripe.' },
                 { weight: '25%', iconEl: Icon.handshake(18, 'var(--teal)'), title: 'Relationship Health', desc: 'Meeting sentiment trends, stakeholder engagement (are decision-makers still showing up?), communication responsiveness.' },
                 { weight: '20%', iconEl: Icon.radio(18, 'var(--teal)'), title: 'Engagement Health', desc: 'Meeting frequency trends, email volume patterns, response time changes — the subtle signals that precede churn.' },
-                { weight: '15%', iconEl: Icon.refresh(18, 'var(--teal)'), title: 'Content Velocity', desc: 'When you also run ReForge, content velocity per client flows in automatically. A 30-day early warning signal no standalone CS product can offer.' },
+                { weight: '15%', iconEl: Icon.refresh(18, 'var(--teal)'), title: 'Content Velocity', desc: 'When you also run ContentPulse, content velocity per client flows in automatically. A 30-day early warning signal no standalone CS product can offer.' },
                 { weight: '10%', iconEl: Icon.package(18, 'var(--teal)'), title: 'Delivery Health', desc: 'Scope creep signals, action items completed vs. overdue, deliverable cadence and quality indicators.' },
               ].map((signal, i) => (
                 <div
@@ -849,8 +849,8 @@ export default function Home() {
                 desc: 'Single-product CS platforms (Vitally, ChurnZero, Planhat) live in B2B SaaS land — they bill from $1,250/mo+ and assume product-usage signals you don’t have. ClientPulse fuses Stripe, meeting recordings, email patterns, calendar attendance, and content velocity for the actual buying motion of an agency: retainer relationships.',
               },
               {
-                label: 'Closed loop with ReForge',
-                desc: 'When you also run ReForge, the content velocity signal flows in automatically. The Agency Suite is the only place a content product and a retention product talk to each other — that’s why it’s $999/mo, not a bundle discount.',
+                label: 'Closed loop with ContentPulse',
+                desc: 'When you also run ContentPulse, the content velocity signal flows in automatically. The Agency Suite is the only place a content product and a retention product talk to each other — that’s why it’s $999/mo, not a bundle discount.',
               },
               {
                 label: 'Agency-priced MCP',
@@ -973,7 +973,7 @@ export default function Home() {
                 {[
                   { color: 'var(--teal)', name: 'Acme Creative', detail: '— Score 89 ↑ Invoice paid early. Meeting sentiment positive.' },
                   { color: 'var(--teal)', name: 'Stellar Digital', detail: '— Score 84 → Stable. All deliverables on track.' },
-                  { color: 'var(--reforge-gold)', name: 'BrightVista', detail: '— Score 62 ↓ Meeting cancellation. Check in this week.' },
+                  { color: 'var(--contentpulse-gold)', name: 'BrightVista', detail: '— Score 62 ↓ Meeting cancellation. Check in this week.' },
                   { color: 'var(--pulse-red)', name: 'NexGen', detail: '', special: true },
                 ].map((item, i) => (
                   <div
@@ -1026,7 +1026,7 @@ export default function Home() {
               { iconEl: Icon.dollar(24, 'var(--teal)'), iconBg: 'rgba(56, 232, 200, 0.08)', title: 'Financial Signal Agent', desc: 'Monitors Stripe invoicing data. Detects payment delays, disputes, contract value changes, and revenue concentration risk. Alerts on anomalies.' },
               { iconEl: Icon.mic(24, 'var(--aurora-blue)'), iconBg: 'rgba(76, 201, 240, 0.08)', title: 'Meeting Intelligence Agent', desc: 'Processes meeting recordings via Whisper + Claude. Extracts sentiment, action items, scope changes, and stakeholder engagement signals.' },
               { iconEl: Icon.barChart(24, 'var(--teal)'), iconBg: 'rgba(56, 232, 200, 0.08)', title: 'Health Scoring Agent', desc: 'Computes the composite Client Health Score (0–100) from all signal categories. Updates as new data arrives. Self-calibrates on actual outcomes.' },
-              { iconEl: Icon.alertTriangle(24, 'var(--reforge-gold)'), iconBg: 'rgba(240, 200, 76, 0.08)', title: 'Churn Prediction Agent', desc: 'Pattern-matches across all clients to predict churn probability. Alerts 60 days before predicted churn. Explains the driving factors behind each prediction.' },
+              { iconEl: Icon.alertTriangle(24, 'var(--contentpulse-gold)'), iconBg: 'rgba(240, 200, 76, 0.08)', title: 'Churn Prediction Agent', desc: 'Pattern-matches across all clients to predict churn probability. Alerts 60 days before predicted churn. Explains the driving factors behind each prediction.' },
               { iconEl: Icon.trendUp(24, 'var(--aurora-purple)'), iconBg: 'rgba(179, 136, 235, 0.08)', title: 'Upsell Detection Agent', desc: 'Analyzes meeting transcripts for expansion signals. Flags when clients mention needs outside their current package. Surfaces revenue growth opportunities.' },
               { iconEl: Icon.brain(24, 'var(--aurora-pink)'), iconBg: 'rgba(232, 127, 165, 0.08)', title: 'Recursive Learning Engine', desc: 'Every client renewal or churn trains the model. After 50+ clients, predictions calibrate to YOUR agency\'s patterns. The moat that grows over time.' },
             ].map((agent, i) => (
@@ -1416,7 +1416,7 @@ export default function Home() {
                   </span>
                 </div>
                 <h3 className="mt-3 font-playfair text-[22px] font-bold leading-[1.3]" style={{ color: 'var(--text-primary)' }}>
-                  ClientPulse Agency + ReForge Agency, talking to each other.
+                  ClientPulse Agency + ContentPulse Agency, talking to each other.
                 </h3>
                 <p className="mt-2 max-w-2xl text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                   Most agencies use a content product <em>and</em> a client-health product.
@@ -1426,7 +1426,7 @@ export default function Home() {
                 <ul className="mt-4 grid gap-2 sm:grid-cols-2">
                   {[
                     'Everything in both Agency plans',
-                    'RF → CP content-velocity pipeline',
+                    'ContentPulse → ClientPulse content-velocity pipeline',
                     'Content velocity as a leading churn indicator',
                     'A 30-day head start on every churn risk',
                     '20 EA slots · 30% off first year',
@@ -1500,7 +1500,7 @@ export default function Home() {
               },
               {
                 q: 'What signals does the Health Score include?',
-                a: 'Five categories: Financial Health (30%) — payment timeliness, invoice disputes, contract value trends via Stripe. Relationship Health (25%) — meeting sentiment, stakeholder engagement, communication responsiveness. Engagement Health (20%) — meeting frequency, email patterns, response time changes. Content Velocity (15%) — when you also run ReForge, content velocity per client flows in automatically. Delivery Health (10%) — scope creep, action items, deliverable cadence.',
+                a: 'Five categories: Financial Health (30%) — payment timeliness, invoice disputes, contract value trends via Stripe. Relationship Health (25%) — meeting sentiment, stakeholder engagement, communication responsiveness. Engagement Health (20%) — meeting frequency, email patterns, response time changes. Content Velocity (15%) — when you also run ContentPulse, content velocity per client flows in automatically. Delivery Health (10%) — scope creep, action items, deliverable cadence.',
               },
               {
                 q: 'How is this different from Vitally, ChurnZero, Planhat?',
@@ -1508,7 +1508,7 @@ export default function Home() {
               },
               {
                 q: 'What integrations are supported?',
-                a: 'At launch: Stripe (financial signals), Google Calendar (meeting attendance), Gmail (email pattern analysis), Zoom and Google Meet (meeting recordings for sentiment analysis). On the roadmap: QuickBooks, FreshBooks (for agencies not on Stripe). Content Velocity via ReForge is available when you’re on the Agency Suite.',
+                a: 'At launch: Stripe (financial signals), Google Calendar (meeting attendance), Gmail (email pattern analysis), Zoom and Google Meet (meeting recordings for sentiment analysis). On the roadmap: QuickBooks, FreshBooks (for agencies not on Stripe). Content Velocity via ContentPulse is available when you’re on the Agency Suite.',
               },
               {
                 q: 'How do I get started right now?',
@@ -1549,15 +1549,15 @@ export default function Home() {
       <section className="py-[80px]" style={{ background: 'linear-gradient(to bottom, transparent, rgba(56, 232, 200, 0.02))' }}>
         <div className="max-w-[1140px] mx-auto px-6">
           <div className="text-center">
-            <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4" style={{ color: 'var(--reforge-gold)' }}>
-              <span className="inline-flex items-center align-middle" style={{ marginRight: '8px' }}>{Icon.refresh(16, 'var(--reforge-gold)')}</span>
+            <div className="reveal text-xs font-semibold uppercase tracking-[0.15em] mb-4" style={{ color: 'var(--contentpulse-gold)' }}>
+              <span className="inline-flex items-center align-middle" style={{ marginRight: '8px' }}>{Icon.refresh(16, 'var(--contentpulse-gold)')}</span>
               Also from Aurora
             </div>
             <h3 className="reveal font-playfair font-bold leading-[1.2] mb-4" style={{ fontSize: 'clamp(24px, 3vw, 36px)', letterSpacing: '-0.01em' }}>
-              Creating content for clients?<br />Meet <a href="https://reforge.helloaurora.ai" className="no-underline" style={{ color: 'var(--teal)' }}>ReForge</a>.
+              Creating content for clients?<br />Meet <a href="https://contentpulse.helloaurora.ai" className="no-underline" style={{ color: 'var(--teal)' }}>ContentPulse</a>.
             </h3>
             <p className="reveal text-base font-light leading-[1.7] max-w-[680px] mx-auto mb-8" style={{ color: 'var(--text-secondary)' }}>
-              ClientPulse tells you which clients need attention. ReForge helps you deliver the content that keeps them happy. Same workflow. Same agency focus. Built to work together &mdash; and when they do, content velocity becomes your earliest churn signal.
+              ClientPulse tells you which clients need attention. ContentPulse helps you deliver the content that keeps them happy. Same workflow. Same agency focus. Built to work together &mdash; and when they do, content velocity becomes your earliest churn signal.
             </p>
           </div>
         </div>
@@ -1656,7 +1656,7 @@ export default function Home() {
       </section>
 
       {/* ═══ SECTION 12: FOOTER ═══ */}
-      {/* Three-row layout, mirrors ReForge's footer pattern:
+      {/* Three-row layout, mirrors ContentPulse's footer pattern:
           row 1: brand left, primary nav right
           row 2: legal links centered
           row 3: copyright centered
@@ -1676,7 +1676,7 @@ export default function Home() {
               { label: 'Log In', href: '/auth/login' },
               { label: 'Sign Up', href: '/auth/signup' },
               { label: 'Aurora', href: 'https://helloaurora.ai' },
-              { label: 'ReForge', href: 'https://reforge.helloaurora.ai' },
+              { label: 'ContentPulse', href: 'https://contentpulse.helloaurora.ai' },
               { label: 'For Creators', href: '/for-creators' },
             ].map((link) => (
               <a

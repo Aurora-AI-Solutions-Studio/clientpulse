@@ -1,6 +1,6 @@
 // Sprint 7.9 Slice 7b — POST /api/suite/unmatched-signals/resolve
 //
-// Persists a chosen mapping for a previously-unmatched RF client:
+// Persists a chosen mapping for a previously-unmatched ContentPulse client:
 //   1) inserts (or upserts) cp_rf_client_map(agency, cp, rf)
 //   2) marks the cp_rf_unmatched_signals row resolved_at = NOW(),
 //      resolved_to = cp_client_id

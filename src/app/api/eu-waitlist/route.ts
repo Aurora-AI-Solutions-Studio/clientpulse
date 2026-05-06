@@ -1,4 +1,4 @@
-// EU geoblock waitlist email capture — mirror of reforge route.
+// EU geoblock waitlist email capture — mirror of contentpulse route.
 //
 // EU-27 visitors are redirected by middleware to /eu-waitlist; the form
 // on that page POSTs here. Service-role insert into eu_waitlist;

@@ -1,4 +1,4 @@
-// EU-27 detection helper. Mirrors reforge/lib/geo/eu.ts.
+// EU-27 detection helper. Mirrors contentpulse/lib/geo/eu.ts.
 //
 // Aurora's launch posture (CEO call 2026-04-28 evening): market
 // globally, no hard geoblock. EU visitors see a non-blocking notice

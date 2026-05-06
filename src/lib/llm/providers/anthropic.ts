@@ -1,5 +1,5 @@
 // ─── Anthropic provider ───────────────────────────────────────────
-// Ported from reforge/lib/llm/providers/anthropic.ts (Sprint 7.6 M1).
+// Ported from contentpulse/lib/llm/providers/anthropic.ts (Sprint 7.6 M1).
 
 import Anthropic from '@anthropic-ai/sdk';
 import { BaseLLMProvider } from '../base-provider';

@@ -1,8 +1,10 @@
-// RF→CP Signal Pipeline v1 — ingest webhook (CP side).
+// ContentPulse→CP Signal Pipeline v1 — ingest webhook (CP side).
 //
-// Accepts an HMAC-signed signal token from RF, verifies it, maps the
-// RF client to a CP client (via cp_rf_client_map first, then exact-name
-// fallback within the agency), and upserts into client_signals.
+// Accepts an HMAC-signed signal token from ContentPulse, verifies it, maps the
+// ContentPulse client to a CP client (via cp_rf_client_map first, then exact-name
+// fallback within the agency), and upserts into client_signals. Table +
+// column names keep the legacy `rf_*` token because the schema is shared
+// with the sibling product's writers.
 //
 // Idempotency: client_signals UNIQUE (client_id, signal_type, period)
 // — same signal twice = single row, value/metadata refreshed.
@@ -39,7 +41,7 @@ export async function POST(req: NextRequest) {
   const supabase = createServiceClient();
 
   // Find the agency this signal belongs to. Look up the CP user by the
-  // agency_email RF carried in the payload, then resolve their agency.
+  // agency_email ContentPulse carried in the payload, then resolve their agency.
   const { data: lookup, error: lookupErr } = await supabase.auth.admin.listUsers({
     page: 1, perPage: 200,
   });
@@ -50,7 +52,7 @@ export async function POST(req: NextRequest) {
     (u) => (u.email ?? '').toLowerCase() === payload.agency_email.toLowerCase(),
   );
   if (!agencyOwner) {
-    // No CP account for this RF agency — silently accept the signal but
+    // No CP account for this ContentPulse agency — silently accept the signal but
     // don't store it. The agency hasn't onboarded to CP yet.
     return NextResponse.json({ accepted: false, reason: 'no_cp_account' });
   }
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
   }
   const agencyId = ownerProfile.agency_id as string;
 
-  // Resolve which CP client this RF signal targets. First check the
+  // Resolve which CP client this ContentPulse signal targets. First check the
   // explicit map; fall back to exact-name match within the agency and
   // backfill the map row when a unique match exists.
   let cpClientId: string | null = null;
@@ -99,7 +101,7 @@ export async function POST(req: NextRequest) {
     // for manual mapping. Idempotent on (agency_id, rf_client_id) —
     // repeated misses bump last_seen_at + signal_count instead of
     // duplicating. Best-effort: a write failure here doesn't fail the
-    // request (RF's outbox would just retry the signal forever).
+    // request (ContentPulse's outbox would just retry the signal forever).
     try {
       const { data: existing } = await supabase
         .from('cp_rf_unmatched_signals')
@@ -153,7 +155,7 @@ export async function POST(req: NextRequest) {
 
   // APE auto-trigger — create a re-engagement action_item when a pause
   // or velocity drop arrives. Best-effort: any failure is logged but
-  // never propagated to RF (the ingest must not 5xx, otherwise RF's
+  // never propagated to ContentPulse (the ingest must not 5xx, otherwise ContentPulse's
   // outbox retry loop will hammer the route forever).
   const triggerResult = await maybeCreateSignalTriggeredActionItem({
     supabase,

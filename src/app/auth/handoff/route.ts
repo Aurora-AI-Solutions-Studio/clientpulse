@@ -1,6 +1,6 @@
 // Aurora Suite SSO — verify endpoint (CP side).
 //
-// Receives a signed token from RF, verifies HMAC + exp + nonce, looks
+// Receives a signed token from ContentPulse, verifies HMAC + exp + nonce, looks
 // up the user in CP's auth.users by email, and bootstraps a CP session
 // by:
 //   1) generating a Supabase magic-link via service role to mint a

@@ -1,13 +1,19 @@
 // Sprint 7.8 — applySuiteAccess flips local + sister profiles (CP).
 //
-// Mirror of reforge/__tests__/stripe/suite-access.test.ts. Same shape
-// — sister here points at RF.
+// Mirror of contentpulse/__tests__/stripe/suite-access.test.ts. Same shape
+// — sister here points at ContentPulse.
+//
+// Tests set the new CONTENTPULSE_SUPABASE_* env names. createSisterClient()
+// also accepts legacy RF_SUPABASE_* names during the Vercel cutover; that
+// fallback path is exercised by the existing missing-env case below.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-const ORIG_URL = process.env.RF_SUPABASE_URL;
-const ORIG_KEY = process.env.RF_SUPABASE_SERVICE_ROLE_KEY;
+const ORIG_URL = process.env.CONTENTPULSE_SUPABASE_URL;
+const ORIG_KEY = process.env.CONTENTPULSE_SUPABASE_SERVICE_ROLE_KEY;
+const ORIG_LEGACY_URL = process.env.RF_SUPABASE_URL;
+const ORIG_LEGACY_KEY = process.env.RF_SUPABASE_SERVICE_ROLE_KEY;
 
 interface UpdateCall {
   table: string;
@@ -50,8 +56,12 @@ vi.mock('@supabase/supabase-js', () => ({
 import { applySuiteAccess } from '@/lib/stripe/suite-access';
 
 beforeEach(() => {
-  process.env.RF_SUPABASE_URL = 'https://rf.example.supabase.co';
-  process.env.RF_SUPABASE_SERVICE_ROLE_KEY = 'service-role-stub';
+  process.env.CONTENTPULSE_SUPABASE_URL = 'https://contentpulse.example.supabase.co';
+  process.env.CONTENTPULSE_SUPABASE_SERVICE_ROLE_KEY = 'service-role-stub';
+  // Make sure stale legacy values from a previous test run don't satisfy
+  // the env-missing case below via the fallback.
+  delete process.env.RF_SUPABASE_URL;
+  delete process.env.RF_SUPABASE_SERVICE_ROLE_KEY;
   localUpdates.length = 0;
   sisterUpdates.length = 0;
   localRowsMatched = 1;
@@ -59,10 +69,14 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  if (ORIG_URL === undefined) delete process.env.RF_SUPABASE_URL;
-  else process.env.RF_SUPABASE_URL = ORIG_URL;
-  if (ORIG_KEY === undefined) delete process.env.RF_SUPABASE_SERVICE_ROLE_KEY;
-  else process.env.RF_SUPABASE_SERVICE_ROLE_KEY = ORIG_KEY;
+  if (ORIG_URL === undefined) delete process.env.CONTENTPULSE_SUPABASE_URL;
+  else process.env.CONTENTPULSE_SUPABASE_URL = ORIG_URL;
+  if (ORIG_KEY === undefined) delete process.env.CONTENTPULSE_SUPABASE_SERVICE_ROLE_KEY;
+  else process.env.CONTENTPULSE_SUPABASE_SERVICE_ROLE_KEY = ORIG_KEY;
+  if (ORIG_LEGACY_URL === undefined) delete process.env.RF_SUPABASE_URL;
+  else process.env.RF_SUPABASE_URL = ORIG_LEGACY_URL;
+  if (ORIG_LEGACY_KEY === undefined) delete process.env.RF_SUPABASE_SERVICE_ROLE_KEY;
+  else process.env.RF_SUPABASE_SERVICE_ROLE_KEY = ORIG_LEGACY_KEY;
 });
 
 describe('applySuiteAccess (CP)', () => {
@@ -132,11 +146,24 @@ describe('applySuiteAccess (CP)', () => {
   });
 
   it('returns sister_db_unavailable when env vars missing — local still updates', async () => {
+    delete process.env.CONTENTPULSE_SUPABASE_URL;
+    delete process.env.CONTENTPULSE_SUPABASE_SERVICE_ROLE_KEY;
     delete process.env.RF_SUPABASE_URL;
     delete process.env.RF_SUPABASE_SERVICE_ROLE_KEY;
     const local = fakeClient(localUpdates, () => localRowsMatched);
     const r = await applySuiteAccess({ local, email: 'a@b.com', localUserId: 'u', grant: true });
     expect(r.local).toBe('updated');
     expect(r.sister).toBe('sister_db_unavailable');
+  });
+
+  it('falls back to legacy RF_SUPABASE_* env vars during cutover', async () => {
+    delete process.env.CONTENTPULSE_SUPABASE_URL;
+    delete process.env.CONTENTPULSE_SUPABASE_SERVICE_ROLE_KEY;
+    process.env.RF_SUPABASE_URL = 'https://legacy.example.supabase.co';
+    process.env.RF_SUPABASE_SERVICE_ROLE_KEY = 'legacy-stub';
+    const local = fakeClient(localUpdates, () => localRowsMatched);
+    const r = await applySuiteAccess({ local, email: 'a@b.com', localUserId: 'u', grant: true });
+    expect(r.local).toBe('updated');
+    expect(r.sister).toBe('updated');
   });
 });

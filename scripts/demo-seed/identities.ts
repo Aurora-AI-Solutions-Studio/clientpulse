@@ -2,13 +2,15 @@
 //
 // COPY THIS FILE VERBATIM between:
 //   clientpulse/scripts/demo-seed/identities.ts
-//   reforge/scripts/demo-seed/identities.ts
+//   contentpulse/scripts/demo-seed/identities.ts
 //
 // The deterministic client UUIDs are the cross-product identity glue:
-// same UUID on CP and RF means the cp_rf_client_map row is identity
-// by construction (`rf_client_id === cp_client_id`). The signal pipe
-// already supports the explicit map row, so this just makes the seed
-// honest end-to-end without a setup wizard.
+// same UUID on CP and ContentPulse means the cp_rf_client_map row is identity
+// by construction (`rf_client_id === cp_client_id`). The `rf_*` schema
+// column names are preserved — they are wire identifiers shared with the
+// sibling product's writers. The signal pipe already supports the
+// explicit map row, so this just makes the seed honest end-to-end
+// without a setup wizard.
 
 export const DEMO_USER_EMAIL = 'demo@helloaurora.ai';
 /** Set on demo account creation. Sasa logs in via the regular login

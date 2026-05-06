@@ -42,7 +42,7 @@ Each test ships with a 0-10 rubric. After running, open the result JSON in
 
 - **AgentForge** (`agentforge/eval/`) — Sprint 5 reasoning + tool calling + vertical knowledge
 - **VeritasX** — legal reasoning suite (separate repo)
-- **ReForge** — retention + win-back suite (separate repo)
+- **ContentPulse** — retention + win-back suite (separate repo)
 - **ClientPulse** (this) — health scoring + meeting intelligence + Monday Brief + churn
 
 Each product has its own suite because the tasks are domain-specific enough

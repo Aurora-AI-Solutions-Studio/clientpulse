@@ -1,4 +1,4 @@
-// HMAC sign/verify smoke. Mirrors the RF-side test by design — same
+// HMAC sign/verify smoke. Mirrors the ContentPulse-side test by design — same
 // wire format both directions.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';

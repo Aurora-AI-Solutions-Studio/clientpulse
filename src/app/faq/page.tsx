@@ -38,7 +38,7 @@ const FAQ_SECTIONS: { id: string; label: string; items: FaqItem[] }[] = [
             <p>
               Three monthly plans: <strong>Solo $59</strong> · <strong>Pro $199</strong> ·{' '}
               <strong>Agency $799</strong>. Annual billing gives you{' '}
-              <strong>two months free</strong> on every tier. The Aurora Agency Suite — ReForge
+              <strong>two months free</strong> on every tier. The Aurora Agency Suite — ContentPulse
               Agency + ClientPulse Agency bundled — is <strong>$999/mo</strong> (vs $1,398
               stacked).
             </p>
@@ -121,7 +121,7 @@ const FAQ_SECTIONS: { id: string; label: string; items: FaqItem[] }[] = [
               changes, churn signals).
             </p>
             <p className="mt-3">
-              Plus content velocity from <strong>ReForge</strong> when both products are connected
+              Plus content velocity from <strong>ContentPulse</strong> when both products are connected
               via the Aurora Suite — engagement events from each client&rsquo;s published content
               feed CP&rsquo;s health signals automatically.
             </p>
@@ -142,7 +142,7 @@ const FAQ_SECTIONS: { id: string; label: string; items: FaqItem[] }[] = [
               CP rolls every signal it sees per client into a 0–100 health score across five
               dimensions: <strong>communication frequency</strong>, <strong>communication
               sentiment</strong>, <strong>meeting cadence</strong>, <strong>commercial signals</strong>{' '}
-              (Stripe), and <strong>content velocity</strong> (ReForge engagement when
+              (Stripe), and <strong>content velocity</strong> (ContentPulse engagement when
               connected).
             </p>
             <p className="mt-3">
@@ -177,7 +177,7 @@ const FAQ_SECTIONS: { id: string; label: string; items: FaqItem[] }[] = [
             </p>
             <p className="mt-3">
               The Brief is also where Suite-connected agencies see the cross-product picture: CP
-              signals × ReForge engagement × content velocity in one place.
+              signals × ContentPulse engagement × content velocity in one place.
             </p>
           </>
         ),

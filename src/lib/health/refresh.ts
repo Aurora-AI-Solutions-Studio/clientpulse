@@ -152,7 +152,7 @@ export async function refreshClientHealth({
     .maybeSingle();
   const engagement = (engagementData ?? null) as EngagementRow | null;
 
-  // ─── 4b. RF→CP signals (Slice 2B) ────────────────────────────────
+  // ─── 4b. ContentPulse→CP signals (Slice 2B) ──────────────────────
   // Pull the most-recent value per signal_type and shape it into the
   // SignalsInput envelope the scoring agent consumes. Empty result =
   // signalsInput stays undefined and the agent reverts to 4-dim.

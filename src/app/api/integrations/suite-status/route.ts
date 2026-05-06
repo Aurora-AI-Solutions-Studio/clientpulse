@@ -1,13 +1,13 @@
 // Aurora Suite Connect-card data feed (Slice 2C-2).
 //
-// Returns the agency's RF→CP signal pipeline state for the Suite
+// Returns the agency's ContentPulse→CP signal pipeline state for the Suite
 // integration card on /dashboard/settings. Three numbers drive the
 // card:
 //   - enabled: whether this user has the cross-product entitlement
 //     (`profiles.has_suite_access`). Non-Suite users see a greyed
 //     card with an upsell CTA, no live data exposed.
 //   - signalsLast7d: how many client_signals rows have been received
-//     in the past week. Confidence indicator that RF is actually
+//     in the past week. Confidence indicator that ContentPulse is actually
 //     emitting.
 //   - lastSignalAt: most recent emitted_at across all signal types —
 //     surfaces "Last signal …" in the card footer.

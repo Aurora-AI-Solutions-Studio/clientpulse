@@ -246,7 +246,7 @@ function TabStrip({ current, onChange }: { current: Tab; onChange: (t: Tab) => v
 }
 
 // -----------------------------
-// Signals tab — placeholder MVP, fed by RF→CP signal pipeline (step 4)
+// Signals tab — placeholder MVP, fed by ContentPulse→CP signal pipeline (step 4)
 // -----------------------------
 
 interface SignalRow {
@@ -336,7 +336,7 @@ function SignalsTab({ clientId }: { clientId: string }) {
             <div>
               <h3 className="text-base font-semibold text-white mb-1">No signals yet</h3>
               <p className="text-sm text-[#9aa6c0] max-w-2xl">
-                Aurora Suite signals from ReForge land here once your agency starts publishing
+                Aurora Suite signals from ContentPulse land here once your agency starts publishing
                 content for this client. For non-Suite signals (meetings, email, payments),
                 connect Gmail / Calendar / Zoom / Stripe in{' '}
                 <Link href="/dashboard/settings" className="text-[#e74c3c] hover:underline">

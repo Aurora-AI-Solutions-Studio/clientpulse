@@ -12,7 +12,7 @@
 //   apiAccess             'none' 'none'     'read'    'full'
 //
 // Tier source is `profiles.subscription_plan` — a single-column 4-tier
-// enum, unlike ReForge's dual `plan` / `launch_plan` setup. Unknown /
+// enum, unlike ContentPulse's dual `plan` / `launch_plan` setup. Unknown /
 // missing values fall back to 'free'.
 
 import type { SubscriptionPlan } from '@/types/stripe';

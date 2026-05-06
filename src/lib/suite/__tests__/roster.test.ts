@@ -1,4 +1,4 @@
-// Roster RPC token sign/verify smoke. Mirrors the RF-side test by
+// Roster RPC token sign/verify smoke. Mirrors the ContentPulse-side test by
 // design — same wire format both directions, identical guards.
 
 import crypto from 'crypto';

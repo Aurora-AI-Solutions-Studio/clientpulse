@@ -26,7 +26,7 @@ const config: Config = {
         'aurora-blue': 'var(--aurora-blue)',
         'aurora-purple': 'var(--aurora-purple)',
         'aurora-pink': 'var(--aurora-pink)',
-        'reforge-gold': 'var(--reforge-gold)',
+        'contentpulse-gold': 'var(--contentpulse-gold)',
         'border-teal': 'var(--border-teal)',
         'border-subtle': 'var(--border-subtle)',
         'text-primary': 'var(--text-primary)',

@@ -1,5 +1,5 @@
 -- Hotfix: PostgREST onConflict can't resolve a functional unique index.
--- Mirrors reforge migration 038. Same root cause: the prior functional
+-- Mirrors contentpulse migration 038. Same root cause: the prior functional
 -- UNIQUE INDEX on (LOWER(email), product) is invisible to ON CONFLICT
 -- (email, product) lookups. API now lowercases at the application
 -- boundary; constraint is on plain columns so PostgREST can resolve

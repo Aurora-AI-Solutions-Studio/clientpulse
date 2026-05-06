@@ -57,7 +57,7 @@ export interface MondayBriefRecommendedAction {
   rationale: string;
   urgency: 'high' | 'medium' | 'low';
   engagementContext?: string; // e.g. "No meetings in 23 days, email volume down 40%"
-  /** Slice 2C-1: when set, this action was driven by a fresh RF signal
+  /** Slice 2C-1: when set, this action was driven by a fresh ContentPulse signal
    *  (pause or 60% velocity drop) and the Brief headline can lead with
    *  it directly. Distinguishes signal-driven re-engagement from the
    *  engagement-metrics heuristic that already ships under the same type. */
@@ -65,7 +65,7 @@ export interface MondayBriefRecommendedAction {
 }
 
 /**
- * Slice 2C-1 — RF→CP signals snapshot per client. Latest value per
+ * Slice 2C-1 — ContentPulse→CP signals snapshot per client. Latest value per
  * signal_type within the lookback window plus the previous-period
  * content_velocity needed to detect a w/w drop.
  */
@@ -319,7 +319,7 @@ export class MondayBriefAgent {
     // Sort: lowest engagement first
     engagementInsights.sort((a, b) => a.overallEngagement - b.overallEngagement);
 
-    // 10b. Slice 2C-1 — RF→CP signals snapshot.
+    // 10b. Slice 2C-1 — ContentPulse→CP signals snapshot.
     // Two queries: latest 50 signal rows for the agency (latest value per
     // signal_type wins), plus a separate scan of content_velocity ordered
     // by emitted_at desc that lets us pull current + previous period for
@@ -442,9 +442,9 @@ export class MondayBriefAgent {
     let actionId = 0;
 
     // Slice 2C-1 — Priority 0: signal-driven re-engagement.
-    // RF marked the client as paused, or velocity collapsed >=60% w/w.
+    // ContentPulse marked the client as paused, or velocity collapsed >=60% w/w.
     // Outranks the critical-clients priority because signals are
-    // freshness-grounded (RF emits weekly) and the matching action_item
+    // freshness-grounded (ContentPulse emits weekly) and the matching action_item
     // already exists on the dashboard from the APE auto-trigger.
     interface SignalHit {
       entry: MondayBriefClientEntry;
@@ -497,7 +497,7 @@ export class MondayBriefAgent {
           clientName: topHit.entry.clientName,
           companyName: topHit.entry.companyName,
           title: `Re-engage ${label} — publishing has paused`,
-          rationale: `RF reports zero new pieces in the latest period. Reach out today before the relationship goes fully cold.`,
+          rationale: `ContentPulse reports zero new pieces in the latest period. Reach out today before the relationship goes fully cold.`,
           urgency: 'high',
           signalReason: 'paused',
         });

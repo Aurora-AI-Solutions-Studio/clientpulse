@@ -9,7 +9,7 @@
 //
 // All errors are swallowed and surfaced to the caller as a structured
 // result — the ingest route MUST NOT fail because the APE could not
-// auto-create an item, otherwise RF will retry the signal forever.
+// auto-create an item, otherwise ContentPulse will retry the signal forever.
 //
 // Idempotency: action_items.source_signal_id has a partial UNIQUE
 // index. A duplicate insert raises Postgres 23505, which we map to

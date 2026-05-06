@@ -1,7 +1,7 @@
 // Sprint 7.8 — Suite SKU detection helpers (CP).
 //
-// Mirror of reforge/__tests__/stripe/suite-detect.test.ts. Same wire
-// shape both directions so a Suite event detected on RF is also
+// Mirror of contentpulse/__tests__/stripe/suite-detect.test.ts. Same wire
+// shape both directions so a Suite event detected on ContentPulse is also
 // detected on CP, and vice versa.
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';

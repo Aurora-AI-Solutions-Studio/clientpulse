@@ -8,7 +8,7 @@
  *   - Manage Billing (Stripe portal) for active subscribers
  *   - Annual toggle (2 months free = 16.7% off)
  *   - CP-shaped feature comparison matrix (limits from src/lib/tiers/limits.ts)
- *   - Agency Suite cross-link to ReForge pricing
+ *   - Agency Suite cross-link to ContentPulse pricing
  */
 
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -111,7 +111,7 @@ function isValidTier(v: string | null): v is Tier {
 
 // Next 15 requires every component that calls useSearchParams() to be
 // wrapped in <Suspense> at build time, otherwise the static prerender
-// bails. Defensive wrap mirrors the RF-side fix and the earlier
+// bails. Defensive wrap mirrors the ContentPulse-side fix and the earlier
 // /auth/signup Suspense hotfix.
 export default function UpgradePage() {
   return (
@@ -655,14 +655,14 @@ function UpgradePageInner() {
           <h3
             className="font-playfair text-lg font-semibold mb-1 text-text-primary"
           >
-            Already running ReForge? Bundle both for a built-in upsell loop.
+            Already running ContentPulse? Bundle both for a built-in upsell loop.
           </h3>
           <p className="text-sm text-text-muted">
-            ReForge publishing signals feed ClientPulse health scores. The bundled Agency Suite lives on the ReForge pricing page.
+            ContentPulse publishing signals feed ClientPulse health scores. The bundled Agency Suite lives on the ContentPulse pricing page.
           </p>
         </div>
         <a
-          href="https://reforge.helloaurora.ai/pricing"
+          href="https://contentpulse.helloaurora.ai/pricing"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-5 py-2.5 text-sm font-semibold transition"

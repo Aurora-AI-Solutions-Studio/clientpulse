@@ -1,4 +1,4 @@
-// One-off verification script for the RF→CP signal pipeline (slices
+// One-off verification script for the ContentPulse→CP signal pipeline (slices
 // 2B + 2C-1) against prod.
 //
 // Runs the deployed refreshClientHealth() against prod for the demo

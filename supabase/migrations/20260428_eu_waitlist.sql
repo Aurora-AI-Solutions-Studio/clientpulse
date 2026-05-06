@@ -3,8 +3,12 @@
 --
 -- Service-role-only writes (the API route uses the service-role
 -- client to honor RLS without exposing the table to anonymous reads).
--- Mirrors reforge migration 037_eu_waitlist; same shape so the two
+-- Mirrors contentpulse migration 037_eu_waitlist; same shape so the two
 -- products' EU lists can be merged for Sasa's outreach later.
+-- The CHECK constraint value 'reforge' is a stored data identifier shared
+-- with the sibling product's emission code and is intentionally preserved
+-- across the ReForge → ContentPulse rename — flipping it requires a
+-- coordinated migration on both sides plus a backfill, owned by agent A1.
 
 CREATE TABLE IF NOT EXISTS public.eu_waitlist (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -1,11 +1,13 @@
--- RF→CP Signal Pipeline v1.
+-- ContentPulse→CP Signal Pipeline v1.
 --
 -- Two tables:
---   1) cp_rf_client_map — agency-owned identity glue. Maps an RF
+--   1) cp_rf_client_map — agency-owned identity glue. Maps a ContentPulse
 --      client's external id → the corresponding CP client's UUID.
 --      Populated via the Suite setup wizard (slice 2 will surface UI;
---      slice 1 uses exact-name match as a stopgap).
---   2) client_signals — every signal RF emits about a CP client.
+--      slice 1 uses exact-name match as a stopgap). Table + column
+--      names keep the legacy `rf_*` token because this schema is shared
+--      with the sibling product's writers.
+--   2) client_signals — every signal ContentPulse emits about a CP client.
 --      Idempotent on (client_id, signal_type, period). Drives the
 --      per-client Signals tab today; will feed the health-score engine
 --      and Monday Brief in slice 2.
@@ -65,6 +67,6 @@ ALTER TABLE client_signals ENABLE ROW LEVEL SECURITY;
 -- reads via getAuthedContext + agency scoping in the API route.
 
 COMMENT ON TABLE cp_rf_client_map IS
-  'Identity glue: maps an RF client external id to the corresponding CP client UUID per agency. Populated by the Suite setup wizard.';
+  'Identity glue: maps a ContentPulse client external id to the corresponding CP client UUID per agency. Populated by the Suite setup wizard. Table + column names keep the legacy rf_* token because the schema is shared with the sibling product''s writers.';
 COMMENT ON TABLE client_signals IS
-  'RF→CP signals (publishing activity, approval latency, pause/resume, voice freshness, ingestion rate). Idempotent on (client_id, signal_type, period). Drives per-client Signals tab + health score + Monday Brief.';
+  'ContentPulse->CP signals (publishing activity, approval latency, pause/resume, voice freshness, ingestion rate). Idempotent on (client_id, signal_type, period). Drives per-client Signals tab + health score + Monday Brief.';

@@ -1,10 +1,10 @@
-// Sprint 7.9 Slice 7b — agency's unresolved RF→CP unmatched-signals.
+// Sprint 7.9 Slice 7b — agency's unresolved ContentPulse→CP unmatched-signals.
 //
 // Reads `cp_rf_unmatched_signals` filtered to the calling agency, returns
 // only the unresolved rows + a count of all rows (resolved + unresolved)
 // for the settings card. Used by:
 //   - the Suite onboarding step UI to enumerate misses to map,
-//   - the settings page Suite card to surface a "X RF clients waiting"
+//   - the settings page Suite card to surface a "X ContentPulse clients waiting"
 //     CTA.
 //
 // Suite-gated: non-Suite agencies see an empty list (the wizard step

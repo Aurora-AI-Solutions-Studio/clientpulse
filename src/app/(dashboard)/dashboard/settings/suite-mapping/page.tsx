@@ -2,15 +2,17 @@
 
 // Sprint 7.9 Slice 7b — Suite mapping management page.
 //
-// Standalone view to map RF clients to CP clients outside of the
+// Standalone view to map ContentPulse clients to CP clients outside of the
 // onboarding wizard flow. Two sections:
-//   1) Unresolved — RF signals that haven't been wired to a CP client.
+//   1) Unresolved — ContentPulse signals that haven't been wired to a CP client.
 //   2) Already mapped — read-only audit of the cp_rf_client_map rows.
 //
 // Reuses the same /api/suite/unmatched-signals endpoints as the wizard
-// step. Re-resolving a mapping (changing which CP client an RF id
+// step. Re-resolving a mapping (changing which CP client a ContentPulse id
 // points to) is an upsert on (agency_id, rf_client_id) — already
-// covered by the resolve endpoint.
+// covered by the resolve endpoint. (Table + column names keep the legacy
+// `rf_*` token because they are wire identifiers shared with the sibling
+// product.)
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -66,7 +68,7 @@ export default function SuiteMappingPage() {
   async function onResolve(unmatchedId: string) {
     const cp_client_id = picks[unmatchedId];
     if (!cp_client_id) {
-      setError('Pick a ClientPulse client to map this RF client to.');
+      setError('Pick a ClientPulse client to map this ContentPulse client to.');
       return;
     }
     setError(null);
@@ -100,7 +102,7 @@ export default function SuiteMappingPage() {
         </Link>
         <h1 className="text-3xl text-white mb-1">Suite mapping</h1>
         <p className="text-sm text-[#7a88a8]">
-          Pair RF clients with their ClientPulse counterparts so cross-product signals
+          Pair ContentPulse clients with their ClientPulse counterparts so cross-product signals
           flow into health scoring and proposals.
         </p>
       </div>
@@ -120,13 +122,13 @@ export default function SuiteMappingPage() {
         ) : unresolved.length === 0 ? (
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-[#38e8c8]" />
-            <p className="text-sm text-white">All RF signals are mapped.</p>
+            <p className="text-sm text-white">All ContentPulse signals are mapped.</p>
           </div>
         ) : clients.length === 0 ? (
           <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-[#c8d0e0]">
-              You have unmatched RF signals but no CP clients yet. Add a client first
+              You have unmatched ContentPulse signals but no CP clients yet. Add a client first
               from the Clients page.
             </p>
           </div>
@@ -140,7 +142,7 @@ export default function SuiteMappingPage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-white">{row.rf_client_name}</p>
                   <p className="text-xs text-[#7a88a8]">
-                    RF id <span className="font-mono">{row.rf_client_id}</span> ·{' '}
+                    ContentPulse id <span className="font-mono">{row.rf_client_id}</span> ·{' '}
                     {row.signal_count} signal{row.signal_count === 1 ? '' : 's'} · last seen{' '}
                     {new Date(row.last_seen_at).toLocaleDateString()}
                   </p>

@@ -1,11 +1,11 @@
-// ─── Multi-Model LLM Abstraction — Sprint 8A M1 (ported from ReForge) ──
+// ─── Multi-Model LLM Abstraction — Sprint 8A M1 (ported from ContentPulse) ──
 // Shared type surface for provider-agnostic LLM calls. The rest of the
 // codebase should import from this module only — never reach into a
 // concrete provider SDK directly.
 //
-// Ported from reforge/lib/llm/types.ts (Sprint 7.6 M1).
+// Ported from contentpulse/lib/llm/types.ts (Sprint 7.6 M1).
 // CP adaptation: uses `SubscriptionPlan` (solo | pro | agency) from
-// `@/types/stripe` instead of RF's 5-tier `LaunchPlan`.
+// `@/types/stripe` instead of ContentPulse's 5-tier `LaunchPlan`.
 
 import type { SubscriptionPlan } from '@/types/stripe';
 

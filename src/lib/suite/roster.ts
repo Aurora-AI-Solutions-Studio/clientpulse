@@ -1,6 +1,6 @@
 // Aurora Suite Roster — HMAC sign/verify for cross-product roster RPC.
 //
-// COPY THIS FILE BETWEEN RF AND CP VERBATIM. Same wire format as the
+// COPY THIS FILE BETWEEN ContentPulse AND CP VERBATIM. Same wire format as the
 // suite/handoff and signal pipeline tokens — `<base64url(payload-json)>.<base64url(HMAC)>`.
 //
 // Reuses the AURORA_SUITE_HANDOFF_SECRET — same trust domain (cross-product

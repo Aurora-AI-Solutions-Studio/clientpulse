@@ -1,7 +1,13 @@
 // Aurora Suite SSO — issue endpoint (CP side).
-// Authed CP user clicks the RF link in the product switcher; we sign a
-// short-lived token bound to their email and redirect them to RF's
-// /auth/handoff verifier. RF mirrors this for the CP→RF direction.
+// Authed CP user clicks the ContentPulse link in the product switcher; we
+// sign a short-lived token bound to their email and redirect them to
+// ContentPulse's /auth/handoff verifier. ContentPulse mirrors this for the
+// CP→ContentPulse direction.
+//
+// The `to=rf` query value + `signHandoff(email, 'cp')` direction tag are
+// wire-protocol identifiers shared with the sibling product. They are
+// intentionally kept stable across the ReForge → ContentPulse rename to
+// avoid a flag-day cutover; both endpoints already speak `rf`/`cp`.
 //
 // The Suite gate keys off `profiles.has_suite_access` — a real flag
 // flipped only for buyers of the Aurora Suite bundle ($999/mo Stripe
@@ -11,7 +17,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthedContext } from '@/lib/auth/get-authed-context';
 import { signHandoff } from '@/lib/suite/handoff';
 
-const RF_BASE = process.env.NEXT_PUBLIC_RF_BASE_URL ?? 'https://reforge.helloaurora.ai';
+const CONTENTPULSE_BASE =
+  process.env.NEXT_PUBLIC_CONTENTPULSE_BASE_URL ??
+  process.env.NEXT_PUBLIC_RF_BASE_URL ?? // legacy fallback; remove after Vercel env rename lands
+  'https://contentpulse.helloaurora.ai';
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
@@ -53,8 +62,8 @@ export async function GET(req: NextRequest) {
     token = signHandoff(email, 'cp');
   } catch (err) {
     console.error('[suite/handoff] sign failed:', err);
-    return NextResponse.redirect(`${RF_BASE}/auth/login?error=sso_not_configured`);
+    return NextResponse.redirect(`${CONTENTPULSE_BASE}/auth/login?error=sso_not_configured`);
   }
 
-  return NextResponse.redirect(`${RF_BASE}/auth/handoff?token=${encodeURIComponent(token)}`);
+  return NextResponse.redirect(`${CONTENTPULSE_BASE}/auth/handoff?token=${encodeURIComponent(token)}`);
 }

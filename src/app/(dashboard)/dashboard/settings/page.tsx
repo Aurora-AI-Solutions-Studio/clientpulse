@@ -723,7 +723,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Aurora Suite — RF→CP signal pipeline (Slice 2C-2) */}
+      {/* Aurora Suite — ContentPulse→CP signal pipeline (Slice 2C-2) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -731,7 +731,7 @@ export default function SettingsPage() {
             Aurora Suite
           </CardTitle>
           <CardDescription>
-            Cross-product signal pipeline. ReForge emits content velocity, pause/resume, voice freshness, approval latency, and ingestion rate per client; ClientPulse rolls them into health scoring and the Action Proposal Engine.
+            Cross-product signal pipeline. ContentPulse emits content velocity, pause/resume, voice freshness, approval latency, and ingestion rate per client; ClientPulse rolls them into health scoring and the Action Proposal Engine.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -743,7 +743,7 @@ export default function SettingsPage() {
                     <Check className="w-5 h-5 text-[#38e8c8]" />
                   </div>
                   <div>
-                    <p className="font-medium text-white">ReForge → ClientPulse</p>
+                    <p className="font-medium text-white">ContentPulse → ClientPulse</p>
                     <p className="text-xs text-[#38e8c8]">Connected · {suiteStatus.signalsLast7d} signal{suiteStatus.signalsLast7d === 1 ? '' : 's'} in the last 7 days</p>
                   </div>
                 </div>
@@ -765,7 +765,7 @@ export default function SettingsPage() {
                 <div className="flex items-start gap-2 mt-4 pt-4 border-t border-[#1a2540]">
                   <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-[#7a88a8]">
-                    No signals received this week. If ReForge has active content for these clients, the next scheduled emission will arrive shortly.
+                    No signals received this week. If ContentPulse has active content for these clients, the next scheduled emission will arrive shortly.
                   </p>
                 </div>
               )}
@@ -775,7 +775,7 @@ export default function SettingsPage() {
                     <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-[#c8d0e0]">
                       <span className="text-white font-medium">
-                        {unmatched.unresolved_count} RF client
+                        {unmatched.unresolved_count} ContentPulse client
                         {unmatched.unresolved_count === 1 ? '' : 's'} waiting to be mapped
                       </span>{' '}
                       — incoming signals are dropping until you wire them up.
@@ -798,9 +798,9 @@ export default function SettingsPage() {
                     <Lock className="w-5 h-5 text-[#7a88a8]" />
                   </div>
                   <div>
-                    <p className="font-medium text-white">ReForge → ClientPulse</p>
+                    <p className="font-medium text-white">ContentPulse → ClientPulse</p>
                     <p className="text-xs text-[#7a88a8]">
-                      Aurora Suite required. Combine ClientPulse with ReForge to get RF activity signals folded into your health scores and proposals.
+                      Aurora Suite required. Combine ClientPulse with ContentPulse to get ContentPulse activity signals folded into your health scores and proposals.
                     </p>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 // Aurora Suite Signal pipeline — HMAC sign/verify utilities.
 //
-// COPY THIS FILE BETWEEN CP AND RF VERBATIM. Same wire format as the
+// COPY THIS FILE BETWEEN CP AND ContentPulse VERBATIM. Same wire format as the
 // suite/handoff token — `<base64url(payload-json)>.<base64url(HMAC)>` —
 // but a different shared secret (AURORA_SUITE_SIGNALS_SECRET) so a leak
 // of the SSO secret can't forge signals and vice versa.

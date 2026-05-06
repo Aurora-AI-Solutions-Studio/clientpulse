@@ -14,8 +14,10 @@
 //    registered, we redirect to /auth/signup with the email pre-filled.
 //
 // Token format: `<base64url(payload-json)>.<base64url(HMAC-SHA256)>`.
-// Identical on CP and RF — copy this file as-is between the two
-// products so the wire format never drifts.
+// Identical on CP and ContentPulse — copy this file as-is between the two
+// products so the wire format never drifts. The 'rf' value in
+// HandoffSource is the wire-protocol direction tag and is intentionally
+// preserved across the ReForge → ContentPulse rename.
 
 import crypto from 'crypto';
 

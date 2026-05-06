@@ -3,7 +3,7 @@
 // Adding a new model is a one-line change here — no other module should
 // hard-code vendor model strings.
 //
-// Ported from reforge/lib/llm/models.ts (Sprint 7.6 M1).
+// Ported from contentpulse/lib/llm/models.ts (Sprint 7.6 M1).
 
 import type { LLMModelDescriptor, LLMModelId, LLMProviderId } from './types';
 

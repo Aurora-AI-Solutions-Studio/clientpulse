@@ -37,12 +37,12 @@ are never touched.
 - `public.clients` — 6 deterministic clients (3 healthy / 2 at-risk / 1 churning)
 - `public.client_health_scores` — pre-computed scores per status bucket
 - `public.action_items` — per-client action plus an upsell proposal
-- `public.cp_rf_client_map` — pre-populated identity map (RF and CP share the same client UUIDs by construction)
+- `public.cp_rf_client_map` — pre-populated identity map (ContentPulse and CP share the same client UUIDs by construction). Table name keeps the legacy `rf` token because the schema is shared with the sibling product's writers.
 
-## Pair with the RF seed
+## Pair with the ContentPulse seed
 
-Run `npm run seed:demo` in the `reforge/` repo with the same
-`identities.ts` to populate the matching RF client workspaces +
+Run `npm run seed:demo` in the `contentpulse/` repo with the same
+`identities.ts` to populate the matching ContentPulse client workspaces +
 4-week content velocity that the signal pipeline picks up.
 
 ## Verify

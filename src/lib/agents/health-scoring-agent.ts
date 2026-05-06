@@ -19,7 +19,7 @@ export interface HealthScoreInput {
   /** v2 (Sprint 5): If provided, overrides the heuristic engagement score with
    *  the real composite from Calendar + Email integration data. */
   engagementScoreOverride?: number;
-  /** Slice 2B: RF→CP Signal Pipeline 5th dimension. When present, blends
+  /** Slice 2B: ContentPulse→CP Signal Pipeline 5th dimension. When present, blends
    *  in at 20% weight; when absent, the score collapses to the original
    *  4-dimension weighting so non-Suite agencies see no behavior change. */
   signalsInput?: SignalsInput;
@@ -28,7 +28,7 @@ export interface HealthScoreInput {
 export interface SignalsInput {
   /** Latest content_velocity numeric (pieces in the period). */
   contentVelocity?: number;
-  /** 1.0 if RF marked the client as paused, 0.0 otherwise. */
+  /** 1.0 if ContentPulse marked the client as paused, 0.0 otherwise. */
   pauseResume?: number;
   /** Days since voice_profiles.updated_at. */
   voiceFreshnessDays?: number;
@@ -36,8 +36,8 @@ export interface SignalsInput {
   approvalLatencyMs?: number;
   /** Ingestion job count over the last 30 days. */
   ingestionRate?: number;
-  /** Slice 6 — engagement events count on the client's published RF
-   *  pieces in the latest period. High = audience is responding;
+  /** Slice 6 — engagement events count on the client's published
+   *  ContentPulse pieces in the latest period. High = audience is responding;
    *  zero = pieces are going out but landing flat. */
   engagementVelocity?: number;
 }
@@ -59,7 +59,7 @@ export interface HealthScoreBreakdown {
   relationship: number; // 0-100
   delivery: number; // 0-100
   engagement: number; // 0-100
-  /** Slice 2B: RF→CP signals 5th dimension. Undefined = no signals data;
+  /** Slice 2B: ContentPulse→CP signals 5th dimension. Undefined = no signals data;
    *  callers should treat as "not yet wired" and not display the row. */
   signals?: number; // 0-100
 }
@@ -122,7 +122,7 @@ export class HealthScoringAgent {
       );
     }
 
-    // Optional 5th dimension — RF→CP signals. Only contributes when
+    // Optional 5th dimension — ContentPulse→CP signals. Only contributes when
     // the caller has wired up a SignalsInput (i.e. Suite customers).
     let signalsScore: number | undefined;
     if (params.signalsInput) {
@@ -197,7 +197,7 @@ export class HealthScoringAgent {
   }
 
   /**
-   * Computes the RF→CP signals dimension (slice 2B). The pause_resume=1
+   * Computes the ContentPulse→CP signals dimension (slice 2B). The pause_resume=1
    * case is terminal — it pins the score very low because publishing
    * has stopped completely; otherwise we layer penalties from velocity,
    * voice freshness, approval latency, and ingestion rate on top of a
@@ -210,7 +210,7 @@ export class HealthScoringAgent {
     if (input.pauseResume === 1) {
       signals.push({
         type: 'signals',
-        message: 'Publishing has paused — RF reports zero new pieces',
+        message: 'Publishing has paused — ContentPulse reports zero new pieces',
         severity: 'high',
       });
       return 5;

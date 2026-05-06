@@ -2,19 +2,22 @@
 --
 -- Today /api/signals/ingest drops a signal silently with `accepted:
 -- false, reason: 'unmatched_client'` when neither cp_rf_client_map nor
--- exact-name match resolves an RF client to a CP client. The agency
+-- exact-name match resolves a ContentPulse client to a CP client. The agency
 -- never finds out, the signal disappears, and the Suite-cohesion pitch
--- ("RF activity rolls into CP health scoring per client") becomes a
--- silent contract.
+-- ("ContentPulse activity rolls into CP health scoring per client") becomes
+-- a silent contract.
 --
 -- This table is a record of every (agency, rf_client) that has tried
 -- and failed to resolve. The Suite onboarding wizard reads it to
--- surface a "map these RF clients" UI; the settings card surfaces an
+-- surface a "map these ContentPulse clients" UI; the settings card surfaces an
 -- unresolved-count CTA. When the wizard resolves a row, we set
 -- resolved_at / resolved_to so the history is audit-able.
 --
+-- Table + column names keep the legacy `rf_*` token because the schema
+-- is shared with the sibling product's writers.
+--
 -- Idempotent: UNIQUE (agency_id, rf_client_id) — repeated unmatched
--- signals from the same RF client increment signal_count + bump
+-- signals from the same ContentPulse client increment signal_count + bump
 -- last_seen_at instead of inserting duplicates.
 
 CREATE TABLE IF NOT EXISTS public.cp_rf_unmatched_signals (
@@ -40,4 +43,4 @@ ALTER TABLE public.cp_rf_unmatched_signals ENABLE ROW LEVEL SECURITY;
 -- service client + explicit agency_id scope.
 
 COMMENT ON TABLE public.cp_rf_unmatched_signals IS
-  'RF signals that could not auto-resolve to a CP client (no map row, no exact-name match). Surfaced by the Suite onboarding wizard so agencies can map them; resolved_at + resolved_to record the disposition.';
+  'ContentPulse signals that could not auto-resolve to a CP client (no map row, no exact-name match). Surfaced by the Suite onboarding wizard so agencies can map them; resolved_at + resolved_to record the disposition.';

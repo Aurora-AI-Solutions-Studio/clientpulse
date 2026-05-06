@@ -1,7 +1,7 @@
 // ─── Tier metering enforcement tests — Sprint 8A ────────────────
 // Covers the CP tier helpers end-to-end. Pure helpers use no mocks;
 // DB-touching ones stub @/lib/supabase/service with a tiny query-builder
-// fake modelled on the RF 7.6 pattern.
+// fake modelled on the ContentPulse 7.6 pattern.
 //
 // What we assert:
 //   1. Tier matrix values match Sprint 8A scope exactly

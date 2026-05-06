@@ -5,17 +5,17 @@
 // Layout, left to right:
 //   [mobile menu] · breadcrumb · . . . · product switcher · search · user
 //
-// The product switcher (CP ⇄ RF) makes the suite framing visible from
-// the first second the user lands. RF is "Soon" until step 3 (RF nav
-// reshape) ships; the link goes to a simple soon-page so a click doesn't
-// 404. Search is a placeholder for cmd-K-style global search; no
+// The product switcher (CP ⇄ ContentPulse) makes the suite framing visible
+// from the first second the user lands. ContentPulse is "Soon" until step 3
+// (ContentPulse nav reshape) ships; the link goes to a simple soon-page so a
+// click doesn't 404. Search is a placeholder for cmd-K-style global search; no
 // behavior wired yet, but the slot is fixed so future work doesn't move
 // chrome around.
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, Menu, Search } from 'lucide-react';
-import { ClientPulseMark, ReForgeMark } from '@/components/brand/brand-mark';
+import { ClientPulseMark, ContentPulseMark } from '@/components/brand/brand-mark';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -195,15 +195,18 @@ function ProductSwitcher() {
       >
         <ClientPulseMark size="sm" />
       </div>
-      {/* Inactive: ReForge — clicking starts an SSO handoff (server-side
+      {/* Inactive: ContentPulse — clicking starts an SSO handoff (server-side
           tier check + signed token + magic-link session bootstrap) so
-          the user lands authed in RF without re-logging-in. */}
+          the user lands authed in ContentPulse without re-logging-in.
+          The `to=rf` query value is a wire-protocol identifier shared with
+          the sibling product's handoff verifier and is intentionally kept
+          stable across the rename. */}
       <a
         href="/api/auth/handoff/issue?to=rf"
         className="px-2 py-1 rounded-md inline-flex items-center gap-1 opacity-75 hover:opacity-100 hover:bg-white/[0.03] transition-all"
-        title="Switch to ReForge"
+        title="Switch to ContentPulse"
       >
-        <ReForgeMark size="sm" />
+        <ContentPulseMark size="sm" />
       </a>
     </div>
   );

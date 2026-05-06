@@ -2,7 +2,7 @@
 
 // Sprint 7.9 Slice 7b — Suite mapping wizard step.
 //
-// Surfaces every unmatched RF→CP signal so the agency can pick the
+// Surfaces every unmatched ContentPulse→CP signal so the agency can pick the
 // matching CP client. Only renders when the wizard order includes
 // 'suite' (Suite agency + at least one unresolved unmatched row).
 //
@@ -73,7 +73,7 @@ export function StepSuite() {
   async function onResolve(unmatchedId: string) {
     const cp_client_id = picks[unmatchedId];
     if (!cp_client_id) {
-      setError('Pick a ClientPulse client to map this RF client to.');
+      setError('Pick a ClientPulse client to map this ContentPulse client to.');
       return;
     }
     setError(null);
@@ -102,7 +102,7 @@ export function StepSuite() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-[#c8d0e0]">
-        ReForge has been emitting signals for these clients, but ClientPulse couldn&apos;t
+        ContentPulse has been emitting signals for these clients, but ClientPulse couldn&apos;t
         match them to a client on this side. Pick the matching ClientPulse client to wire
         the signals into health scoring and proposals.
       </p>
@@ -123,7 +123,7 @@ export function StepSuite() {
         <div className="p-4 bg-[#38e8c8]/5 border border-[#38e8c8]/30 rounded-lg">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-[#38e8c8]" />
-            <p className="text-sm text-white">All RF signals are mapped.</p>
+            <p className="text-sm text-white">All ContentPulse signals are mapped.</p>
           </div>
           <p className="text-xs text-[#7a88a8] mt-1">
             New unmatched signals will surface here automatically. You can also manage
@@ -143,7 +143,7 @@ export function StepSuite() {
               <div className="flex-1">
                 <p className="text-sm font-medium text-white">{row.rf_client_name}</p>
                 <p className="text-xs text-[#7a88a8]">
-                  RF id <span className="font-mono">{row.rf_client_id}</span> ·{' '}
+                  ContentPulse id <span className="font-mono">{row.rf_client_id}</span> ·{' '}
                   {row.signal_count} signal{row.signal_count === 1 ? '' : 's'} · last seen{' '}
                   {new Date(row.last_seen_at).toLocaleDateString()}
                 </p>
@@ -184,15 +184,15 @@ export function StepSuite() {
       )}
 
       <p className="text-xs text-[#7a88a8]">
-        Don&apos;t see all your RF clients? Open ReForge to confirm they&apos;re publishing.
+        Don&apos;t see all your ContentPulse clients? Open ContentPulse to confirm they&apos;re publishing.
         New signals show up here within minutes of arrival.{' '}
         <a
-          href="https://reforge.helloaurora.ai/clients"
+          href="https://contentpulse.helloaurora.ai/clients"
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center gap-0.5 underline"
         >
-          Open RF clients <ExternalLink className="w-3 h-3" />
+          Open ContentPulse clients <ExternalLink className="w-3 h-3" />
         </a>
       </p>
     </div>

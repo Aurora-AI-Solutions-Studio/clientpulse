@@ -1,6 +1,6 @@
 // ─── Tier Enforcement — Sprint 8A Tier Metering ─────────────────
 // The enforcement helpers called from API routes + MCP write tools.
-// Ported from reforge/lib/tiers/enforce.ts and adapted to CP's domain
+// Ported from contentpulse/lib/tiers/enforce.ts and adapted to CP's domain
 // (agencies + clients + agency_members, no pieces/channels/voices).
 
 import { createServiceClient } from '@/lib/supabase/service';

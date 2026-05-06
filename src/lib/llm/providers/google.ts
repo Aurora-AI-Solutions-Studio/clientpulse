@@ -2,7 +2,7 @@
 // Uses the REST endpoint directly for the same reason we skip the OpenAI
 // SDK — keep build size down until we need streaming or vision.
 //
-// Ported from reforge/lib/llm/providers/google.ts (Sprint 7.6 M1).
+// Ported from contentpulse/lib/llm/providers/google.ts (Sprint 7.6 M1).
 
 import { BaseLLMProvider } from '../base-provider';
 import { getModel } from '../models';

@@ -7,7 +7,7 @@
 // content workflow visible to the user.
 //
 // Reads its data from the same WORKSPACES module the sidebar uses, so
-// drift is a single edit, not a hunt across files. Mirrors the RF
+// drift is a single edit, not a hunt across files. Mirrors the ContentPulse
 // version 1:1 — same visual language across both products.
 
 import Link from 'next/link';

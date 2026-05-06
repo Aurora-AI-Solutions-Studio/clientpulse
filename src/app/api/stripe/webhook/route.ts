@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
         if (!items || items.length === 0) break;
 
         const priceId = items[0].price.id;
-        // Suite SKU isn't in CP's stripe-config.ts (it's an RF-issued
+        // Suite SKU isn't in CP's stripe-config.ts (it's a ContentPulse-issued
         // product), so getPlanByPriceId returns null. That's fine — we
         // skip the per-tier plan update for Suite events and only fire
         // the has_suite_access flip below. The buyer's subscription_plan
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
 
         // Suite-access flip — fetch customer email + apply on local + sister.
         // Runs even when the local profile lookup missed, because the sister
-        // RF profile may still exist and need the flip.
+        // ContentPulse profile may still exist and need the flip.
         if (isSuite) {
           try {
             const customer = await stripe.customers.retrieve(customerId);

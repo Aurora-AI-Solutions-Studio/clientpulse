@@ -1,10 +1,10 @@
-// Aurora Suite brand marks — single source for the CP and RF wordmarks
+// Aurora Suite brand marks — single source for the CP and ContentPulse wordmarks
 // + the "by Aurora" gradient.
 //
 // The SVGs below are LIFTED VERBATIM from the canonical landing-page
 // implementations:
-//   - ClientPulse: clientpulse/src/app/page.tsx Icon.pulse  (40x40 viewBox)
-//   - ReForge:    reforge/app/page.tsx          ReForge nav (72x72 viewBox)
+//   - ClientPulse:  clientpulse/src/app/page.tsx       Icon.pulse  (40x40 viewBox)
+//   - ContentPulse: contentpulse/app/page.tsx          ContentPulse nav (72x72 viewBox)
 // Do not improvise — if the marks change on the landing page, update them
 // here too so dashboard chrome stays in lockstep with the public brand.
 
@@ -27,7 +27,7 @@ const TEXT_CLASS = {
   lg: 'text-xl',
 };
 
-export function ReForgeMark({
+export function ContentPulseMark({
   showWordmark = true,
   size = 'md',
   href,
@@ -42,7 +42,7 @@ export function ReForgeMark({
           className={`font-bold tracking-[-0.01em] text-white ${TEXT_CLASS[size]}`}
           style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
         >
-          ReForge
+          ContentPulse
         </span>
       )}
     </span>

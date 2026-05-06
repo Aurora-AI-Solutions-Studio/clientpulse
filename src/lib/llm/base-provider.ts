@@ -3,7 +3,7 @@
 // base and implements `generate()`. The registry never talks to a vendor
 // SDK directly — it goes through this contract.
 //
-// Ported from reforge/lib/llm/base-provider.ts (Sprint 7.6 M1).
+// Ported from contentpulse/lib/llm/base-provider.ts (Sprint 7.6 M1).
 
 import type {
   LLMCompletionRequest,

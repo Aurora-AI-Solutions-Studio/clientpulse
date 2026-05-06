@@ -1,8 +1,8 @@
 // Sprint 7.9 Slice 7b — POST /api/suite/roster
 //
-// Cross-product roster RPC. Called by ReForge's /api/suite/clients to
-// hydrate the RF /clients page (and, post-Slice-7b, the write-as-client
-// picker in /repurpose). Authenticated by HMAC token signed with
+// Cross-product roster RPC. Called by ContentPulse's /api/suite/clients to
+// hydrate the ContentPulse /clients page (and, post-Slice-7b, the
+// write-as-client picker in /repurpose). Authenticated by HMAC token signed with
 // AURORA_SUITE_HANDOFF_SECRET — same trust pattern as the signal
 // pipeline. The token's `agency_email` field is the only authority for
 // scoping; we look the user up by that email and return only their
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
   const agencyId = profile?.agency_id as string | undefined;
   if (!agencyId) {
     // CP account exists but has no agency yet — still has_cp_account true,
-    // just an empty roster. The RF page will render the empty state.
+    // just an empty roster. The ContentPulse page will render the empty state.
     return NextResponse.json({ has_cp_account: true, clients: [] });
   }
 

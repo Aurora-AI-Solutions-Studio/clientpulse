@@ -72,7 +72,7 @@ export default function OnboardingPage() {
     loadUnmatched();
   }, []);
 
-  // Dynamic step order — Suite agencies with unresolved RF signals get
+  // Dynamic step order — Suite agencies with unresolved ContentPulse signals get
   // a 'suite' mapping step inserted between 'client' and 'brief'.
   const order = buildStepOrder({
     hasSuiteAccess: Boolean(me?.suiteAccess),

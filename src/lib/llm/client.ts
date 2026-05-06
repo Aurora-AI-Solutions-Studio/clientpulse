@@ -13,7 +13,7 @@
 // The router enforces tier gating before touching a provider — lower
 // tiers can request anything and the router substitutes safely.
 //
-// Ported from reforge/lib/llm/client.ts (Sprint 7.6 M1).
+// Ported from contentpulse/lib/llm/client.ts (Sprint 7.6 M1).
 
 import { getDefaultRegistry, type LLMProviderRegistry } from './registry';
 import { resolveModel, type ResolveModelOptions } from './routing';

@@ -8,7 +8,7 @@
 export type OnboardingStep = 'stripe' | 'integrations' | 'client' | 'brief' | 'suite';
 
 /** Static step set — `STEP_ORDER` returns this for non-Suite agencies.
- *  Suite agencies with unmatched RF signals get the 'suite' step
+ *  Suite agencies with unmatched ContentPulse signals get the 'suite' step
  *  inserted between 'client' and 'brief' via `buildStepOrder`. */
 const BASE_STEP_ORDER: readonly OnboardingStep[] = [
   'stripe',
@@ -29,7 +29,7 @@ export const STEP_LABELS: Record<OnboardingStep, string> = {
 
 /** Build the step order for a specific user. Inserts the 'suite' step
  *  between 'client' and 'brief' for Suite agencies that have at least
- *  one unresolved RF→CP unmatched signal. Otherwise returns the base
+ *  one unresolved ContentPulse→CP unmatched signal. Otherwise returns the base
  *  4-step sequence — non-Suite agencies and Suite agencies with no
  *  pending mappings never see the wizard step. */
 export function buildStepOrder(opts: {

@@ -1,6 +1,6 @@
 // Sprint 7.8 — apply has_suite_access flips to local + sister profiles.
 //
-// Mirror of reforge/lib/stripe/suite-access.ts. Single source of truth
+// Mirror of contentpulse/lib/stripe/suite-access.ts. Single source of truth
 // called from the webhook handler for both the grant path
 // (subscription created/updated → active|trialing) and the revoke
 // path (deleted, canceled, past_due, unpaid).

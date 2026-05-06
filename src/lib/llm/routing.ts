@@ -4,7 +4,7 @@
 //   Pro     → all models, caller chooses
 //   Agency  → all models + automatic cost/quality routing
 //
-// Ported from reforge/lib/llm/routing.ts (Sprint 7.6 M1).
+// Ported from contentpulse/lib/llm/routing.ts (Sprint 7.6 M1).
 // CP adaptation: 3-tier only (no 'free' or 'enterprise' in CP's plan).
 
 import { MODELS, getModel } from './models';

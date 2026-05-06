@@ -1,4 +1,4 @@
-// RF→CP Signal Pipeline — APE auto-trigger rules.
+// ContentPulse→CP Signal Pipeline — APE auto-trigger rules.
 //
 // Pure decision function: given a freshly-arrived client_signal and the
 // previous-period value for the same signal_type, decide whether the
@@ -8,7 +8,7 @@
 // Two trigger conditions today:
 //
 //   1) pause_resume = 1.0
-//      RF marks a client as paused when their publishing has stopped
+//      ContentPulse marks a client as paused when their publishing has stopped
 //      across the latest period. Always create.
 //
 //   2) content_velocity dropped >= 60% week-over-week

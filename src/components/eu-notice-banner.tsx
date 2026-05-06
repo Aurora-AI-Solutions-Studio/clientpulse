@@ -1,6 +1,6 @@
 'use client';
 
-// Non-blocking EU notice banner. Mirrors reforge banner. Server-side
+// Non-blocking EU notice banner. Mirrors contentpulse banner. Server-side
 // detects EU-27 visitors via the geo header, passes `show={true}`;
 // component handles dismissibility via localStorage so EU prospects
 // can browse without nagging on every page view.
